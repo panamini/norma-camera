@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "norma-camera",
+    "slug": "norma-camera",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "scheme": "norma-camera",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": false,
+      "infoPlist": {
+        "NSCameraUsageDescription": "norma-camera uses the app camera to show live composition guides and capture photos."
+      }
+    },
+    "android": {
+      "permissions": [
+        "android.permission.CAMERA"
+      ],
+      "package": "com.anonymous.normacamera"
+    }
+  }
+}

@@ -1,0 +1,42 @@
+# dependencies
+node_modules/
+
+# Expo/React Native local state
+.expo/
+
+# native folders (often generated)
+android/
+ios/
+
+# build outputs
+build/
+Dist/
+dist/
+coverage/
+.gradle/
+
+# bundler / tooling
+.expo-shared/
+
+# editor and system artifacts
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*.tmp
+*~
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.log
+
+# certificates / keystores (if present)
+*.keystore
+*.jks
+
+# gradle/local config
+local.properties
