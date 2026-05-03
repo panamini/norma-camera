@@ -1,0 +1,8 @@
+{
+  "name": "Pagecraft",
+  "slug": "pagecraft",
+  "summary": "A portable hybrid wiki contract for LLM-active memory, ingest discipline, and careful knowledge-base mutation.",
+  "description": "Pagecraft combines a durable wiki control plane with an execution layer for ambiguity control, minimal edits, and verified outcomes. It supports active-memory retrieval through wiki/hot.md, canonical index/log discipline, immutable raw sources, and reusable ingest workflows.",
+  "categories": ["knowledge-management", "coding-agents", "documentation"],
+  "license": "MIT"
+}
