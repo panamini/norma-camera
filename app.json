@@ -15,17 +15,11 @@
     },
     "android": {
       "permissions": [
+        "android.permission.CAMERA",
         "android.permission.CAMERA"
-      ]
+      ],
+      "package": "com.anonymous.normacamera"
     },
-    "plugins": [
-      [
-        "react-native-vision-camera",
-        {
-          "cameraPermissionText": "norma-camera uses the app camera to show live composition guides and capture photos.",
-          "enableMicrophonePermission": false
-        }
-      ]
-    ]
+    "plugins": []
   }
 }

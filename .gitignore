@@ -20,6 +20,8 @@ coverage/
 
 # editor and system artifacts
 .DS_Store
+.env
+.env.*
 .vscode/
 .idea/
 *.swp
