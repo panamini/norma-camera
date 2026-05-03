@@ -12,9 +12,5 @@
     "noFallthroughCasesInSwitch": true,
     "skipLibCheck": true
   },
-  "include": [
-    "App.tsx",
-    "src"
-  ],
-  "extends": "expo/tsconfig.base"
+  "include": ["App.tsx", "src"]
 }

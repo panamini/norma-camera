@@ -43,12 +43,12 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
       <View style={styles.primaryRow}>
         <Pressable
           accessibilityRole="switch"
-          accessibilityLabel="Toggle armed auto capture"
+          accessibilityLabel={armed ? 'Turn armed auto capture off' : 'Turn armed auto capture on'}
           accessibilityState={{ checked: armed }}
           onPress={toggleArmed}
           style={[styles.armedButton, armed ? styles.armedButtonActive : null]}
         >
-          <Text style={[styles.armedText, armed ? styles.armedTextActive : null]}>{armed ? 'ARMED' : 'ARM'}</Text>
+          <Text style={[styles.armedText, armed ? styles.armedTextActive : null]}>{armed ? 'ARM ON' : 'ARM OFF'}</Text>
         </Pressable>
 
         <Pressable
