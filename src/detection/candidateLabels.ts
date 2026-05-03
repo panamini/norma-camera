@@ -8,6 +8,8 @@ export function modeLabelForDetectionMode(mode: DetectionMode): string {
       return 'AUTO V0.2 · PLACEHOLDER';
     case 'simulated-detector':
       return 'SIMULATED DETECTOR';
+    case 'native-heuristic':
+      return 'NATIVE HEURISTIC';
   }
 }
 
@@ -19,6 +21,8 @@ export function instructionForDetectionMode(mode: DetectionMode, hasCandidate: b
       return hasCandidate ? 'No real object detection yet.' : 'Tap subject or switch Auto.';
     case 'simulated-detector':
       return 'Testing auto-capture flow.';
+    case 'native-heuristic':
+      return hasCandidate ? 'Real luminance analysis. No semantic object detection yet.' : 'Tap subject or switch mode.';
   }
 }
 
@@ -30,6 +34,8 @@ export function displayNameForDetectionSource(source: DetectionSource): string {
       return 'placeholder subject';
     case 'simulated-detector':
       return 'simulated subject';
+    case 'native-heuristic':
+      return 'native heuristic subject';
     case 'none':
       return 'no subject';
   }
@@ -47,6 +53,8 @@ export function shortLabelForCandidateSource(source: DetectionSource): string {
       return 'PLACEHOLDER';
     case 'simulated-detector':
       return 'SIMULATED';
+    case 'native-heuristic':
+      return 'NATIVE';
     case 'none':
       return 'NONE';
   }

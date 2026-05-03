@@ -13,7 +13,8 @@ const OVERLAY_MODES: OverlayMode[] = ['thirds', 'halves', 'both'];
 const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
   { value: 'manual', label: 'Manual', accessibilityLabel: 'Use manual tap subject mode' },
   { value: 'auto-placeholder', label: 'Auto placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
-  { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' }
+  { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' },
+  { value: 'native-heuristic', label: 'Native heuristic', accessibilityLabel: 'Use native heuristic frame analysis mode' }
 ];
 const QUALITY_MODES: DebugQualityMode[] = ['normal', 'blurry', 'badExposure', 'motion'];
 

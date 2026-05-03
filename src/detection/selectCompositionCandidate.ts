@@ -1,5 +1,6 @@
 import { clamp } from '../shared/clamp';
 import { modeLabelForDetectionMode } from './candidateLabels';
+import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CandidateSelectionInput, CandidateSelectionResult, CompositionCandidate, NormalizedPoint, NormalizedRect } from './types';
 
 const PLACEHOLDER_CENTER: NormalizedPoint = { x: 1 / 3, y: 1 / 2 };
@@ -7,6 +8,7 @@ const PLACEHOLDER_BOUNDS: NormalizedRect = { x: 0.25, y: 0.38, width: 0.18, heig
 const SIMULATED_BUCKET_MS = 3000;
 const SIMULATED_BOUNDS_WIDTH = 0.22;
 const SIMULATED_BOUNDS_HEIGHT = 0.28;
+const NATIVE_CONFIDENCE_THRESHOLD = 0.35;
 
 const SIMULATED_CENTERS = [
   { x: 1 / 3, y: 1 / 2, name: 'left-third' },
@@ -37,6 +39,62 @@ function boundsAround(center: NormalizedPoint, width: number, height: number): N
 function simulatedIndex(input: CandidateSelectionInput): number {
   const rawStep = input.simulatedStep ?? Math.floor(input.nowMs / SIMULATED_BUCKET_MS);
   return ((rawStep % SIMULATED_CENTERS.length) + SIMULATED_CENTERS.length) % SIMULATED_CENTERS.length;
+}
+
+function makeNativeCandidate(subject: NativeSubjectCandidate, analysis: NativeFrameAnalysisResult, nowMs: number): CompositionCandidate {
+  return {
+    id: `native-heuristic-${analysis.createdAtMs}`,
+    source: 'native-heuristic',
+    label: 'native heuristic subject',
+    center: subject.center,
+    bounds: subject.bounds,
+    confidence: subject.confidence,
+    createdAtMs: analysis.createdAtMs || nowMs
+  };
+}
+
+function selectNativeCandidate(input: CandidateSelectionInput, manualSubject: NormalizedPoint | null): CandidateSelectionResult {
+  if (manualSubject) {
+    return {
+      candidate: makeManualCandidate(manualSubject, input.nowMs),
+      modeLabel: 'NATIVE HEURISTIC · MANUAL FALLBACK',
+      explanation: 'Manual fallback is overriding Native Heuristic mode.'
+    };
+  }
+
+  const analysis = input.nativeFrameAnalysis ?? null;
+
+  if (!analysis || analysis.status === 'unavailable') {
+    return {
+      candidate: null,
+      modeLabel: 'NATIVE HEURISTIC · UNAVAILABLE',
+      explanation: 'Native heuristic unavailable. No Android frame-analysis plugin is wired yet.'
+    };
+  }
+
+  if (analysis.status === 'error') {
+    return {
+      candidate: null,
+      modeLabel: 'NATIVE HEURISTIC · ERROR',
+      explanation: analysis.explanation || 'Native heuristic returned an error. Manual fallback is active.'
+    };
+  }
+
+  const subject = analysis.subject;
+
+  if (!subject || analysis.status === 'low-confidence' || subject.confidence < NATIVE_CONFIDENCE_THRESHOLD) {
+    return {
+      candidate: null,
+      modeLabel: 'NATIVE HEURISTIC · NO STRONG CANDIDATE',
+      explanation: analysis.explanation || 'Native luminance analysis ran, but confidence was too low for auto-capture.'
+    };
+  }
+
+  return {
+    candidate: makeNativeCandidate(subject, analysis, input.nowMs),
+    modeLabel: modeLabelForDetectionMode(input.autoMode),
+    explanation: analysis.explanation || 'Real luminance analysis. No semantic object detection yet.'
+  };
 }
 
 export function selectCompositionCandidate(input: CandidateSelectionInput): CandidateSelectionResult {
@@ -72,6 +130,10 @@ export function selectCompositionCandidate(input: CandidateSelectionInput): Cand
       modeLabel: modeLabelForDetectionMode(input.autoMode),
       explanation: 'No real object detection yet. Placeholder subject is placed on the left third.'
     };
+  }
+
+  if (input.autoMode === 'native-heuristic') {
+    return selectNativeCandidate(input, manualSubject);
   }
 
   const simulated = SIMULATED_CENTERS[simulatedIndex(input)];

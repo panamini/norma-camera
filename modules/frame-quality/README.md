@@ -1,45 +1,25 @@
-# norma-camera frame analysis module plan
+# frame-quality future module
 
-## V0.1/V0.2A status
+V0.3A keeps frame quality stubbed unless a native frame-analysis module is present.
 
-The app currently uses `useFrameQualityStub()` for quality gates and V0.2A placeholder/simulated candidates for automatic composition UX. V0.2A does **not** read pixels and does **not** perform real object, horizon, or construction-line detection.
+Current app behavior:
 
-## Quality analysis plan
+- `useFrameQualityStub()` still provides default quality values.
+- Native Heuristic mode can display real sharpness/exposure only if a future Android module returns them.
+- Motion remains stubbed in this pass.
 
-The intended native quality module should:
+Future implementation should live in `modules/frame-analysis` and return:
 
-- Process downsampled luminance only, not full-resolution RGB frames.
-- Estimate exposure from mean luminance plus clipped highlight and clipped shadow ratios.
-- Estimate sharpness with variance of Laplacian on grayscale/luminance data.
-- Estimate motion from gyro/accelerometer data or thumbnail-to-thumbnail difference.
-- Return normalized scores from `0..100`:
-  - `sharpnessScore`
-  - `exposureScore`
-  - `motionScore` where lower is better
-  - `sceneChangedScore`
-- Run natively through a VisionCamera Native Frame Processor Plugin or an Expo local module using Swift/Kotlin/C++.
-- Throttle analysis to roughly 4–10 fps.
-- Drop frames when work is already in progress.
-- Never create a queue or backlog of frames.
-- Keep latest-frame-only semantics.
+- `sharpnessScore` from downsampled luminance edge energy / variance of Laplacian
+- `exposureScore` from mean luminance plus highlight/shadow clipping ratios
+- `motionScore` from sensors or frame-to-frame thumbnail deltas in a later pass
 
-## Detection V0.3 plan
+Constraints:
 
-Real object/horizon/line detection also needs native frame analysis. VisionCamera frames are in-memory buffers and should be processed by Native Frame Processor Plugins, not JavaScript pixel loops.
-
-GrapheneOS-first recommendation:
-
-- native heuristic frame-analysis plugin
-- downsample luminance
-- edge/gradient map
-- coarse saliency blob detection
-- Hough/line-like horizon estimates
-- return normalized subject/horizon/line candidates
-
-Optional experimental branch:
-
-- ML Kit bundled object detector
-- keep model bundled/offline if tested
-- do not require Google Play Services as the default product path
-
-ML Kit can detect/track objects on-device and return bounding boxes/tracking IDs, but model installation choice matters. A bundled model works offline/immediately but increases app size. An unbundled model relies on Google Play Services/model delivery, which is not ideal for GrapheneOS-first behavior. GrapheneOS supports sandboxed Google Play, but norma-camera should not require it by default.
+- process luminance only
+- throttle to 4–10 fps
+- drop frames when busy
+- no JS full-frame pixel loops
+- no frame backlog
+- no backend
+- no cloud AI

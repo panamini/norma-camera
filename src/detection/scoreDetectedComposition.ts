@@ -18,6 +18,8 @@ function explanationForCandidate(candidate: CompositionCandidate | null, fallbac
       return fallbackExplanation ?? 'Placeholder subject is being scored. No real object or horizon detection yet.';
     case 'simulated-detector':
       return fallbackExplanation ?? 'Simulated subject is being scored to test auto-capture flow.';
+    case 'native-heuristic':
+      return fallbackExplanation ?? 'Native heuristic subject is being scored. Real luminance analysis, no semantic object detection yet.';
     case 'none':
       return fallbackExplanation ?? 'No candidate. Tap subject or switch Auto.';
   }

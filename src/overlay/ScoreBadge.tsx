@@ -27,6 +27,7 @@ type Props = {
   statusLine: string;
   gateReasonLine: string;
   stabilityLine: string | null;
+  qualityLine: string;
   snapshot: CandidateScoreSnapshot;
   captureBanner: CaptureBanner | null;
   debugQualityMode: DebugQualityMode;
@@ -40,6 +41,7 @@ function ScoreBadgeComponent({
   statusLine,
   gateReasonLine,
   stabilityLine,
+  qualityLine,
   snapshot,
   captureBanner,
   debugQualityMode
@@ -64,6 +66,7 @@ function ScoreBadgeComponent({
       <Text style={styles.status}>{statusLine}</Text>
       <Text style={styles.meta}>{gateReasonLine}</Text>
       {stabilityLine ? <Text style={styles.meta}>{stabilityLine}</Text> : null}
+      <Text style={styles.meta}>{qualityLine}</Text>
 
       {snapshot.hasCandidate ? (
         <View style={styles.debugBlock}>

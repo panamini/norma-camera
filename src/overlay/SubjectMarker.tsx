@@ -28,7 +28,13 @@ function SubjectMarkerComponent({ width, height, sharedValues, source }: Props) 
       pointerEvents="none"
       style={[
         styles.marker,
-        source === 'manual' ? styles.manualMarker : source === 'heuristic-placeholder' ? styles.placeholderMarker : styles.simulatedMarker,
+        source === 'manual'
+          ? styles.manualMarker
+          : source === 'heuristic-placeholder'
+            ? styles.placeholderMarker
+            : source === 'native-heuristic'
+              ? styles.nativeMarker
+              : styles.simulatedMarker,
         markerStyle
       ]}
     />
@@ -58,5 +64,9 @@ const styles = StyleSheet.create({
   simulatedMarker: {
     borderColor: '#f2b84b',
     backgroundColor: 'rgba(242,184,75,0.20)'
+  },
+  nativeMarker: {
+    borderColor: '#84f28f',
+    backgroundColor: 'rgba(132,242,143,0.18)'
   }
 });

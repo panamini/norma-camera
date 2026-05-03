@@ -1,72 +1,78 @@
-# norma-camera frame analysis roadmap
+# modules/frame-analysis
 
-## Current V0.2A status
+Status in this branch: **scaffold only**.
 
-V0.2A does **not** read camera pixels. It adds an honest candidate layer so the product flow can be tested before native frame analysis exists:
+The app includes TypeScript contracts and UI wiring for `native-heuristic` mode, but no native Android frame processor is compiled yet.
 
-- manual fallback candidate from user tap
-- heuristic placeholder candidate at a useful guide position
-- simulated detector candidate that cycles across left third, center, and right third
-
-The placeholder and simulated candidates are not object detection. The UI must keep saying this clearly.
-
-## Why real detection is native
-
-VisionCamera frames are in-memory native buffers. Real subject, horizon, and line analysis should run in a Native Frame Processor Plugin or a local native module. The app should not copy full frames into JavaScript and should not run JS pixel loops.
-
-Any native analyzer should use latest-frame-only semantics:
-
-- throttle analysis to about 4–10 fps
-- drop frames when busy
-- never create a backlog
-- return compact normalized candidates only
-
-## ML Kit object detection option
-
-ML Kit can detect and track objects on-device and return bounding boxes/tracking IDs. Model packaging matters:
-
-- Bundled model: works offline/immediately after install, but increases app size.
-- Unbundled model: smaller app, but model delivery can rely on Google Play Services/model download behavior.
-
-For GrapheneOS-first compatibility, unbundled model delivery is not ideal as a default. GrapheneOS supports sandboxed Google Play, but norma-camera should not require it by default.
-
-An optional experimental branch can test a bundled ML Kit object detector, as long as the app keeps a manual fallback and detector-unavailable UI.
-
-## Preferred V0.3 GrapheneOS-first path
-
-Build a small native heuristic frame-analysis plugin:
-
-1. Downsample luminance only.
-2. Compute a coarse edge/gradient map.
-3. Find contrast/saliency blobs as subject candidates.
-4. Estimate horizon or strong construction lines with Hough-like or line-segment heuristics.
-5. Return normalized candidates:
-   - subject center/bounds/confidence
-   - horizon line/confidence
-   - strong line segments/confidence
-6. Keep analysis throttled and latest-frame-only.
-
-## Expected V0.3 files
+## Intended V0.3A native heuristic
 
 ```text
-src/detection/
-  types.ts
-  candidateLabels.ts
-  selectCompositionCandidate.ts
-  scoreDetectedComposition.ts
-  useNativeFrameAnalysisCandidate.ts
-
-modules/frame-analysis/
-  android/
-  ios/ optional later
-  README.md
+frame
+  -> native Android frame-analysis plugin
+  -> Y plane / luminance only
+  -> downsample to 96x72 or 128x96
+  -> exposure stats
+  -> sharpness / edge energy
+  -> contrast/saliency candidate
+  -> optional horizontal line diagnostic
+  -> compact normalized result to JS
 ```
 
-## V0.3 acceptance criteria
+## Output contract
 
-- Real native frame analysis runs without backend/cloud.
-- Manual tap remains fallback.
-- Detector status is visible.
-- No JS full-frame pixel processing.
-- No frame queue/backlog.
-- Auto-capture uses real detected candidates only when confidence is high enough.
+```ts
+type NativeFrameAnalysisResult = {
+  status: 'unavailable' | 'ready' | 'low-confidence' | 'error';
+  createdAtMs: number;
+  subject: NativeSubjectCandidate | null;
+  lineCandidate?: NativeLineCandidate | null;
+  exposure: NativeExposureMetrics | null;
+  sharpness: NativeSharpnessMetrics | null;
+  explanation: string;
+  analysisFps?: number;
+};
+```
+
+## Safety constraints
+
+- latest-frame-only
+- throttle to 4–10 fps
+- drop frame if analyzer is busy
+- never queue frames
+- no full-frame copy into JS
+- no JS pixel loops
+- no backend
+- no cloud AI
+- no ML Kit in V0.3A
+- no Google Play Services dependency
+
+## Suggested Android algorithm
+
+1. Read Y plane from the camera frame.
+2. Downsample luminance into a small grid.
+3. Exposure:
+   - mean luminance
+   - clipped highlight ratio
+   - crushed shadow ratio
+   - score 0–100
+4. Sharpness:
+   - variance of Laplacian or Sobel-like edge energy
+   - score 0–100
+5. Subject candidate:
+   - local contrast / gradient magnitude
+   - center-weighted visual mass
+   - coarse bbox from high-energy cells
+   - confidence from energy concentration and bbox size
+6. Optional line diagnostic:
+   - horizontal-gradient accumulator
+   - return only if confidence is meaningful
+
+## Native module name expected by JS scaffold
+
+The current JS hook looks for:
+
+```ts
+NativeModules.NormaFrameAnalysis?.getLatestAnalysis()
+```
+
+That is intentionally a future adapter contract. It is not present in this scaffold branch.

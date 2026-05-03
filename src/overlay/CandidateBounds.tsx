@@ -29,7 +29,17 @@ function CandidateBoundsComponent({ width, height, source, sharedValues }: Props
   return (
     <Animated.View
       pointerEvents="none"
-      style={[styles.bounds, source === 'heuristic-placeholder' ? styles.placeholderBounds : styles.simulatedBounds, animatedStyle]}
+      style={[
+        styles.bounds,
+        source === 'heuristic-placeholder'
+          ? styles.placeholderBounds
+          : source === 'native-heuristic'
+            ? styles.nativeBounds
+            : source === 'simulated-detector'
+              ? styles.simulatedBounds
+              : styles.simulatedBounds,
+        animatedStyle
+      ]}
     />
   );
 }
@@ -51,5 +61,8 @@ const styles = StyleSheet.create({
   },
   simulatedBounds: {
     borderColor: '#f2b84b'
+  },
+  nativeBounds: {
+    borderColor: '#84f28f'
   }
 });

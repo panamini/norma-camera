@@ -1,4 +1,5 @@
 import type { CompositionScoreResult, GuideKind, NormalizedPoint } from '../composition/types';
+import type { NativeFrameAnalysisResult } from './nativeHeuristicTypes';
 
 export type { NormalizedPoint };
 
@@ -9,9 +10,9 @@ export type NormalizedRect = {
   height: number;
 };
 
-export type DetectionSource = 'manual' | 'heuristic-placeholder' | 'simulated-detector' | 'none';
+export type DetectionSource = 'manual' | 'heuristic-placeholder' | 'simulated-detector' | 'native-heuristic' | 'none';
 
-export type DetectionMode = 'manual' | 'auto-placeholder' | 'simulated-detector';
+export type DetectionMode = 'manual' | 'auto-placeholder' | 'simulated-detector' | 'native-heuristic';
 
 export type CompositionCandidate = {
   id: string;
@@ -28,6 +29,7 @@ export type CandidateSelectionInput = {
   manualSubject?: NormalizedPoint | null;
   autoMode: DetectionMode;
   simulatedStep?: number;
+  nativeFrameAnalysis?: NativeFrameAnalysisResult | null;
 };
 
 export type CandidateSelectionResult = {

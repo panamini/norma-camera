@@ -12,6 +12,7 @@ import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composit
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
+import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
@@ -130,6 +131,11 @@ function buildStabilityLine(decision: AutoCaptureDecision): string | null {
   return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
 }
 
+function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean }): string {
+  const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
+  return `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
+}
+
 function titleForCandidate(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
   if (!candidate) return 'NO SUBJECT';
   return result.label === 'TAP SUBJECT' ? candidate.label.toUpperCase() : result.label;
@@ -151,6 +157,10 @@ export function CameraScreen() {
   const lastCaptureAtMs = useCameraUiStore((state) => state.lastCaptureAtMs);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const addCapturedPhoto = useCameraUiStore((state) => state.addCapturedPhoto);
+  const nativeHeuristic = useNativeHeuristicCandidate(detectionMode === 'native-heuristic');
+  const nativeSharpnessScore = nativeHeuristic.analysis?.sharpness?.sharpnessScore;
+  const nativeExposureScore = nativeHeuristic.analysis?.exposure?.exposureScore;
+  const nativeQualityIsReal = detectionMode === 'native-heuristic' && typeof nativeSharpnessScore === 'number' && typeof nativeExposureScore === 'number';
   const detectionModeRef = useRef<DetectionMode>(detectionMode);
 
   const qualitySharedValues = useFrameQualityStub(debugQualityMode);
@@ -174,18 +184,21 @@ export function CameraScreen() {
     boundsText: null,
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
-    candidateExplanation: 'No object, horizon, or construction-line detection runs in V0.2A.'
+    candidateExplanation: 'Native heuristic mode is scaffolded but unavailable until the Android frame-analysis plugin is wired.'
   });
+  const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
 
   useEffect(() => {
-    sharedValues.sharpnessScore.value = qualitySharedValues.sharpnessScore.value;
-    sharedValues.exposureScore.value = qualitySharedValues.exposureScore.value;
+    sharedValues.sharpnessScore.value =
+      nativeQualityIsReal && typeof nativeSharpnessScore === 'number' ? nativeSharpnessScore : qualitySharedValues.sharpnessScore.value;
+    sharedValues.exposureScore.value =
+      nativeQualityIsReal && typeof nativeExposureScore === 'number' ? nativeExposureScore : qualitySharedValues.exposureScore.value;
     sharedValues.motionScore.value = qualitySharedValues.motionScore.value;
     sharedValues.sceneChangedScore.value = qualitySharedValues.sceneChangedScore.value;
-  }, [debugQualityMode, qualitySharedValues, sharedValues]);
+  }, [debugQualityMode, nativeExposureScore, nativeQualityIsReal, nativeSharpnessScore, qualitySharedValues, sharedValues]);
 
   useEffect(() => {
     if (detectionModeRef.current !== detectionMode) {
@@ -218,7 +231,12 @@ export function CameraScreen() {
 
   const selectAndApplyCandidate = useCallback(
     (evaluationNowMs: number): AppliedComposition => {
-      const selection = selectCompositionCandidate({ nowMs: evaluationNowMs, manualSubject, autoMode: detectionMode });
+      const selection = selectCompositionCandidate({
+        nowMs: evaluationNowMs,
+        manualSubject,
+        autoMode: detectionMode,
+        nativeFrameAnalysis: nativeHeuristic.analysis
+      });
       const detectedScore = scoreDetectedComposition(selection.candidate, activeGuideKinds, selection.explanation);
       const candidate = detectedScore.candidate;
       const result = detectedScore.composition;
@@ -258,7 +276,7 @@ export function CameraScreen() {
 
       return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore) };
     },
-    [activeGuideKinds, detectionMode, manualSubject, sharedValues]
+    [activeGuideKinds, detectionMode, manualSubject, nativeHeuristic.analysis, sharedValues]
   );
 
   const publishCandidateUi = useCallback(
@@ -276,8 +294,16 @@ export function CameraScreen() {
       setAutoStatusLine(buildAutoStatusLine({ armed, hasCandidate, score: result.score, decision: params.decision }));
       setGateReasonLine(buildGateReasonLine(params.decision, hasCandidate));
       setStabilityLine(buildStabilityLine(params.decision));
+      setQualityLine(
+        buildQualityLine({
+          sharpnessScore: sharedValues.sharpnessScore.value,
+          exposureScore: sharedValues.exposureScore.value,
+          motionScore: sharedValues.motionScore.value,
+          nativeQualityIsReal
+        })
+      );
     },
-    [armed, detectionMode]
+    [armed, detectionMode, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -406,6 +432,7 @@ export function CameraScreen() {
         statusLine={autoStatusLine}
         gateReasonLine={gateReasonLine}
         stabilityLine={stabilityLine}
+        qualityLine={qualityLine}
         snapshot={candidateSnapshot}
         captureBanner={captureBanner}
         debugQualityMode={debugQualityMode}
