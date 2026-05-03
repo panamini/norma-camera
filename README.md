@@ -116,6 +116,29 @@ cat /tmp/norma-camera-connect.log
 - Si `gradlew`/build Android n’est pas requis pour ce flux : le build debug doit être déjà installé localement
 - Si l’appareil reste bloqué en connexion, inspecter uniquement le blocage final dans `/tmp/norma-camera-connect.log`
 
+## Raccourcis ultra-courts (niveau novice)
+
+- `npm run u` = **Terminal 1** : nettoie `8081`, configure `adb reverse`, lance Metro.
+- `npm run d` = **Terminal 2** : démarre l’app installée sur le téléphone avec l’URL de dev.
+
+### Exemple d’utilisation
+
+1) Ouvrir Terminal 1 et lancer :
+
+```bash
+npm run u
+```
+
+2) Ouvrir Terminal 2 (après que Terminal 1 affiche le QR / le bon message Metro) et lancer :
+
+```bash
+npm run d
+```
+
+L’idée est simple :
+- `u` = “up / boot Metro”
+- `d` = “device / app launch”
+
 ## Prompt LLM recommandé (copier-coller)
 
 Tu es sur macOS. Le projet est dans `/Volumes/video/git/norma-camera`.  

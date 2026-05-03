@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { OverlayMode } from '../composition/types';
+import type { DetectionMode } from '../detection/types';
 import { useCameraUiStore, type DebugQualityMode } from '../state/cameraUiStore';
 
 type Props = {
@@ -9,18 +10,44 @@ type Props = {
 };
 
 const OVERLAY_MODES: OverlayMode[] = ['thirds', 'halves', 'both'];
+const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
+  { value: 'manual', label: 'Manual', accessibilityLabel: 'Use manual tap subject mode' },
+  { value: 'auto-placeholder', label: 'Auto placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
+  { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' }
+];
 const QUALITY_MODES: DebugQualityMode[] = ['normal', 'blurry', 'badExposure', 'motion'];
 
 function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
   const overlayMode = useCameraUiStore((state) => state.overlayMode);
+  const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const setOverlayMode = useCameraUiStore((state) => state.setOverlayMode);
+  const setDetectionMode = useCameraUiStore((state) => state.setDetectionMode);
   const toggleArmed = useCameraUiStore((state) => state.toggleArmed);
   const setDebugQualityMode = useCameraUiStore((state) => state.setDebugQualityMode);
 
   return (
     <View style={styles.root}>
+      <View accessibilityLabel="Detection mode" style={styles.segmentedWide}>
+        {DETECTION_MODES.map((mode) => {
+          const active = mode.value === detectionMode;
+
+          return (
+            <Pressable
+              key={mode.value}
+              accessibilityRole="button"
+              accessibilityLabel={mode.accessibilityLabel}
+              accessibilityState={{ selected: active }}
+              onPress={() => setDetectionMode(mode.value)}
+              style={[styles.segmentButton, active ? styles.segmentButtonActive : null]}
+            >
+              <Text style={[styles.segmentText, active ? styles.segmentTextActive : null]}>{mode.label}</Text>
+            </Pressable>
+          );
+        })}
+      </View>
+
       <View accessibilityLabel="Overlay mode" style={styles.segmented}>
         {OVERLAY_MODES.map((mode) => {
           const active = mode === overlayMode;
@@ -43,12 +70,12 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
       <View style={styles.primaryRow}>
         <Pressable
           accessibilityRole="switch"
-          accessibilityLabel={armed ? 'Turn armed auto capture off' : 'Turn armed auto capture on'}
+          accessibilityLabel="Toggle armed auto capture"
           accessibilityState={{ checked: armed }}
           onPress={toggleArmed}
           style={[styles.armedButton, armed ? styles.armedButtonActive : null]}
         >
-          <Text style={[styles.armedText, armed ? styles.armedTextActive : null]}>{armed ? 'ARM ON' : 'ARM OFF'}</Text>
+          <Text style={[styles.armedText, armed ? styles.armedTextActive : null]}>{armed ? 'ARMED' : 'ARM'}</Text>
         </Pressable>
 
         <Pressable
@@ -91,9 +118,9 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    bottom: 28,
+    bottom: 24,
     alignItems: 'center',
-    gap: 14
+    gap: 10
   },
   segmented: {
     flexDirection: 'row',
@@ -101,18 +128,27 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(0,0,0,0.5)',
     padding: 4
   },
+  segmentedWide: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    borderRadius: 18,
+    backgroundColor: 'rgba(0,0,0,0.5)',
+    padding: 4,
+    gap: 3
+  },
   segmentButton: {
     borderRadius: 999,
-    paddingHorizontal: 14,
-    paddingVertical: 8
+    paddingHorizontal: 11,
+    paddingVertical: 7
   },
   segmentButtonActive: {
     backgroundColor: 'rgba(255,255,255,0.9)'
   },
   segmentText: {
     color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '800',
     textTransform: 'uppercase'
   },
   segmentTextActive: {

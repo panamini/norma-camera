@@ -14,6 +14,7 @@ type Props = {
 };
 
 type HighlightLineProps = {
+  key?: string;
   axis: 'x' | 'y';
   value: number;
   width: number;

@@ -6,14 +6,17 @@ import { Camera, usePhotoOutput } from 'react-native-vision-camera';
 import { createAutoCaptureController } from '../autocapture/createAutoCaptureController';
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
-import { describeGuideHit, explainGuideScore, formatNormalizedPoint } from '../composition/describeGuideHit';
 import { guideKindsForOverlayMode } from '../composition/guides';
-import { scoreFrameComposition } from '../composition/scoreFrameComposition';
-import { scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
+import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
+import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
+import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
+import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
+import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
+import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
 import { CompositionOverlay } from '../overlay/CompositionOverlay';
-import { ScoreBadge } from '../overlay/ScoreBadge';
+import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../overlay/ScoreBadge';
 import { clamp } from '../shared/clamp';
 import { nowMs } from '../shared/time';
 import { useCameraUiStore } from '../state/cameraUiStore';
@@ -21,40 +24,18 @@ import { CameraControls } from './CameraControls';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
 import { useFrameQualityStub } from './useFrameQualityStub';
 
-type LayoutSize = {
-  width: number;
-  height: number;
-};
+type LayoutSize = { width: number; height: number };
 
-type CompositionDisplay = {
-  hasSubject: boolean;
-  point: NormalizedPoint | null;
-  label: string;
-  score: number;
-  coordinateLabel: string;
-  nearestGuideLabel: string;
-  scoreReasonLabel: string;
+type AppliedComposition = {
+  selection: CandidateSelectionResult;
+  detectedScore: DetectedCompositionScore;
+  snapshot: CandidateScoreSnapshot;
 };
-
-type CaptureBanner = {
-  uri: string;
-  score: number;
-} | null;
 
 const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
 const LABEL_UPDATE_INTERVAL_MS = 500;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
-const CAPTURE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
-
-const EMPTY_COMPOSITION_DISPLAY: CompositionDisplay = {
-  hasSubject: false,
-  point: null,
-  label: 'TAP SUBJECT',
-  score: 0,
-  coordinateLabel: 'x=— · y=—',
-  nearestGuideLabel: 'nearest guide: none',
-  scoreReasonLabel: 'No subject point has been selected. Manual V0 does not detect objects or horizons yet.'
-};
+const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 
 function findBestAxisHit(hits: GuideHit[], axis: 'x' | 'y'): GuideHit | null {
   const best = hits.filter((hit) => hit.guide.axis === axis).sort((a, b) => b.score - a.score || a.distance - b.distance)[0];
@@ -65,80 +46,93 @@ function uriForFilePath(filePath: string): string {
   return filePath.startsWith('file://') ? filePath : `file://${filePath}`;
 }
 
-function displayFromScore(point: NormalizedPoint | null, result: CompositionScoreResult): CompositionDisplay {
-  if (!point) {
-    return EMPTY_COMPOSITION_DISPLAY;
+function formatBounds(bounds: NormalizedRect | undefined): string | null {
+  if (!bounds) return null;
+  return `x=${bounds.x.toFixed(3)} · y=${bounds.y.toFixed(3)} · w=${bounds.width.toFixed(3)} · h=${bounds.height.toFixed(3)}`;
+}
+
+function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
+  if (!candidate) return 'No subject candidate. Tap subject or switch Auto.';
+  if (!result.bestHit) return 'No active composition guide is available for this overlay mode.';
+
+  const guideName = displayNameForGuide(result.bestHit.guide);
+  const distance = result.bestHit.distance.toFixed(3);
+
+  if (result.score >= READY_SCORE_THRESHOLD) {
+    return `High: ${candidate.label} is ${distance} from the ${guideName}; ready threshold is ${READY_SCORE_THRESHOLD}.`;
+  }
+  if (result.score >= 45) {
+    return `Medium: ${candidate.label} is ${distance} from the ${guideName}; move closer for ${READY_SCORE_THRESHOLD}.`;
+  }
+  return `Low: ${candidate.label} is ${distance} from the ${guideName}; guide score reaches 0 around ${DEFAULT_MAX_GUIDE_DISTANCE}.`;
+}
+
+function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): CandidateScoreSnapshot {
+  const candidate = detectedScore.candidate;
+  if (!candidate) {
+    return {
+      hasCandidate: false,
+      candidateSourceText: null,
+      candidateConfidenceText: null,
+      subjectText: null,
+      boundsText: null,
+      nearestGuideText: null,
+      scoreReason: makeScoreReason(null, detectedScore.composition),
+      candidateExplanation: detectedScore.explanation
+    };
   }
 
   return {
-    hasSubject: true,
-    point,
-    label: result.label,
-    score: result.score,
-    coordinateLabel: formatNormalizedPoint(point),
-    nearestGuideLabel: describeGuideHit(result.bestHit),
-    scoreReasonLabel: explainGuideScore(result.score, result.bestHit)
+    hasCandidate: true,
+    candidateSourceText: candidate.label,
+    candidateConfidenceText: formatCandidateConfidence(candidate.confidence),
+    subjectText: formatNormalizedPoint(candidate.center),
+    boundsText: formatBounds(candidate.bounds),
+    nearestGuideText: formatGuideHit(detectedScore.composition.bestHit),
+    scoreReason: makeScoreReason(candidate, detectedScore.composition),
+    candidateExplanation: detectedScore.explanation
   };
 }
 
+function buildAutoStatusLine(params: { armed: boolean; hasCandidate: boolean; score: number; decision: AutoCaptureDecision }): string {
+  const roundedScore = Math.round(params.score);
+  if (!params.armed) return 'ARM OFF · auto-capture disabled';
+  if (!params.hasCandidate) return 'ARMED · no subject';
+  if (roundedScore < READY_SCORE_THRESHOLD) return `ARMED · adjust composition · score ${roundedScore} / ${READY_SCORE_THRESHOLD}`;
+  if (params.decision.kind === 'candidate') return 'ARMED · hold steady';
+  if (params.decision.kind === 'capture') return 'ARMED · capture triggered';
 
-function statusForManualDisplay(display: CompositionDisplay, armed: boolean): string {
-  if (!armed) {
-    return 'ARM OFF · auto-capture disabled';
-  }
-
-  if (!display.hasSubject) {
-    return 'ARMED · tap subject first';
-  }
-
-  if (display.score < CAPTURE_THRESHOLD) {
-    return `ARMED · adjust composition · score ${Math.round(display.score)} / ${CAPTURE_THRESHOLD}`;
-  }
-
-  return 'ARMED · hold steady';
-}
-
-function statusForDecision(hasSubject: boolean, score: number, armed: boolean, decision: AutoCaptureDecision): string {
-  if (!armed) {
-    return 'ARM OFF · auto-capture disabled';
-  }
-
-  if (!hasSubject) {
-    return 'ARMED · tap subject first';
-  }
-
-  if (score < CAPTURE_THRESHOLD) {
-    return `ARMED · adjust composition · score ${Math.round(score)} / ${CAPTURE_THRESHOLD}`;
-  }
-
-  if (decision.kind === 'candidate' || decision.kind === 'capture') {
-    return 'ARMED · hold steady';
-  }
-
-  switch (decision.reason) {
+  switch (params.decision.reason) {
     case 'sharpness below threshold':
-      return 'ARMED · quality gate: blurry frame';
+      return 'ARMED · quality blocked · blurry';
     case 'exposure below threshold':
-      return 'ARMED · quality gate: bad exposure';
+      return 'ARMED · quality blocked · exposure';
     case 'motion too high':
-      return 'ARMED · quality gate: motion too high';
-    case 'scene unchanged':
-      return 'ARMED · scene unchanged';
+      return 'ARMED · quality blocked · motion';
     case 'cooldown active':
       return 'ARMED · cooldown active';
+    case 'scene unchanged':
+      return 'ARMED · scene unchanged';
     default:
-      return `ARMED · ${decision.reason}`;
+      return 'ARMED · hold steady';
   }
 }
 
-function stabilityLabelForDecision(decision: AutoCaptureDecision): string | null {
-  if (decision.kind !== 'candidate') {
-    return null;
-  }
+function buildGateReasonLine(decision: AutoCaptureDecision, hasCandidate: boolean): string {
+  if (!hasCandidate && decision.reason === 'composition below threshold') return 'gate: no subject candidate';
+  return `gate: ${decision.reason}`;
+}
 
+function buildStabilityLine(decision: AutoCaptureDecision): string | null {
+  if (decision.kind !== 'candidate') return null;
   const stableForMs = Math.max(0, decision.stableForMs);
   const progress = Math.min(100, Math.round((stableForMs / DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs) * 100));
-  return `stability ${progress}% · ${Math.round(stableForMs)} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
+  return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
+}
+
+function titleForCandidate(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
+  if (!candidate) return 'NO SUBJECT';
+  return result.label === 'TAP SUBJECT' ? candidate.label.toUpperCase() : result.label;
 }
 
 export function CameraScreen() {
@@ -146,23 +140,43 @@ export function CameraScreen() {
   const photoOutput = usePhotoOutput();
   const sharedValues = useCompositionSharedValues();
   const autoCaptureController = useRef(createAutoCaptureController(DEFAULT_AUTO_CAPTURE_CONFIG));
-  const compositionLabelRef = useRef('TAP SUBJECT');
+  const compositionLabelRef = useRef('NO SUBJECT');
   const mountedRef = useRef(true);
   const isCapturingRef = useRef(false);
+  const wasArmedRef = useRef(false);
 
   const overlayMode = useCameraUiStore((state) => state.overlayMode);
+  const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const lastCaptureAtMs = useCameraUiStore((state) => state.lastCaptureAtMs);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const addCapturedPhoto = useCameraUiStore((state) => state.addCapturedPhoto);
+  const detectionModeRef = useRef<DetectionMode>(detectionMode);
 
   const qualitySharedValues = useFrameQualityStub(debugQualityMode);
   const [layout, setLayout] = useState<LayoutSize>({ width: 0, height: 0 });
+  const [manualSubject, setManualSubject] = useState<NormalizedPoint | null>(null);
   const [isCapturing, setIsCapturing] = useState(false);
-  const [compositionDisplay, setCompositionDisplay] = useState<CompositionDisplay>(EMPTY_COMPOSITION_DISPLAY);
-  const [armStatusLabel, setArmStatusLabel] = useState('ARM OFF · auto-capture disabled');
-  const [stabilityLabel, setStabilityLabel] = useState<string | null>(null);
-  const [captureBanner, setCaptureBanner] = useState<CaptureBanner>(null);
+  const [displayModeLabel, setDisplayModeLabel] = useState(modeLabelForDetectionMode(detectionMode));
+  const [displayTitle, setDisplayTitle] = useState('NO SUBJECT');
+  const [displayInstruction, setDisplayInstruction] = useState(instructionForDetectionMode(detectionMode, false));
+  const [displayScore, setDisplayScore] = useState(0);
+  const [autoStatusLine, setAutoStatusLine] = useState('ARM OFF · auto-capture disabled');
+  const [gateReasonLine, setGateReasonLine] = useState('gate: not armed');
+  const [stabilityLine, setStabilityLine] = useState<string | null>(null);
+  const [candidateSource, setCandidateSource] = useState<DetectionSource>('none');
+  const [candidateBounds, setCandidateBounds] = useState<NormalizedRect | undefined>(undefined);
+  const [candidateSnapshot, setCandidateSnapshot] = useState<CandidateScoreSnapshot>({
+    hasCandidate: false,
+    candidateSourceText: null,
+    candidateConfidenceText: null,
+    subjectText: null,
+    boundsText: null,
+    nearestGuideText: null,
+    scoreReason: 'No subject candidate. Tap subject or switch Auto.',
+    candidateExplanation: 'No object, horizon, or construction-line detection runs in V0.2A.'
+  });
+  const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
 
@@ -174,52 +188,104 @@ export function CameraScreen() {
   }, [debugQualityMode, qualitySharedValues, sharedValues]);
 
   useEffect(() => {
-    return () => {
-      mountedRef.current = false;
-    };
+    if (detectionModeRef.current !== detectionMode) {
+      if (detectionMode !== 'manual') {
+        setManualSubject(null);
+      }
+      autoCaptureController.current.reset();
+      detectionModeRef.current = detectionMode;
+    }
+  }, [detectionMode]);
+
+  useEffect(() => {
+    const justArmed = armed && !wasArmedRef.current;
+    wasArmedRef.current = armed;
+
+    if (!justArmed) {
+      return;
+    }
+
+    if (detectionMode !== 'manual' && manualSubject !== null) {
+      setManualSubject(null);
+      autoCaptureController.current.reset();
+      setCaptureBanner(null);
+    }
+  }, [armed, detectionMode, manualSubject]);
+
+  useEffect(() => () => {
+    mountedRef.current = false;
   }, []);
 
-  const applyCompositionScore = useCallback(
-    (point: NormalizedPoint | null) => {
-      const result = scoreFrameComposition({
-        subjectCenter: point,
-        activeGuideKinds
-      });
+  const selectAndApplyCandidate = useCallback(
+    (evaluationNowMs: number): AppliedComposition => {
+      const selection = selectCompositionCandidate({ nowMs: evaluationNowMs, manualSubject, autoMode: detectionMode });
+      const detectedScore = scoreDetectedComposition(selection.candidate, activeGuideKinds, selection.explanation);
+      const candidate = detectedScore.candidate;
+      const result = detectedScore.composition;
 
       sharedValues.compositionScore.value = result.score;
-      compositionLabelRef.current = result.label;
+      compositionLabelRef.current = titleForCandidate(candidate, result);
 
-      if (!point) {
+      if (!candidate) {
+        sharedValues.hasSubject.value = 0;
+        sharedValues.hasCandidateBounds.value = 0;
         sharedValues.bestGuideX.value = -1;
         sharedValues.bestGuideY.value = -1;
         sharedValues.highlightIntensity.value = withTiming(0, { duration: 120 });
-        return displayFromScore(null, result);
+        return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore) };
       }
 
-      const guideScore = scorePointAgainstGuides(point, { activeGuideKinds });
+      sharedValues.subjectX.value = candidate.center.x;
+      sharedValues.subjectY.value = candidate.center.y;
+      sharedValues.hasSubject.value = 1;
+
+      if (candidate.bounds) {
+        sharedValues.candidateBoundsX.value = candidate.bounds.x;
+        sharedValues.candidateBoundsY.value = candidate.bounds.y;
+        sharedValues.candidateBoundsWidth.value = candidate.bounds.width;
+        sharedValues.candidateBoundsHeight.value = candidate.bounds.height;
+        sharedValues.hasCandidateBounds.value = 1;
+      } else {
+        sharedValues.hasCandidateBounds.value = 0;
+      }
+
+      const guideScore = scorePointAgainstGuides(candidate.center, { activeGuideKinds });
       const bestXHit = findBestAxisHit(guideScore.hits, 'x');
       const bestYHit = findBestAxisHit(guideScore.hits, 'y');
-
       sharedValues.bestGuideX.value = bestXHit?.guide.value ?? -1;
       sharedValues.bestGuideY.value = bestYHit?.guide.value ?? -1;
       sharedValues.highlightIntensity.value = withTiming(result.score >= HIGHLIGHT_SCORE_THRESHOLD ? 1 : 0, { duration: 120 });
 
-      return displayFromScore(point, result);
+      return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore) };
     },
-    [activeGuideKinds, sharedValues]
+    [activeGuideKinds, detectionMode, manualSubject, sharedValues]
+  );
+
+  const publishCandidateUi = useCallback(
+    (params: { selection: CandidateSelectionResult; detectedScore: DetectedCompositionScore; snapshot: CandidateScoreSnapshot; decision: AutoCaptureDecision }) => {
+      const candidate = params.detectedScore.candidate;
+      const hasCandidate = Boolean(candidate);
+      const result = params.detectedScore.composition;
+      setDisplayModeLabel(params.selection.modeLabel);
+      setDisplayTitle(hasCandidate && params.decision.kind === 'candidate' ? 'COMPOSITION READY' : titleForCandidate(candidate, result));
+      setDisplayInstruction(instructionForDetectionMode(detectionMode, hasCandidate));
+      setDisplayScore(result.score);
+      setCandidateSource(candidate?.source ?? 'none');
+      setCandidateBounds(candidate?.bounds);
+      setCandidateSnapshot(params.snapshot);
+      setAutoStatusLine(buildAutoStatusLine({ armed, hasCandidate, score: result.score, decision: params.decision }));
+      setGateReasonLine(buildGateReasonLine(params.decision, hasCandidate));
+      setStabilityLine(buildStabilityLine(params.decision));
+    },
+    [armed, detectionMode]
   );
 
   useEffect(() => {
-    const display =
-      sharedValues.hasSubject.value === 1
-        ? applyCompositionScore({ x: sharedValues.subjectX.value, y: sharedValues.subjectY.value })
-        : applyCompositionScore(null);
-
-    setCompositionDisplay(display);
-    setArmStatusLabel(statusForManualDisplay(display, armed));
-    setStabilityLabel(null);
+    const applied = selectAndApplyCandidate(nowMs());
+    const idleDecision: AutoCaptureDecision = { kind: 'idle', reason: armed ? 'waiting for next check' : 'not armed', nextStableSinceMs: null };
+    publishCandidateUi({ ...applied, decision: idleDecision });
     autoCaptureController.current.reset();
-  }, [applyCompositionScore, armed, overlayMode, sharedValues]);
+  }, [armed, publishCandidateUi, selectAndApplyCandidate]);
 
   const handleLayout = useCallback((event: LayoutChangeEvent) => {
     const { width, height } = event.nativeEvent.layout;
@@ -232,32 +298,15 @@ export function CameraScreen() {
         return;
       }
 
-      const point: NormalizedPoint = {
+      setManualSubject({
         x: clamp(event.nativeEvent.locationX / layout.width, 0, 1),
         y: clamp(event.nativeEvent.locationY / layout.height, 0, 1)
-      };
-
-      sharedValues.subjectX.value = point.x;
-      sharedValues.subjectY.value = point.y;
-      sharedValues.hasSubject.value = 1;
-      const display = applyCompositionScore(point);
-
-      setCompositionDisplay(display);
-      setArmStatusLabel(statusForManualDisplay(display, armed));
-      setStabilityLabel(null);
+      });
       setCaptureBanner(null);
       autoCaptureController.current.reset();
     },
-    [applyCompositionScore, armed, layout.height, layout.width, sharedValues]
+    [layout.height, layout.width]
   );
-
-  useEffect(() => {
-    setArmStatusLabel(statusForManualDisplay(compositionDisplay, armed));
-
-    if (!armed || !compositionDisplay.hasSubject || compositionDisplay.score < CAPTURE_THRESHOLD) {
-      setStabilityLabel(null);
-    }
-  }, [armed, compositionDisplay.hasSubject, compositionDisplay.score]);
 
   const capturePhoto = useCallback(
     async (trigger: 'manual' | 'auto') => {
@@ -287,24 +336,19 @@ export function CameraScreen() {
           uri = `simulated-capture://${createdAtMs}`;
         }
 
-        addCapturedPhoto({
-          uri,
-          createdAtMs,
-          label,
-          score
-        });
+        addCapturedPhoto({ uri, createdAtMs, label, score });
         autoCaptureController.current.reset();
-        setCaptureBanner({ uri, score });
-        setArmStatusLabel(trigger === 'auto' ? 'ARMED · captured' : 'MANUAL CAPTURED');
-        setStabilityLabel(null);
+        setCaptureBanner({ score, uri, trigger });
+        setAutoStatusLine(trigger === 'auto' ? 'ARMED · captured' : 'manual capture complete');
+        setGateReasonLine('gate: capture complete');
+        setStabilityLine(null);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'Unknown capture error';
-        setArmStatusLabel(`CAPTURE FAILED: ${message}`);
+        setAutoStatusLine(`capture failed · ${message}`);
+        setGateReasonLine('gate: capture failed');
       } finally {
         isCapturingRef.current = false;
-        if (mountedRef.current) {
-          setIsCapturing(false);
-        }
+        if (mountedRef.current) setIsCapturing(false);
       }
     },
     [addCapturedPhoto, photoOutput, sharedValues.compositionScore]
@@ -313,38 +357,32 @@ export function CameraScreen() {
   useEffect(() => {
     let lastLabelUpdateAtMs = 0;
     const interval = setInterval(() => {
-      const now = nowMs();
-      const score = sharedValues.compositionScore.value;
-      const hasSubject = sharedValues.hasSubject.value === 1;
-      const quality = {
-        sharpnessScore: sharedValues.sharpnessScore.value,
-        exposureScore: sharedValues.exposureScore.value,
-        motionScore: sharedValues.motionScore.value,
-        sceneChangedScore: sharedValues.sceneChangedScore.value
-      };
-
-      const decision: AutoCaptureDecision = autoCaptureController.current.evaluate({
-        nowMs: now,
+      const currentNowMs = nowMs();
+      const applied = selectAndApplyCandidate(currentNowMs);
+      const hasCandidate = applied.selection.candidate !== null;
+      const decision = autoCaptureController.current.evaluate({
+        nowMs: currentNowMs,
         armed,
-        compositionScore: score,
-        quality,
+        compositionScore: hasCandidate ? applied.detectedScore.composition.score : 0,
+        quality: {
+          sharpnessScore: sharedValues.sharpnessScore.value,
+          exposureScore: sharedValues.exposureScore.value,
+          motionScore: sharedValues.motionScore.value,
+          sceneChangedScore: sharedValues.sceneChangedScore.value
+        },
         lastCaptureAtMs
       });
 
-      if (decision.kind === 'capture') {
-        void capturePhoto('auto');
-      }
+      if (decision.kind === 'capture') void capturePhoto('auto');
 
-      if (now - lastLabelUpdateAtMs >= LABEL_UPDATE_INTERVAL_MS) {
-        lastLabelUpdateAtMs = now;
-        setCompositionDisplay((current) => ({ ...current, score }));
-        setArmStatusLabel(statusForDecision(hasSubject, score, armed, decision));
-        setStabilityLabel(stabilityLabelForDecision(decision));
+      if (currentNowMs - lastLabelUpdateAtMs >= LABEL_UPDATE_INTERVAL_MS) {
+        lastLabelUpdateAtMs = currentNowMs;
+        publishCandidateUi({ ...applied, decision });
       }
     }, AUTO_CAPTURE_CHECK_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [armed, capturePhoto, lastCaptureAtMs, sharedValues]);
+  }, [armed, capturePhoto, lastCaptureAtMs, publishCandidateUi, selectAndApplyCandidate, sharedValues]);
 
   if (!device) {
     return (
@@ -354,33 +392,21 @@ export function CameraScreen() {
     );
   }
 
-  const primaryLabel = compositionDisplay.hasSubject ? compositionDisplay.label : 'Tap the subject point.';
-  const instructionLabel = compositionDisplay.hasSubject
-    ? 'Point scorer only · no object or horizon detection yet.'
-    : 'Tap the subject point.';
-
   return (
     <View style={styles.root} onLayout={handleLayout}>
       <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />
-      <Pressable
-        accessibilityRole="button"
-        accessibilityLabel="Camera preview, tap to mark subject center"
-        onPress={handlePreviewPress}
-        style={StyleSheet.absoluteFill}
-      >
-        <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} />
+      <Pressable accessibilityRole="button" accessibilityLabel="Camera preview, tap to mark manual subject center" onPress={handlePreviewPress} style={StyleSheet.absoluteFill}>
+        <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} candidateSource={candidateSource} candidateBounds={candidateBounds} />
       </Pressable>
       <ScoreBadge
-        modeLabel="MANUAL V0"
-        primaryLabel={primaryLabel}
-        instructionLabel={instructionLabel}
-        armStatusLabel={armStatusLabel}
-        hasSubject={compositionDisplay.hasSubject}
-        coordinateLabel={compositionDisplay.coordinateLabel}
-        nearestGuideLabel={compositionDisplay.nearestGuideLabel}
-        score={compositionDisplay.score}
-        scoreReasonLabel={compositionDisplay.scoreReasonLabel}
-        stabilityLabel={stabilityLabel}
+        modeLabel={displayModeLabel}
+        title={displayTitle}
+        instruction={displayInstruction}
+        score={displayScore}
+        statusLine={autoStatusLine}
+        gateReasonLine={gateReasonLine}
+        stabilityLine={stabilityLine}
+        snapshot={candidateSnapshot}
         captureBanner={captureBanner}
         debugQualityMode={debugQualityMode}
       />
@@ -390,21 +416,7 @@ export function CameraScreen() {
 }
 
 const styles = StyleSheet.create({
-  root: {
-    flex: 1,
-    backgroundColor: '#000000'
-  },
-  centered: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#000000',
-    padding: 24
-  },
-  centeredText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '700',
-    textAlign: 'center'
-  }
+  root: { flex: 1, backgroundColor: '#000000' },
+  centered: { flex: 1, alignItems: 'center', justifyContent: 'center', backgroundColor: '#000000', padding: 24 },
+  centeredText: { color: '#ffffff', fontSize: 16, fontWeight: '700', textAlign: 'center' }
 });

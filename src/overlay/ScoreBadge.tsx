@@ -2,65 +2,84 @@ import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { DebugQualityMode } from '../state/cameraUiStore';
 
-type CaptureBanner = {
-  uri: string;
+export type CaptureBanner = {
   score: number;
-} | null;
+  uri: string;
+  trigger: 'manual' | 'auto';
+};
+
+export type CandidateScoreSnapshot = {
+  hasCandidate: boolean;
+  candidateSourceText: string | null;
+  candidateConfidenceText: string | null;
+  subjectText: string | null;
+  boundsText: string | null;
+  nearestGuideText: string | null;
+  scoreReason: string;
+  candidateExplanation: string;
+};
 
 type Props = {
   modeLabel: string;
-  primaryLabel: string;
-  instructionLabel: string;
-  armStatusLabel: string;
-  hasSubject: boolean;
-  coordinateLabel: string;
-  nearestGuideLabel: string;
+  title: string;
+  instruction: string;
   score: number;
-  scoreReasonLabel: string;
-  stabilityLabel: string | null;
-  captureBanner: CaptureBanner;
+  statusLine: string;
+  gateReasonLine: string;
+  stabilityLine: string | null;
+  snapshot: CandidateScoreSnapshot;
+  captureBanner: CaptureBanner | null;
   debugQualityMode: DebugQualityMode;
 };
 
 function ScoreBadgeComponent({
   modeLabel,
-  primaryLabel,
-  instructionLabel,
-  armStatusLabel,
-  hasSubject,
-  coordinateLabel,
-  nearestGuideLabel,
+  title,
+  instruction,
   score,
-  scoreReasonLabel,
-  stabilityLabel,
+  statusLine,
+  gateReasonLine,
+  stabilityLine,
+  snapshot,
   captureBanner,
   debugQualityMode
 }: Props) {
   return (
     <View pointerEvents="none" style={styles.root}>
-      <Text style={styles.mode}>{modeLabel}</Text>
-      <Text style={styles.label}>{primaryLabel}</Text>
-      <Text style={styles.meta}>{instructionLabel}</Text>
-      <Text style={styles.arm}>{armStatusLabel}</Text>
-
-      {hasSubject ? (
-        <View style={styles.detailBlock}>
-          <Text style={styles.detail}>{coordinateLabel}</Text>
-          <Text style={styles.detail}>{nearestGuideLabel}</Text>
-          <Text style={styles.detail}>score {Math.round(score)} / 100</Text>
-          <Text style={styles.reason}>{scoreReasonLabel}</Text>
-        </View>
-      ) : null}
-
-      {stabilityLabel ? <Text style={styles.stability}>{stabilityLabel}</Text> : null}
-
       {captureBanner ? (
         <View style={styles.captureBanner}>
-          <Text style={styles.captureTitle}>CAPTURED · SCORE {Math.round(captureBanner.score)}</Text>
-          <Text style={styles.captureUri}>{captureBanner.uri}</Text>
+          <Text style={styles.captureTitle}>{captureBanner.trigger === 'auto' ? 'AUTO CAPTURED' : 'CAPTURED'}</Text>
+          <Text numberOfLines={2} style={styles.captureMeta}>
+            score {captureBanner.score} · {captureBanner.uri}
+          </Text>
         </View>
       ) : null}
 
+      <Text style={styles.mode}>{modeLabel}</Text>
+      <Text style={styles.title}>{title}</Text>
+      <Text style={styles.instruction}>{instruction}</Text>
+
+      <View style={styles.divider} />
+
+      <Text style={styles.status}>{statusLine}</Text>
+      <Text style={styles.meta}>{gateReasonLine}</Text>
+      {stabilityLine ? <Text style={styles.meta}>{stabilityLine}</Text> : null}
+
+      {snapshot.hasCandidate ? (
+        <View style={styles.debugBlock}>
+          <Text style={styles.meta}>source {snapshot.candidateSourceText}</Text>
+          <Text style={styles.meta}>confidence {snapshot.candidateConfidenceText}</Text>
+          <Text style={styles.meta}>point {snapshot.subjectText}</Text>
+          {snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
+          <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text>
+          <Text style={styles.meta}>score {Math.round(score)} / 100</Text>
+        </View>
+      ) : (
+        <Text style={styles.meta}>source no subject · confidence 0%</Text>
+      )}
+
+      <Text style={styles.reason}>{snapshot.scoreReason}</Text>
+      <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>
       {debugQualityMode !== 'normal' ? <Text style={styles.warning}>DEBUG QUALITY: {debugQualityMode}</Text> : null}
     </View>
   );
@@ -73,83 +92,85 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 16,
     right: 16,
-    top: 48,
+    top: 42,
     borderRadius: 14,
-    backgroundColor: 'rgba(0,0,0,0.58)',
+    backgroundColor: 'rgba(0,0,0,0.62)',
     paddingHorizontal: 14,
     paddingVertical: 10
   },
-  mode: {
-    color: '#f2b84b',
-    fontSize: 11,
-    fontWeight: '900',
-    letterSpacing: 1
-  },
-  label: {
-    marginTop: 2,
-    color: '#ffffff',
-    fontSize: 15,
-    fontWeight: '800',
-    letterSpacing: 0.8
-  },
-  meta: {
-    marginTop: 4,
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 12,
-    fontWeight: '600'
-  },
-  arm: {
-    marginTop: 6,
-    color: '#ffffff',
-    fontSize: 12,
-    fontWeight: '800'
-  },
-  detailBlock: {
-    marginTop: 8,
-    gap: 3
-  },
-  detail: {
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: 11,
-    fontWeight: '600'
-  },
-  reason: {
-    color: 'rgba(255,255,255,0.86)',
-    fontSize: 11,
-    lineHeight: 15,
-    fontWeight: '600'
-  },
-  stability: {
-    marginTop: 8,
-    color: '#f2b84b',
-    fontSize: 12,
-    fontWeight: '800'
-  },
   captureBanner: {
-    marginTop: 10,
+    marginBottom: 8,
     borderRadius: 10,
-    backgroundColor: 'rgba(242,184,75,0.18)',
-    borderWidth: 1,
-    borderColor: 'rgba(242,184,75,0.72)',
+    backgroundColor: 'rgba(242,184,75,0.22)',
     paddingHorizontal: 10,
     paddingVertical: 8
   },
   captureTitle: {
     color: '#f2b84b',
+    fontSize: 13,
+    fontWeight: '900',
+    letterSpacing: 0.7
+  },
+  captureMeta: {
+    marginTop: 3,
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  mode: {
+    color: '#f2b84b',
+    fontSize: 11,
+    fontWeight: '900',
+    letterSpacing: 1.1
+  },
+  title: {
+    marginTop: 2,
+    color: '#ffffff',
+    fontSize: 15,
+    fontWeight: '900',
+    letterSpacing: 0.6
+  },
+  instruction: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.86)',
+    fontSize: 12,
+    fontWeight: '700'
+  },
+  divider: {
+    height: 1,
+    marginVertical: 8,
+    backgroundColor: 'rgba(255,255,255,0.14)'
+  },
+  status: {
+    color: '#ffffff',
     fontSize: 12,
     fontWeight: '900'
   },
-  captureUri: {
-    marginTop: 3,
-    color: 'rgba(255,255,255,0.78)',
-    fontSize: 10,
-    lineHeight: 14,
-    fontWeight: '600'
+  debugBlock: {
+    marginTop: 6,
+    gap: 2
   },
-  warning: {
-    marginTop: 7,
-    color: '#f2b84b',
+  meta: {
+    color: 'rgba(255,255,255,0.72)',
     fontSize: 11,
     fontWeight: '700'
+  },
+  reason: {
+    marginTop: 6,
+    color: 'rgba(255,255,255,0.88)',
+    fontSize: 11,
+    fontWeight: '700'
+  },
+  explanation: {
+    marginTop: 4,
+    color: 'rgba(255,255,255,0.68)',
+    fontSize: 10,
+    fontWeight: '700'
+  },
+  warning: {
+    marginTop: 5,
+    color: '#f2b84b',
+    fontSize: 11,
+    fontWeight: '800'
   }
 });

@@ -5,6 +5,11 @@ export type CompositionSharedValues = {
   subjectX: SharedValue<number>;
   subjectY: SharedValue<number>;
   hasSubject: SharedValue<number>;
+  candidateBoundsX: SharedValue<number>;
+  candidateBoundsY: SharedValue<number>;
+  candidateBoundsWidth: SharedValue<number>;
+  candidateBoundsHeight: SharedValue<number>;
+  hasCandidateBounds: SharedValue<number>;
   compositionScore: SharedValue<number>;
   bestGuideX: SharedValue<number>;
   bestGuideY: SharedValue<number>;
@@ -19,6 +24,11 @@ export function useCompositionSharedValues(): CompositionSharedValues {
   const subjectX = useSharedValue(0.5);
   const subjectY = useSharedValue(0.5);
   const hasSubject = useSharedValue(0);
+  const candidateBoundsX = useSharedValue(0);
+  const candidateBoundsY = useSharedValue(0);
+  const candidateBoundsWidth = useSharedValue(0);
+  const candidateBoundsHeight = useSharedValue(0);
+  const hasCandidateBounds = useSharedValue(0);
   const compositionScore = useSharedValue(0);
   const bestGuideX = useSharedValue(-1);
   const bestGuideY = useSharedValue(-1);
@@ -33,6 +43,11 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       subjectX,
       subjectY,
       hasSubject,
+      candidateBoundsX,
+      candidateBoundsY,
+      candidateBoundsWidth,
+      candidateBoundsHeight,
+      hasCandidateBounds,
       compositionScore,
       bestGuideX,
       bestGuideY,
@@ -45,8 +60,13 @@ export function useCompositionSharedValues(): CompositionSharedValues {
     [
       bestGuideX,
       bestGuideY,
+      candidateBoundsHeight,
+      candidateBoundsWidth,
+      candidateBoundsX,
+      candidateBoundsY,
       compositionScore,
       exposureScore,
+      hasCandidateBounds,
       hasSubject,
       highlightIntensity,
       motionScore,

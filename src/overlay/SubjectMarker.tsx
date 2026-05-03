@@ -2,16 +2,18 @@ import { memo } from 'react';
 import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
+import type { DetectionSource } from '../detection/types';
 
 type Props = {
   width: number;
   height: number;
   sharedValues: CompositionSharedValues;
+  source: DetectionSource;
 };
 
 const MARKER_SIZE = 30;
 
-function SubjectMarkerComponent({ width, height, sharedValues }: Props) {
+function SubjectMarkerComponent({ width, height, sharedValues, source }: Props) {
   const markerStyle = useAnimatedStyle(() => ({
     opacity: sharedValues.hasSubject.value,
     transform: [
@@ -21,7 +23,16 @@ function SubjectMarkerComponent({ width, height, sharedValues }: Props) {
     ]
   }));
 
-  return <Animated.View pointerEvents="none" style={[styles.marker, markerStyle]} />;
+  return (
+    <Animated.View
+      pointerEvents="none"
+      style={[
+        styles.marker,
+        source === 'manual' ? styles.manualMarker : source === 'heuristic-placeholder' ? styles.placeholderMarker : styles.simulatedMarker,
+        markerStyle
+      ]}
+    />
+  );
 }
 
 export const SubjectMarker = memo(SubjectMarkerComponent);
@@ -34,8 +45,18 @@ const styles = StyleSheet.create({
     width: MARKER_SIZE,
     height: MARKER_SIZE,
     borderRadius: MARKER_SIZE / 2,
-    borderWidth: 2,
+    borderWidth: 2
+  },
+  manualMarker: {
     borderColor: '#f2b84b',
     backgroundColor: 'rgba(242,184,75,0.14)'
+  },
+  placeholderMarker: {
+    borderColor: '#ffffff',
+    backgroundColor: 'rgba(255,255,255,0.12)'
+  },
+  simulatedMarker: {
+    borderColor: '#f2b84b',
+    backgroundColor: 'rgba(242,184,75,0.20)'
   }
 });
