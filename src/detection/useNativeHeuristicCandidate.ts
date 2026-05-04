@@ -26,7 +26,7 @@ function unavailableState(): NativeHeuristicHookState {
     analysis: null,
     available: false,
     status: 'unavailable',
-    explanation: 'Native heuristic unavailable. No Android frame-analysis plugin is wired yet.'
+    explanation: 'Native visual-mass analyzer unavailable. No Android frame-analysis plugin is wired yet.'
   };
 }
 
@@ -66,7 +66,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         });
       } catch (error) {
         if (cancelled) return;
-        const message = error instanceof Error ? error.message : 'Unknown native analysis error';
+        const message = error instanceof Error ? error.message : 'Unknown native visual-mass analysis error';
         setState({
           analysis: {
             status: 'error',

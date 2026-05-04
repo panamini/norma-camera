@@ -1,22 +1,35 @@
 # modules/frame-analysis
 
-Status in this branch: **scaffold only**.
+Status in this package: **V0.3B typed adapter + documented native implementation; native Android plugin not compiled here**.
 
-The app includes TypeScript contracts and UI wiring for `native-heuristic` mode, but no native Android frame processor is compiled yet.
+The app is wired to look for this future native module:
 
-## Intended V0.3A native heuristic
+```ts
+NativeModules.NormaFrameAnalysis?.getLatestAnalysis()
+```
+
+When unavailable, Native mode remains honest:
 
 ```text
-frame
-  -> native Android frame-analysis plugin
+NATIVE VISUAL MASS · unavailable
+Manual fallback active.
+No semantic object detection yet.
+```
+
+## Intended V0.3B native visual-mass pipeline
+
+```text
+camera frame
+  -> native Android VisionCamera frame-analysis path
   -> Y plane / luminance only
-  -> downsample to 96x72 or 128x96
+  -> downsample to 96x72 first
   -> exposure stats
   -> sharpness / edge energy
-  -> contrast/saliency candidate
-  -> optional horizontal line diagnostic
+  -> contrast visual-mass candidate
   -> compact normalized result to JS
 ```
+
+No raw pixels or luminance grids should cross the JS bridge.
 
 ## Output contract
 
@@ -33,46 +46,86 @@ type NativeFrameAnalysisResult = {
 };
 ```
 
+Subject candidate:
+
+```ts
+type NativeSubjectCandidate = {
+  center: NormalizedPoint;
+  bounds: NormalizedRect;
+  confidence: number;
+  source: 'native-heuristic';
+};
+```
+
+## V0.3B algorithm
+
+### Exposure
+
+- mean luminance
+- clipped highlight ratio
+- crushed shadow ratio
+- score 0–100
+
+Suggested score:
+
+```text
+base = 100 - abs(meanLuma - 0.52) * 180
+penalty = clippedHighlightsRatio * 80 + crushedShadowsRatio * 70
+exposureScore = clamp(base - penalty, 0, 100)
+```
+
+### Sharpness / edge energy
+
+Use a lightweight gradient on the downsampled Y grid:
+
+```text
+gx = abs(luma[x+1,y] - luma[x-1,y])
+gy = abs(luma[x,y+1] - luma[x,y-1])
+energy = gx + gy
+```
+
+Normalize `edgeEnergy` into `sharpnessScore` 0–100. Device-specific calibration can come later.
+
+### Visual mass
+
+- ignore outer 8–12% border
+- suppress clipped luma cells
+- compute gradient/contrast energy
+- adaptive threshold: `meanEnergy + 0.75 * stdEnergy`
+- weighted centroid from active cells
+- bbox from active cells
+- reject weak/tiny/huge/border-heavy candidates
+- confidence threshold: `0.35`
+
+Label the result as `native visual mass`, not object/person/face detection.
+
 ## Safety constraints
 
 - latest-frame-only
-- throttle to 4–10 fps
+- throttle to 4–8 fps
 - drop frame if analyzer is busy
 - never queue frames
 - no full-frame copy into JS
 - no JS pixel loops
 - no backend
 - no cloud AI
-- no ML Kit in V0.3A
+- no ML Kit in V0.3B
 - no Google Play Services dependency
 
-## Suggested Android algorithm
+## Native API decision rule
 
-1. Read Y plane from the camera frame.
-2. Downsample luminance into a small grid.
-3. Exposure:
-   - mean luminance
-   - clipped highlight ratio
-   - crushed shadow ratio
-   - score 0–100
-4. Sharpness:
-   - variance of Laplacian or Sobel-like edge energy
-   - score 0–100
-5. Subject candidate:
-   - local contrast / gradient magnitude
-   - center-weighted visual mass
-   - coarse bbox from high-energy cells
-   - confidence from energy concentration and bbox size
-6. Optional line diagnostic:
-   - horizontal-gradient accumulator
-   - return only if confidence is meaningful
+Before adding Kotlin/Gradle files, inspect the installed `react-native-vision-camera@5.0.8` package and choose a buildable path.
 
-## Native module name expected by JS scaffold
+If the native API is unclear:
 
-The current JS hook looks for:
+- do not invent plugin names
+- do not break the working camera preview
+- keep this adapter unavailable
+- document the exact API gap
 
-```ts
-NativeModules.NormaFrameAnalysis?.getLatestAnalysis()
-```
+## V0.3C
 
-That is intentionally a future adapter contract. It is not present in this scaffold branch.
+Next step after real visual mass is validated:
+
+- horizon / strong horizontal-line diagnostic
+- separate from composition score until the formula is tested

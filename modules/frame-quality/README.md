@@ -1,12 +1,13 @@
 # frame-quality future module
 
-V0.3A keeps frame quality stubbed unless a native frame-analysis module is present.
+V0.3B can use real native sharpness/exposure only when `NativeModules.NormaFrameAnalysis.getLatestAnalysis()` returns them.
 
-Current app behavior:
+Current fallback behavior:
 
-- `useFrameQualityStub()` still provides default quality values.
-- Native Heuristic mode can display real sharpness/exposure only if a future Android module returns them.
-- Motion remains stubbed in this pass.
+- `useFrameQualityStub()` still provides default quality values when native analysis is unavailable.
+- Native Visual Mass mode labels sharpness/exposure as `real luminance` only when native values exist.
+- Motion remains stubbed.
+- Scene change remains stubbed.
 
 Future implementation should live in `modules/frame-analysis` and return:
 
@@ -17,7 +18,7 @@ Future implementation should live in `modules/frame-analysis` and return:
 Constraints:
 
 - process luminance only
-- throttle to 4–10 fps
+- throttle to 4–8 fps
 - drop frames when busy
 - no JS full-frame pixel loops
 - no frame backlog

@@ -184,7 +184,7 @@ export function CameraScreen() {
     boundsText: null,
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
-    candidateExplanation: 'Native heuristic mode is scaffolded but unavailable until the Android frame-analysis plugin is wired.'
+    candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No semantic object detection yet.'
   });
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);

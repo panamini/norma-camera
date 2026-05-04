@@ -9,7 +9,7 @@ export function modeLabelForDetectionMode(mode: DetectionMode): string {
     case 'simulated-detector':
       return 'SIMULATED DETECTOR';
     case 'native-heuristic':
-      return 'NATIVE HEURISTIC';
+      return 'NATIVE VISUAL MASS';
   }
 }
 
@@ -35,7 +35,7 @@ export function displayNameForDetectionSource(source: DetectionSource): string {
     case 'simulated-detector':
       return 'simulated subject';
     case 'native-heuristic':
-      return 'native heuristic subject';
+      return 'native visual mass';
     case 'none':
       return 'no subject';
   }
