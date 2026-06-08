@@ -25,7 +25,8 @@ export function getNormaFrameAnalysisPlugin(): NormaFrameAnalysisPlugin | null {
 
   try {
     const maybeNitroModules = NitroModuleNamespace as unknown as MaybeNitroModulesApi;
-    cachedPlugin = maybeNitroModules.NitroModules?.createHybridObject?.<NormaFrameAnalysisPlugin>('NormaFrameAnalysisPlugin') ?? null;
+    const createHybridObject = maybeNitroModules.NitroModules?.createHybridObject;
+    cachedPlugin = createHybridObject ? createHybridObject<NormaFrameAnalysisPlugin>('NormaFrameAnalysis') : null;
   } catch {
     cachedPlugin = null;
   }
