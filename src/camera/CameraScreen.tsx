@@ -10,12 +10,13 @@ import { guideKindsForOverlayMode } from '../composition/guides';
 import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
-import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
-import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
+import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
+import { getNormaFrameAnalysisPlugin } from '../detection/normaFrameAnalysisPlugin';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
+import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
 import { CompositionOverlay } from '../overlay/CompositionOverlay';
 import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../overlay/ScoreBadge';
 import { clamp } from '../shared/clamp';
@@ -55,6 +56,17 @@ function uriForFilePath(filePath: string): string {
 function formatBounds(bounds: NormalizedRect | undefined): string | null {
   if (!bounds) return null;
   return `x=${bounds.x.toFixed(3)} · y=${bounds.y.toFixed(3)} · w=${bounds.width.toFixed(3)} · h=${bounds.height.toFixed(3)}`;
+}
+
+function formatFixedMetric(value: number | undefined, digits: number): string {
+  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'n/a';
+}
+
+function makeNativeAnalysisDebugLine(analysis: NativeFrameAnalysisResult | null): string | null {
+  if (!analysis || analysis.analysisSource !== 'live-frame') return null;
+  const ageMs = Math.max(0, Math.round(nowMs() - analysis.createdAtMs));
+  const updateText = typeof analysis.updateCount === 'number' ? `updates ${Math.round(analysis.updateCount)}` : `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
+  return `analysis source: live frame · age ${ageMs} ms · ${updateText} · meanLuma ${formatFixedMetric(analysis.exposure?.meanLuma, 3)} · edgeEnergy ${formatFixedMetric(analysis.sharpness?.edgeEnergy, 4)}`;
 }
 
 function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
@@ -136,9 +148,11 @@ function buildStabilityLine(decision: AutoCaptureDecision): string | null {
   return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
 }
 
-function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean }): string {
+function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean; nativeAnalysis: NativeFrameAnalysisResult | null }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
-  return `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
+  const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
+  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis);
+  return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
 function titleForCandidate(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
@@ -151,18 +165,19 @@ function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
-  const nativeReadinessFrameOutput = useFrameOutput({
+  const frameAnalysisModule = useMemo(getNormaFrameAnalysisPlugin, []);
+  const liveLumaFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
     onFrame(frame) {
       'worklet';
       try {
-        // Readiness only. Do not read pixels or compute metrics in JS.
+        frameAnalysisModule?.analyzeVisionCameraFrame?.(frame);
       } finally {
         frame.dispose();
       }
     }
   });
-  const cameraOutputs = useMemo(() => [photoOutput, nativeReadinessFrameOutput], [nativeReadinessFrameOutput, photoOutput]);
+  const cameraOutputs = useMemo(() => [photoOutput, liveLumaFrameOutput], [liveLumaFrameOutput, photoOutput]);
 
   return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />;
 }
@@ -325,11 +340,12 @@ export function CameraScreen() {
           sharpnessScore: sharedValues.sharpnessScore.value,
           exposureScore: sharedValues.exposureScore.value,
           motionScore: sharedValues.motionScore.value,
-          nativeQualityIsReal
+          nativeQualityIsReal,
+          nativeAnalysis: nativeHeuristic.analysis
         })
       );
     },
-    [armed, detectionMode, nativeQualityIsReal, sharedValues]
+    [armed, detectionMode, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -380,8 +396,8 @@ export function CameraScreen() {
             {},
             {
               onWillBeginCapture: () => {},
-              onDidCapturePhoto: () => {},
-            },
+              onDidCapturePhoto: () => {}
+            }
           );
           uri = uriForFilePath(filePath);
         } else {
