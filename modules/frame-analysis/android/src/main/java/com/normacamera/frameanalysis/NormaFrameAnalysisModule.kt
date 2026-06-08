@@ -12,11 +12,16 @@ class NormaFrameAnalysisModule : Module() {
       NormaFrameAnalysisStore.analyzeDownsampledLumaGrid(values.toDoubleArray(), width, height, createdAt, parseValueRange(valueRange))
     }
 
+    Function("analyzeVisionCameraFrame") { frame: Any? ->
+      NormaVisionCameraFrameAnalyzer.analyzeFrame(frame)
+    }
+
     AsyncFunction("getLatestAnalysis") {
       NormaFrameAnalysisStore.getLatestAnalysis()
     }
 
     Function("reset") {
+      NormaVisionCameraFrameAnalyzer.reset()
       NormaFrameAnalysisStore.reset()
     }
   }
