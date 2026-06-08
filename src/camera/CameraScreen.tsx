@@ -10,6 +10,7 @@ import { guideKindsForOverlayMode } from '../composition/guides';
 import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
+import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
 import { getNormaFrameAnalysisPlugin } from '../detection/normaFrameAnalysisPlugin';
