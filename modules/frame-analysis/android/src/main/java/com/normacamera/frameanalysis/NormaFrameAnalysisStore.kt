@@ -10,10 +10,13 @@ object NormaFrameAnalysisStore {
     width: Int,
     height: Int,
     createdAtMs: Long,
-    valueRange: LumaValueRange = LumaValueRange.AUTO
+    valueRange: LumaValueRange = LumaValueRange.AUTO,
+    analysisSource: String? = null,
+    updateCount: Long? = null,
+    analysisFps: Double? = null
   ): Map<String, Any?> {
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
-    val result: Map<String, Any?> = mapOf(
+    val result = mutableMapOf<String, Any?>(
       "status" to "low-confidence",
       "createdAtMs" to createdAtMs,
       "subject" to null,
@@ -29,6 +32,11 @@ object NormaFrameAnalysisStore {
       ),
       "explanation" to "Real Android luminance quality metrics are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
     )
+
+    if (analysisSource != null) result["analysisSource"] = analysisSource
+    if (updateCount != null) result["updateCount"] = updateCount.toDouble()
+    if (analysisFps != null) result["analysisFps"] = analysisFps
+
     latestAnalysis = result
     return result
   }
