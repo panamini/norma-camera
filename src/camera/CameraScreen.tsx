@@ -33,6 +33,11 @@ type AppliedComposition = {
   snapshot: CandidateScoreSnapshot;
 };
 
+type CameraPreviewProps = {
+  device: NonNullable<ReturnType<typeof useCameraDeviceSafe>>;
+  photoOutput: ReturnType<typeof usePhotoOutput>;
+};
+
 const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
 const LABEL_UPDATE_INTERVAL_MS = 500;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
@@ -141,16 +146,30 @@ function titleForCandidate(candidate: CompositionCandidate | null, result: Compo
   return result.label === 'TAP SUBJECT' ? candidate.label.toUpperCase() : result.label;
 }
 
-export function CameraScreen() {
-  const device = useCameraDeviceSafe();
-  const photoOutput = usePhotoOutput();
+function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />;
+}
+
+function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
   const nativeReadinessFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
     onFrame(frame) {
       'worklet';
-      frame.dispose();
+      try {
+        // Readiness only. Do not read pixels or compute metrics in JS.
+      } finally {
+        frame.dispose();
+      }
     }
   });
+  const cameraOutputs = useMemo(() => [photoOutput, nativeReadinessFrameOutput], [nativeReadinessFrameOutput, photoOutput]);
+
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />;
+}
+
+export function CameraScreen() {
+  const device = useCameraDeviceSafe();
+  const photoOutput = usePhotoOutput();
   const sharedValues = useCompositionSharedValues();
   const autoCaptureController = useRef(createAutoCaptureController(DEFAULT_AUTO_CAPTURE_CONFIG));
   const compositionLabelRef = useRef('NO SUBJECT');
@@ -197,10 +216,6 @@ export function CameraScreen() {
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
-  const cameraOutputs = useMemo(
-    () => (detectionMode === 'native-heuristic' ? [photoOutput, nativeReadinessFrameOutput] : [photoOutput]),
-    [detectionMode, nativeReadinessFrameOutput, photoOutput]
-  );
 
   useEffect(() => {
     sharedValues.sharpnessScore.value =
@@ -431,7 +446,11 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root} onLayout={handleLayout}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />
+      {detectionMode === 'native-heuristic' ? (
+        <NativeHeuristicCameraPreview device={device} photoOutput={photoOutput} />
+      ) : (
+        <PhotoOnlyCameraPreview device={device} photoOutput={photoOutput} />
+      )}
       <Pressable accessibilityRole="button" accessibilityLabel="Camera preview, tap to mark manual subject center" onPress={handlePreviewPress} style={StyleSheet.absoluteFill}>
         <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} candidateSource={candidateSource} candidateBounds={candidateBounds} />
       </Pressable>
