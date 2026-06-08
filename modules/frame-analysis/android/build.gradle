@@ -1,0 +1,25 @@
+plugins {
+  id 'com.android.library'
+  id 'org.jetbrains.kotlin.android'
+}
+
+group = 'com.normacamera.frameanalysis'
+version = '0.1.0'
+
+static def safeExtGet(project, prop, fallback) {
+  return project.rootProject.ext.has(prop) ? project.rootProject.ext.get(prop) : fallback
+}
+
+apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+
+android {
+  namespace 'com.normacamera.frameanalysis'
+  compileSdkVersion safeExtGet(project, 'compileSdkVersion', 35)
+
+  defaultConfig {
+    minSdkVersion safeExtGet(project, 'minSdkVersion', 23)
+    targetSdkVersion safeExtGet(project, 'targetSdkVersion', 35)
+  }
+}
