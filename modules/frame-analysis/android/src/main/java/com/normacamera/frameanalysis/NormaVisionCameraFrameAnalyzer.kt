@@ -53,7 +53,7 @@ object NormaVisionCameraFrameAnalyzer {
         updateCount = nextUpdateCount,
         analysisFps = analysisFps
       )
-    } catch (_: Throwable) {
+    } catch (_: Exception) {
       return null
     } finally {
       busy.set(false)
