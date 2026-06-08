@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { withTiming } from 'react-native-reanimated';
-import { Camera, usePhotoOutput } from 'react-native-vision-camera';
+import { Camera, useFrameOutput, usePhotoOutput } from 'react-native-vision-camera';
 import { createAutoCaptureController } from '../autocapture/createAutoCaptureController';
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
@@ -144,6 +144,13 @@ function titleForCandidate(candidate: CompositionCandidate | null, result: Compo
 export function CameraScreen() {
   const device = useCameraDeviceSafe();
   const photoOutput = usePhotoOutput();
+  const nativeReadinessFrameOutput = useFrameOutput({
+    pixelFormat: 'yuv',
+    onFrame(frame) {
+      'worklet';
+      frame.dispose();
+    }
+  });
   const sharedValues = useCompositionSharedValues();
   const autoCaptureController = useRef(createAutoCaptureController(DEFAULT_AUTO_CAPTURE_CONFIG));
   const compositionLabelRef = useRef('NO SUBJECT');
@@ -190,6 +197,10 @@ export function CameraScreen() {
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
+  const cameraOutputs = useMemo(
+    () => (detectionMode === 'native-heuristic' ? [photoOutput, nativeReadinessFrameOutput] : [photoOutput]),
+    [detectionMode, nativeReadinessFrameOutput, photoOutput]
+  );
 
   useEffect(() => {
     sharedValues.sharpnessScore.value =
@@ -420,7 +431,7 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root} onLayout={handleLayout}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />
+      <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />
       <Pressable accessibilityRole="button" accessibilityLabel="Camera preview, tap to mark manual subject center" onPress={handlePreviewPress} style={StyleSheet.absoluteFill}>
         <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} candidateSource={candidateSource} candidateBounds={candidateBounds} />
       </Pressable>
