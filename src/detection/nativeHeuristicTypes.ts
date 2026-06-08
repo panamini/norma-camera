@@ -40,6 +40,8 @@ export type NativeFrameAnalysisResult = {
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
   explanation: string;
+  analysisSource?: 'live-frame' | 'debug-grid' | string;
+  updateCount?: number;
   analysisFps?: number;
 };
 
@@ -52,5 +54,6 @@ export type NativeFrameAnalysisModule = {
     createdAtMs?: number,
     valueRange?: NativeLumaValueRange
   ) => Promise<NativeFrameAnalysisResult>;
+  analyzeVisionCameraFrame?: (frame: unknown) => NativeFrameAnalysisResult | null;
   reset?: () => void | Promise<void>;
 };
