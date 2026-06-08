@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { withTiming } from 'react-native-reanimated';
-import { Camera, usePhotoOutput } from 'react-native-vision-camera';
+import { Camera, useFrameOutput, usePhotoOutput } from 'react-native-vision-camera';
 import { createAutoCaptureController } from '../autocapture/createAutoCaptureController';
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
@@ -31,6 +31,11 @@ type AppliedComposition = {
   selection: CandidateSelectionResult;
   detectedScore: DetectedCompositionScore;
   snapshot: CandidateScoreSnapshot;
+};
+
+type CameraPreviewProps = {
+  device: NonNullable<ReturnType<typeof useCameraDeviceSafe>>;
+  photoOutput: ReturnType<typeof usePhotoOutput>;
 };
 
 const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
@@ -139,6 +144,27 @@ function buildQualityLine(params: { sharpnessScore: number; exposureScore: numbe
 function titleForCandidate(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
   if (!candidate) return 'NO SUBJECT';
   return result.label === 'TAP SUBJECT' ? candidate.label.toUpperCase() : result.label;
+}
+
+function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />;
+}
+
+function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
+  const nativeReadinessFrameOutput = useFrameOutput({
+    pixelFormat: 'yuv',
+    onFrame(frame) {
+      'worklet';
+      try {
+        // Readiness only. Do not read pixels or compute metrics in JS.
+      } finally {
+        frame.dispose();
+      }
+    }
+  });
+  const cameraOutputs = useMemo(() => [photoOutput, nativeReadinessFrameOutput], [nativeReadinessFrameOutput, photoOutput]);
+
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />;
 }
 
 export function CameraScreen() {
@@ -420,7 +446,11 @@ export function CameraScreen() {
 
   return (
     <View style={styles.root} onLayout={handleLayout}>
-      <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />
+      {detectionMode === 'native-heuristic' ? (
+        <NativeHeuristicCameraPreview device={device} photoOutput={photoOutput} />
+      ) : (
+        <PhotoOnlyCameraPreview device={device} photoOutput={photoOutput} />
+      )}
       <Pressable accessibilityRole="button" accessibilityLabel="Camera preview, tap to mark manual subject center" onPress={handlePreviewPress} style={StyleSheet.absoluteFill}>
         <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} candidateSource={candidateSource} candidateBounds={candidateBounds} />
       </Pressable>
