@@ -8,6 +8,10 @@ const HIGHLIGHT_PENALTY = 80;
 const SHADOW_PENALTY = 70;
 const SHARPNESS_SCALE = 420;
 
+export type LumaValueRange = 'auto' | 'unit' | 'byte';
+
+type ResolvedLumaValueRange = Exclude<LumaValueRange, 'auto'>;
+
 export type LumaGrid = {
   width: number;
   height: number;
@@ -18,6 +22,7 @@ export type LumaMetricOptions = {
   createdAtMs?: number;
   targetMeanLuma?: number;
   sharpnessScale?: number;
+  valueRange?: LumaValueRange;
 };
 
 export type LumaQualityMetrics = Pick<NativeFrameAnalysisResult, 'exposure' | 'sharpness'>;
@@ -26,9 +31,14 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-function toUnitLuma(value: number): number {
+function resolveValueRange(values: readonly number[], requested: LumaValueRange = 'auto'): ResolvedLumaValueRange {
+  if (requested === 'byte' || requested === 'unit') return requested;
+  return values.some((value) => Number.isFinite(value) && value > 1) ? 'byte' : 'unit';
+}
+
+function toUnitLuma(value: number, valueRange: ResolvedLumaValueRange): number {
   if (!Number.isFinite(value)) return 0;
-  return clamp(value > 1 ? value / 255 : value, 0, 1);
+  return clamp(valueRange === 'byte' ? value / 255 : value, 0, 1);
 }
 
 function assertGrid(grid: LumaGrid): void {
@@ -39,13 +49,14 @@ function assertGrid(grid: LumaGrid): void {
 
 export function computeLumaQualityMetrics(grid: LumaGrid, options: LumaMetricOptions = {}): LumaQualityMetrics {
   assertGrid(grid);
+  const valueRange = resolveValueRange(grid.values, options.valueRange);
 
   let sum = 0;
   let highlightCount = 0;
   let shadowCount = 0;
 
   for (const raw of grid.values) {
-    const value = toUnitLuma(raw);
+    const value = toUnitLuma(raw, valueRange);
     sum += value;
     if (value >= HIGHLIGHT_THRESHOLD) highlightCount += 1;
     if (value <= SHADOW_THRESHOLD) shadowCount += 1;
@@ -65,10 +76,10 @@ export function computeLumaQualityMetrics(grid: LumaGrid, options: LumaMetricOpt
   for (let y = 1; y < grid.height - 1; y += 1) {
     for (let x = 1; x < grid.width - 1; x += 1) {
       const center = y * grid.width + x;
-      const left = toUnitLuma(grid.values[center - 1]);
-      const right = toUnitLuma(grid.values[center + 1]);
-      const up = toUnitLuma(grid.values[center - grid.width]);
-      const down = toUnitLuma(grid.values[center + grid.width]);
+      const left = toUnitLuma(grid.values[center - 1], valueRange);
+      const right = toUnitLuma(grid.values[center + 1], valueRange);
+      const up = toUnitLuma(grid.values[center - grid.width], valueRange);
+      const down = toUnitLuma(grid.values[center + grid.width], valueRange);
       edgeEnergyTotal += Math.abs(right - left) + Math.abs(down - up);
       edgeSampleCount += 1;
     }
