@@ -1,0 +1,7 @@
+{
+  "name": "norma-frame-analysis",
+  "version": "0.1.0",
+  "description": "Local Android-only Expo module for Norma Camera frame luminance analysis.",
+  "main": "index.js",
+  "private": true
+}
