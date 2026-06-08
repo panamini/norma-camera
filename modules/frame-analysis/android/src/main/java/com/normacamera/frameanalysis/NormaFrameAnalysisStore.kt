@@ -4,13 +4,15 @@ object NormaFrameAnalysisStore {
   @Volatile
   private var latestAnalysis: Map<String, Any?>? = null
 
+  @Synchronized
   fun analyzeDownsampledLumaGrid(
     values: DoubleArray,
     width: Int,
     height: Int,
-    createdAtMs: Long
+    createdAtMs: Long,
+    valueRange: LumaValueRange = LumaValueRange.AUTO
   ): Map<String, Any?> {
-    val metrics = LumaMetrics.compute(values, width, height)
+    val metrics = LumaMetrics.compute(values, width, height, valueRange)
     val result: Map<String, Any?> = mapOf(
       "status" to "low-confidence",
       "createdAtMs" to createdAtMs,
@@ -31,8 +33,10 @@ object NormaFrameAnalysisStore {
     return result
   }
 
+  @Synchronized
   fun getLatestAnalysis(): Map<String, Any?>? = latestAnalysis
 
+  @Synchronized
   fun reset() {
     latestAnalysis = null
   }
