@@ -44,4 +44,11 @@ export type NativeFrameAnalysisResult = {
 
 export type NativeFrameAnalysisModule = {
   getLatestAnalysis?: () => Promise<NativeFrameAnalysisResult | null>;
+  analyzeDownsampledLumaGrid?: (
+    values: number[],
+    width: number,
+    height: number,
+    createdAtMs?: number
+  ) => Promise<NativeFrameAnalysisResult>;
+  reset?: () => void | Promise<void>;
 };
