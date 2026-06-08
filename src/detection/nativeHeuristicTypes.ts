@@ -54,6 +54,5 @@ export type NativeFrameAnalysisModule = {
     createdAtMs?: number,
     valueRange?: NativeLumaValueRange
   ) => Promise<NativeFrameAnalysisResult>;
-  analyzeVisionCameraFrame?: (frame: unknown) => NativeFrameAnalysisResult | null;
   reset?: () => void | Promise<void>;
 };
