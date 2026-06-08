@@ -47,6 +47,20 @@ describe('luma quality metrics', () => {
     expect(metrics.exposure?.meanLuma).toBeCloseTo(128 / 255);
   });
 
+  it('supports explicit byte range for the value 1 boundary', () => {
+    const metrics = computeLumaQualityMetrics({ width: 2, height: 2, values: [1, 1, 1, 1] }, { valueRange: 'byte' });
+
+    expect(metrics.exposure?.meanLuma).toBeCloseTo(1 / 255);
+    expect(metrics.exposure?.crushedShadowsRatio).toBe(1);
+  });
+
+  it('supports explicit unit range for full-white unit samples', () => {
+    const metrics = computeLumaQualityMetrics({ width: 2, height: 2, values: [1, 1, 1, 1] }, { valueRange: 'unit' });
+
+    expect(metrics.exposure?.meanLuma).toBe(1);
+    expect(metrics.exposure?.clippedHighlightsRatio).toBe(1);
+  });
+
   it('rejects malformed grids', () => {
     expect(() => computeLumaQualityMetrics({ width: 3, height: 3, values: [0.5] })).toThrow(/value count/);
   });
