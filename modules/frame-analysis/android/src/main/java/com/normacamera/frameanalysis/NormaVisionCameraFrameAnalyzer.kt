@@ -2,7 +2,6 @@ package com.normacamera.frameanalysis
 
 import androidx.camera.core.ImageProxy
 import com.margelo.nitro.camera.public.NativeFrame
-import java.nio.ByteBuffer
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.max
 import kotlin.math.min
