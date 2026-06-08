@@ -22,23 +22,23 @@ describe('luma quality metrics', () => {
     expect(metrics.exposure?.exposureScore).toBeLessThan(30);
   });
 
-  it('reports stronger sharpness for alternating luminance than for a flat grid', () => {
+  it('reports stronger sharpness for a luminance boundary than for a flat grid', () => {
     const flat = computeLumaQualityMetrics({ width: 5, height: 5, values: repeat(0.5, 25) });
-    const alternating = computeLumaQualityMetrics({
+    const boundary = computeLumaQualityMetrics({
       width: 5,
       height: 5,
       values: [
-        0, 1, 0, 1, 0,
-        1, 0, 1, 0, 1,
-        0, 1, 0, 1, 0,
-        1, 0, 1, 0, 1,
-        0, 1, 0, 1, 0
+        0, 0, 0, 1, 1,
+        0, 0, 0, 1, 1,
+        0, 0, 0, 1, 1,
+        0, 0, 0, 1, 1,
+        0, 0, 0, 1, 1
       ]
     });
 
     expect(flat.sharpness?.edgeEnergy).toBe(0);
-    expect(alternating.sharpness?.edgeEnergy).toBeGreaterThan(flat.sharpness?.edgeEnergy ?? 0);
-    expect(alternating.sharpness?.sharpnessScore).toBeGreaterThan(flat.sharpness?.sharpnessScore ?? 0);
+    expect(boundary.sharpness?.edgeEnergy).toBeGreaterThan(flat.sharpness?.edgeEnergy ?? 0);
+    expect(boundary.sharpness?.sharpnessScore).toBeGreaterThan(flat.sharpness?.sharpnessScore ?? 0);
   });
 
   it('normalizes byte luma samples', () => {
