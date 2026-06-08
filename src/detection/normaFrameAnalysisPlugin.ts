@@ -1,35 +1,21 @@
+import { requireNativeModule } from 'expo-modules-core';
 import { Platform } from 'react-native';
-import * as NitroModuleNamespace from 'react-native-nitro-modules';
-import type { Frame } from 'react-native-vision-camera';
 import type { NativeFrameAnalysisModule } from './nativeHeuristicTypes';
 
-type MaybeNitroModulesApi = {
-  NitroModules?: {
-    createHybridObject?: <T>(name: string) => T;
-  };
-};
+let cachedModule: NativeFrameAnalysisModule | null | undefined;
 
-export type NormaFrameAnalysisPlugin = NativeFrameAnalysisModule & {
-  analyze(frame: Frame): void;
-  reset?: () => void;
-};
-
-let cachedPlugin: NormaFrameAnalysisPlugin | null | undefined;
-
-export function getNormaFrameAnalysisPlugin(): NormaFrameAnalysisPlugin | null {
-  if (cachedPlugin !== undefined) return cachedPlugin;
+export function getNormaFrameAnalysisPlugin(): NativeFrameAnalysisModule | null {
+  if (cachedModule !== undefined) return cachedModule;
   if (Platform.OS !== 'android') {
-    cachedPlugin = null;
-    return cachedPlugin;
+    cachedModule = null;
+    return cachedModule;
   }
 
   try {
-    const maybeNitroModules = NitroModuleNamespace as unknown as MaybeNitroModulesApi;
-    const createHybridObject = maybeNitroModules.NitroModules?.createHybridObject;
-    cachedPlugin = createHybridObject ? createHybridObject<NormaFrameAnalysisPlugin>('NormaFrameAnalysis') : null;
+    cachedModule = requireNativeModule<NativeFrameAnalysisModule>('NormaFrameAnalysis');
   } catch {
-    cachedPlugin = null;
+    cachedModule = null;
   }
 
-  return cachedPlugin;
+  return cachedModule;
 }
