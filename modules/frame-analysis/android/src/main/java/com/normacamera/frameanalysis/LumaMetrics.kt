@@ -21,7 +21,7 @@ internal data class LumaQualityMetrics(
   val sharpness: SharpnessMetrics
 )
 
-internal enum class LumaValueRange {
+enum class LumaValueRange {
   AUTO,
   UNIT,
   BYTE
