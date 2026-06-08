@@ -1,6 +1,7 @@
 import type { NormalizedPoint, NormalizedRect } from './types';
 
 export type NativeHeuristicStatus = 'unavailable' | 'ready' | 'low-confidence' | 'error';
+export type NativeLumaValueRange = 'auto' | 'unit' | 'byte';
 
 export type NativeSubjectCandidate = {
   center: NormalizedPoint;
@@ -48,7 +49,8 @@ export type NativeFrameAnalysisModule = {
     values: number[],
     width: number,
     height: number,
-    createdAtMs?: number
+    createdAtMs?: number,
+    valueRange?: NativeLumaValueRange
   ) => Promise<NativeFrameAnalysisResult>;
   reset?: () => void | Promise<void>;
 };
