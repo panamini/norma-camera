@@ -23,3 +23,7 @@ android {
     targetSdkVersion safeExtGet(project, 'targetSdkVersion', 35)
   }
 }
+
+dependencies {
+  implementation project(':react-native-vision-camera')
+}
