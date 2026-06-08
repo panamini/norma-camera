@@ -13,7 +13,6 @@ import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../compo
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
-import { getNormaFrameAnalysisPlugin } from '../detection/normaFrameAnalysisPlugin';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
@@ -63,11 +62,15 @@ function formatFixedMetric(value: number | undefined, digits: number): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'n/a';
 }
 
-function makeNativeAnalysisDebugLine(analysis: NativeFrameAnalysisResult | null): string | null {
-  if (!analysis || analysis.analysisSource !== 'live-frame') return null;
-  const ageMs = Math.max(0, Math.round(nowMs() - analysis.createdAtMs));
-  const updateText = typeof analysis.updateCount === 'number' ? `updates ${Math.round(analysis.updateCount)}` : `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
-  return `analysis source: live frame · age ${ageMs} ms · ${updateText} · meanLuma ${formatFixedMetric(analysis.exposure?.meanLuma, 3)} · edgeEnergy ${formatFixedMetric(analysis.sharpness?.edgeEnergy, 4)}`;
+function makeNativeAnalysisDebugLine(analysis: NativeFrameAnalysisResult | null, showNativeDebug: boolean): string | null {
+  if (analysis?.analysisSource === 'live-frame') {
+    const ageMs = Math.max(0, Math.round(nowMs() - analysis.createdAtMs));
+    const updateText = typeof analysis.updateCount === 'number' ? `updates ${Math.round(analysis.updateCount)}` : `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
+    return `analysis source: live frame · age ${ageMs} ms · ${updateText} · meanLuma ${formatFixedMetric(analysis.exposure?.meanLuma, 3)} · edgeEnergy ${formatFixedMetric(analysis.sharpness?.edgeEnergy, 4)}`;
+  }
+
+  if (!showNativeDebug) return null;
+  return 'analysis source: bridge inactive · age n/a · updates n/a · meanLuma n/a · edgeEnergy n/a';
 }
 
 function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
@@ -149,10 +152,10 @@ function buildStabilityLine(decision: AutoCaptureDecision): string | null {
   return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
 }
 
-function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean; nativeAnalysis: NativeFrameAnalysisResult | null }): string {
+function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean; nativeAnalysis: NativeFrameAnalysisResult | null; showNativeDebug: boolean }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
   const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
-  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis);
+  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug);
   return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
@@ -166,19 +169,19 @@ function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
-  const frameAnalysisModule = useMemo(getNormaFrameAnalysisPlugin, []);
-  const liveLumaFrameOutput = useFrameOutput({
+  const nativeReadinessFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
     onFrame(frame) {
       'worklet';
       try {
-        frameAnalysisModule?.analyzeVisionCameraFrame?.(frame);
+        // The Expo module proxy is not worklet-safe here. Keep native mode stable
+        // until a Nitro/worklet-safe frame analyzer entrypoint is implemented.
       } finally {
         frame.dispose();
       }
     }
   });
-  const cameraOutputs = useMemo(() => [photoOutput, liveLumaFrameOutput], [liveLumaFrameOutput, photoOutput]);
+  const cameraOutputs = useMemo(() => [photoOutput, nativeReadinessFrameOutput], [nativeReadinessFrameOutput, photoOutput]);
 
   return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />;
 }
@@ -342,7 +345,8 @@ export function CameraScreen() {
           exposureScore: sharedValues.exposureScore.value,
           motionScore: sharedValues.motionScore.value,
           nativeQualityIsReal,
-          nativeAnalysis: nativeHeuristic.analysis
+          nativeAnalysis: nativeHeuristic.analysis,
+          showNativeDebug: detectionMode === 'native-heuristic'
         })
       );
     },
