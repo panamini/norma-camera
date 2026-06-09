@@ -86,7 +86,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
 
   return {
     candidate: makeNativeVisualMassCandidate(subject, analysis, params.nowMs),
-    modeLabel: analysis.status === 'low-confidence' ? 'NATIVE VISUAL MASS · low confidence' : 'NATIVE VISUAL MASS',
+    modeLabel: 'NATIVE VISUAL MASS · low confidence',
     explanation: explainNativeFrameAnalysis(analysis),
     qualityIsReal
   };
