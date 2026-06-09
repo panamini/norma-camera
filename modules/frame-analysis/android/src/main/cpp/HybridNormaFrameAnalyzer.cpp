@@ -9,6 +9,8 @@
 namespace normacamera::frameanalysis {
 
 namespace jni = facebook::jni;
+using margelo::nitro::Prototype;
+using margelo::nitro::registerHybrids;
 
 struct NormaVisionCameraFrameAnalyzerBridge : jni::JavaClass<NormaVisionCameraFrameAnalyzerBridge> {
   static constexpr auto kJavaDescriptor = "Lcom/normacamera/frameanalysis/NormaVisionCameraFrameAnalyzerBridge;";
