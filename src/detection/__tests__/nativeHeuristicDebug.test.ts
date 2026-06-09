@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { makeNativeAnalysisDebugLine, normalizeNativeAnalysisFreshness, STALE_NATIVE_ANALYSIS_MS } from '../nativeHeuristicDebug';
+import { makeNativeAnalysisDebugLine, nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness, STALE_NATIVE_ANALYSIS_MS } from '../nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 
 function makeLiveAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): NativeFrameAnalysisResult {
@@ -38,15 +38,53 @@ function makeAnalyzerUnavailableAnalysis(): NativeFrameAnalysisResult {
 }
 
 describe('native live frame debug formatting', () => {
-  it('formats live meanLuma and edgeEnergy with source, status, age, and updates', () => {
+  it('formats live metrics and no-candidate state distinctly from guide score', () => {
     const line = makeNativeAnalysisDebugLine(makeLiveAnalysis(), true, 10_250);
 
-    expect(line).toContain('analysis source: live frame');
-    expect(line).toContain('status low-confidence');
-    expect(line).toContain('age 250 ms');
+    expect(line).toContain('source live frame');
+    expect(line).toContain('live frame age 250 ms');
     expect(line).toContain('updates 3');
     expect(line).toContain('meanLuma 0.610');
     expect(line).toContain('edgeEnergy 0.1042');
+    expect(line).toContain('native visual mass: no strong native candidate');
+    expect(line).toContain('visual confidence n/a');
+    expect(line).toContain('guide score n/a');
+  });
+
+  it('formats active native visual confidence separately from guide score', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        subject: {
+          source: 'native-heuristic',
+          center: { x: 0.4, y: 0.5 },
+          bounds: { x: 0.3, y: 0.4, width: 0.2, height: 0.2 },
+          confidence: 0.42
+        }
+      }),
+      true,
+      10_120,
+      68
+    );
+
+    expect(line).toContain('source live frame');
+    expect(line).toContain('live frame age 120 ms');
+    expect(line).toContain('native visual mass: active');
+    expect(line).toContain('visual confidence 42%');
+    expect(line).toContain('guide score 68');
+  });
+
+  it('labels retained native visual mass as held briefly', () => {
+    const analysis = makeLiveAnalysis({
+      subject: {
+        source: 'native-heuristic',
+        center: { x: 0.4, y: 0.5 },
+        bounds: { x: 0.3, y: 0.4, width: 0.2, height: 0.2 },
+        confidence: 0.16
+      }
+    });
+
+    expect(nativeVisualMassStateForAnalysis(analysis)).toBe('held briefly');
+    expect(makeNativeAnalysisDebugLine(analysis, true, 10_120, 61)).toContain('native visual mass: held briefly');
   });
 
   it('marks stale live analysis unavailable and hides stale metrics', () => {
@@ -58,24 +96,32 @@ describe('native live frame debug formatting', () => {
     expect(stale?.sharpness).toBeNull();
 
     const line = makeNativeAnalysisDebugLine(stale, true, 10_000 + STALE_NATIVE_ANALYSIS_MS + 1);
-    expect(line).toContain('analysis source: stale live frame');
+    expect(line).toContain('source stale live frame');
+    expect(line).toContain('native visual mass: stale live frame');
     expect(line).toContain('meanLuma n/a');
     expect(line).toContain('edgeEnergy n/a');
+    expect(line).toContain('visual confidence n/a');
+    expect(line).toContain('guide score n/a');
   });
 
   it('formats analyzer unavailable state with n/a metrics', () => {
     const line = makeNativeAnalysisDebugLine(makeAnalyzerUnavailableAnalysis(), true, 10_250);
 
-    expect(line).toContain('analysis source: analyzer unavailable');
-    expect(line).toContain('status unavailable');
-    expect(line).toContain('age 250 ms');
+    expect(line).toContain('source analyzer unavailable');
+    expect(line).toContain('live frame age 250 ms');
     expect(line).toContain('updates n/a');
     expect(line).toContain('meanLuma n/a');
     expect(line).toContain('edgeEnergy n/a');
+    expect(line).toContain('native visual mass: unavailable');
   });
 
   it('keeps bridge inactive state honest when analyzer is unavailable', () => {
     expect(makeNativeAnalysisDebugLine(null, false, 10_000)).toBeNull();
-    expect(makeNativeAnalysisDebugLine(null, true, 10_000)).toBe('analysis source: bridge inactive · status unavailable · age n/a · updates n/a · meanLuma n/a · edgeEnergy n/a');
+    const line = makeNativeAnalysisDebugLine(null, true, 10_000);
+    expect(line).toContain('source bridge inactive');
+    expect(line).toContain('live frame age n/a');
+    expect(line).toContain('native visual mass: unavailable');
+    expect(line).toContain('visual confidence n/a');
+    expect(line).toContain('guide score n/a');
   });
 });

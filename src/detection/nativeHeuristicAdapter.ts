@@ -1,3 +1,4 @@
+import { nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
@@ -33,8 +34,16 @@ export function nativeFrameAnalysisHasRealQuality(analysis: NativeFrameAnalysisR
 }
 
 export function explainNativeFrameAnalysis(analysis: NativeFrameAnalysisResult | null | undefined): string {
-  if (!analysis || analysis.status === 'unavailable') {
+  if (!analysis) {
     return 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.';
+  }
+
+  if (analysis.analysisSource === 'stale-live-frame') {
+    return analysis.explanation || 'Stale live frame analysis. Waiting for fresh VisionCamera frames.';
+  }
+
+  if (analysis.status === 'unavailable') {
+    return analysis.explanation || 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.';
   }
 
   if (analysis.status === 'error') {
@@ -52,12 +61,12 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   analysis: NativeFrameAnalysisResult | null | undefined;
   nowMs: number;
 }): NativeCandidateAdapterResult {
-  const analysis = params.analysis ?? null;
+  const analysis = normalizeNativeAnalysisFreshness(params.analysis ?? null, params.nowMs);
 
   if (!analysis || analysis.status === 'unavailable') {
     return {
       candidate: null,
-      modeLabel: 'NATIVE VISUAL MASS · unavailable',
+      modeLabel: `NATIVE VISUAL MASS · ${nativeVisualMassStateForAnalysis(analysis)}`,
       explanation: explainNativeFrameAnalysis(analysis),
       qualityIsReal: false
     };
@@ -78,7 +87,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   if (!subject || subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
     return {
       candidate: null,
-      modeLabel: 'NATIVE VISUAL MASS · no strong candidate',
+      modeLabel: 'NATIVE VISUAL MASS · no strong native candidate',
       explanation: explainNativeFrameAnalysis(analysis),
       qualityIsReal
     };
@@ -86,7 +95,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
 
   return {
     candidate: makeNativeVisualMassCandidate(subject, analysis, params.nowMs),
-    modeLabel: 'NATIVE VISUAL MASS · low confidence',
+    modeLabel: `NATIVE VISUAL MASS · ${nativeVisualMassStateForAnalysis(analysis)}`,
     explanation: explainNativeFrameAnalysis(analysis),
     qualityIsReal
   };

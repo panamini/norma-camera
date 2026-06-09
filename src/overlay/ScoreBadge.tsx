@@ -39,6 +39,21 @@ function splitQualityLine(value: string): { summary: string; nativeDebug: string
   return { summary, nativeDebug: nativeDebug.length > 0 ? nativeDebug : null };
 }
 
+function nativeVisualMassStateFromModeLabel(modeLabel: string): string | null {
+  const prefix = 'NATIVE VISUAL MASS · ';
+  if (!modeLabel.startsWith(prefix)) return null;
+  return modeLabel.slice(prefix.length).trim() || null;
+}
+
+function noCandidateReadout(modeLabel: string): string {
+  const nativeState = nativeVisualMassStateFromModeLabel(modeLabel);
+  if (nativeState) {
+    return `native visual mass: ${nativeState} · visual confidence n/a · guide score n/a`;
+  }
+
+  return 'source no candidate · visual confidence n/a · guide score n/a';
+}
+
 function ScoreBadgeComponent({
   modeLabel,
   title,
@@ -53,6 +68,7 @@ function ScoreBadgeComponent({
   debugQualityMode
 }: Props) {
   const quality = splitQualityLine(qualityLine);
+  const shouldShowNoCandidateReadout = !quality.nativeDebug || !modeLabel.startsWith('NATIVE VISUAL MASS');
 
   return (
     <View pointerEvents="none" style={styles.root}>
@@ -92,9 +108,9 @@ function ScoreBadgeComponent({
           <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text>
           <Text style={styles.guideScore}>guide score {Math.round(score)} / 100</Text>
         </View>
-      ) : (
-        <Text style={styles.meta}>source no subject · visual confidence 0% · guide score 0 / 100</Text>
-      )}
+      ) : shouldShowNoCandidateReadout ? (
+        <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text>
+      ) : null}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
       <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>

@@ -82,7 +82,7 @@ export function selectCompositionCandidate(input: CandidateSelectionInput): Cand
       return {
         candidate: makeManualCandidate(manualSubject, input.nowMs),
         modeLabel: modeLabelForDetectionMode(input.autoMode),
-        explanation: 'Manual fallback is overriding the placeholder. No real object detection yet.'
+        explanation: 'Manual fallback is overriding the placeholder candidate.'
       };
     }
 
@@ -97,7 +97,7 @@ export function selectCompositionCandidate(input: CandidateSelectionInput): Cand
         createdAtMs: input.nowMs
       },
       modeLabel: modeLabelForDetectionMode(input.autoMode),
-      explanation: 'No real object detection yet. Placeholder subject is placed on the left third.'
+      explanation: 'Placeholder subject is placed on the left third.'
     };
   }
 
@@ -115,6 +115,6 @@ export function selectCompositionCandidate(input: CandidateSelectionInput): Cand
       createdAtMs: input.nowMs
     },
     modeLabel: modeLabelForDetectionMode(input.autoMode),
-    explanation: 'Testing auto-capture flow. This is a simulated subject, not real object detection.'
+    explanation: 'Testing auto-capture flow. This is a simulated subject, not live frame analysis.'
   };
 }

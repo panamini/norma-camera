@@ -27,7 +27,7 @@ function makeAnalysis(status: NativeFrameAnalysisResult['status'], confidence: n
 }
 
 describe('PR2.7 native visual mass adapter', () => {
-  it('maps a conservative low-confidence native subject when the subject confidence passes threshold', () => {
+  it('maps a conservative active native subject when the subject confidence passes activation threshold', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
       analysis: makeAnalysis('low-confidence', 0.72),
       nowMs: 3_000
@@ -37,11 +37,11 @@ describe('PR2.7 native visual mass adapter', () => {
     expect(result.candidate?.label).toBe('native visual mass');
     expect(result.candidate?.bounds).toEqual({ x: 0.24, y: 0.38, width: 0.18, height: 0.24 });
     expect(result.candidate?.confidence).toBeCloseTo(0.72);
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · active');
     expect(result.explanation).toContain('No recognition is used');
   });
 
-  it('maps a stabilized retained native subject above the lower retention threshold', () => {
+  it('maps a stabilized retained native subject above the lower retention threshold as held briefly', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
       analysis: makeAnalysis('low-confidence', 0.16),
       nowMs: 3_000
@@ -49,7 +49,7 @@ describe('PR2.7 native visual mass adapter', () => {
 
     expect(result.candidate?.source).toBe('native-heuristic');
     expect(result.candidate?.confidence).toBeCloseTo(0.16);
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · held briefly');
   });
 
   it('still rejects a weak conservative native subject below the retention threshold', () => {
@@ -59,6 +59,6 @@ describe('PR2.7 native visual mass adapter', () => {
     });
 
     expect(result.candidate).toBeNull();
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · no strong candidate');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · no strong native candidate');
   });
 });
