@@ -16,16 +16,17 @@ object NormaFrameAnalysisStore {
     analysisFps: Double? = null
   ): Map<String, Any?> {
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
-    val subject = VisualMassHeuristic.detect(values, width, height, valueRange)
+    val rawSubject = VisualMassHeuristic.detect(values, width, height, valueRange)
+    val subject = VisualMassCandidateStabilizer.stabilize(rawSubject, metrics, createdAtMs)
     val explanation = when {
       analysisSource == "live-frame" && subject != null ->
-        "Real live Android luminance metrics and a coarse native visual-mass candidate are available. This is not semantic object detection."
+        "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       analysisSource == "live-frame" ->
-        "Real live Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No semantic object detection is used."
+        "Real live Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       subject != null ->
-        "Real Android luminance metrics and a coarse native visual-mass candidate are available. This is not semantic object detection."
+        "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       else ->
-        "Real Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No semantic object detection is used."
+        "Real Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
     }
     val result = mutableMapOf<String, Any?>(
       "status" to "low-confidence",
@@ -54,6 +55,7 @@ object NormaFrameAnalysisStore {
 
   @Synchronized
   fun recordAnalyzerUnavailable(createdAtMs: Long, reason: String): Map<String, Any?> {
+    VisualMassCandidateStabilizer.reset()
     val result = mapOf<String, Any?>(
       "status" to "unavailable",
       "createdAtMs" to createdAtMs,
@@ -73,5 +75,6 @@ object NormaFrameAnalysisStore {
   @Synchronized
   fun reset() {
     latestAnalysis = null
+    VisualMassCandidateStabilizer.reset()
   }
 }
