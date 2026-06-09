@@ -1,7 +1,7 @@
 import { Platform } from 'react-native';
 import { NitroModules, type HybridObject } from 'react-native-nitro-modules';
 
-export interface NormaFrameAnalyzer extends HybridObject<{ android: 'kotlin' }> {
+export interface NormaFrameAnalyzer extends HybridObject<{ android: 'c++' }> {
   analyze(frame: unknown): boolean;
 }
 
