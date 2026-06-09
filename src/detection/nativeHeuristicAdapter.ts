@@ -1,7 +1,7 @@
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
-export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.35;
+export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.22;
 
 export type NativeCandidateAdapterResult = {
   candidate: CompositionCandidate | null;
@@ -34,7 +34,7 @@ export function nativeFrameAnalysisHasRealQuality(analysis: NativeFrameAnalysisR
 
 export function explainNativeFrameAnalysis(analysis: NativeFrameAnalysisResult | null | undefined): string {
   if (!analysis || analysis.status === 'unavailable') {
-    return 'Native visual-mass analyzer unavailable. Manual fallback active. No semantic object detection yet.';
+    return 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.';
   }
 
   if (analysis.status === 'error') {
@@ -42,10 +42,10 @@ export function explainNativeFrameAnalysis(analysis: NativeFrameAnalysisResult |
   }
 
   if (analysis.status === 'low-confidence') {
-    return analysis.explanation || 'Real luminance analysis ran conservatively. No semantic object detection yet.';
+    return analysis.explanation || 'Real luminance analysis ran conservatively. No recognition is used.';
   }
 
-  return analysis.explanation || 'Real luminance analysis. Real contrast candidate. No semantic object detection yet.';
+  return analysis.explanation || 'Real luminance analysis. Real contrast candidate. No recognition is used.';
 }
 
 export function adaptNativeFrameAnalysisToCandidate(params: {
@@ -103,7 +103,7 @@ export function makeManualFallbackNativeResult(point: NormalizedPoint, nowMs: nu
       createdAtMs: nowMs
     },
     modeLabel: 'NATIVE VISUAL MASS · manual fallback',
-    explanation: 'Manual fallback is overriding native visual-mass mode. No semantic object detection yet.',
+    explanation: 'Manual fallback is overriding native visual-mass mode. No recognition is used.',
     qualityIsReal: false
   };
 }
