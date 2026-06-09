@@ -13,7 +13,6 @@ static def safeExtGet(project, prop, fallback) {
 apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
 applyKotlinExpoModulesCorePlugin()
 useCoreDependencies()
-apply from: '../nitrogen/generated/android/NormaFrameAnalysis+autolinking.gradle'
 
 android {
   namespace 'com.normacamera.frameanalysis'
@@ -26,8 +25,8 @@ android {
 
     externalNativeBuild {
       cmake {
-        cppFlags '-frtti -fexceptions -Wall -Wextra -fstack-protector-all'
-        arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+        cppFlags '-frtti -fexceptions -Wall -Wextra'
+        arguments '-DANDROID_STL=c++_shared'
       }
     }
   }
@@ -41,37 +40,11 @@ android {
   buildFeatures {
     prefab true
   }
-
-  packagingOptions {
-    excludes = [
-      'META-INF',
-      'META-INF/**',
-      '**/libc++_shared.so',
-      '**/libNitroModules.so',
-      '**/libfbjni.so',
-      '**/libjsi.so',
-      '**/libfolly_json.so',
-      '**/libfolly_runtime.so',
-      '**/libglog.so',
-      '**/libhermes.so',
-      '**/libhermes-executor-debug.so',
-      '**/libhermes_executor.so',
-      '**/libreactnative.so',
-      '**/libreactnativejni.so',
-      '**/libturbomodulejsijni.so',
-      '**/libreact_nativemodule_core.so',
-      '**/libjscexecutor.so'
-    ]
-  }
 }
 
 repositories {
   mavenCentral()
   google()
-}
-
-configurations.configureEach {
-  resolutionStrategy.force 'com.google.guava:listenablefuture:1.0'
 }
 
 dependencies {
