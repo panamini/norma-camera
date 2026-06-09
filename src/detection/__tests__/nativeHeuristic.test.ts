@@ -94,7 +94,7 @@ describe('native visual-mass candidate adapter', () => {
     expect(result.candidate?.label).toBe('native visual mass');
     expect(result.candidate?.center.x).toBeCloseTo(1 / 3);
     expect(result.candidate?.confidence).toBeCloseTo(0.72);
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
   });
 
   it('native ready with exposure and sharpness marks quality as real', () => {
