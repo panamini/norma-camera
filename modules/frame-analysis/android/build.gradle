@@ -13,17 +13,69 @@ static def safeExtGet(project, prop, fallback) {
 apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
 applyKotlinExpoModulesCorePlugin()
 useCoreDependencies()
+apply from: '../nitrogen/generated/android/NormaFrameAnalysis+autolinking.gradle'
 
 android {
   namespace 'com.normacamera.frameanalysis'
   compileSdkVersion safeExtGet(project, 'compileSdkVersion', 35)
+  ndkVersion safeExtGet(project, 'ndkVersion', '28.1.13356709')
 
   defaultConfig {
     minSdkVersion safeExtGet(project, 'minSdkVersion', 23)
     targetSdkVersion safeExtGet(project, 'targetSdkVersion', 35)
+
+    externalNativeBuild {
+      cmake {
+        cppFlags '-frtti -fexceptions -Wall -Wextra -fstack-protector-all'
+        arguments '-DANDROID_STL=c++_shared', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON'
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path 'CMakeLists.txt'
+    }
+  }
+
+  buildFeatures {
+    prefab true
+  }
+
+  packagingOptions {
+    excludes = [
+      'META-INF',
+      'META-INF/**',
+      '**/libc++_shared.so',
+      '**/libNitroModules.so',
+      '**/libfbjni.so',
+      '**/libjsi.so',
+      '**/libfolly_json.so',
+      '**/libfolly_runtime.so',
+      '**/libglog.so',
+      '**/libhermes.so',
+      '**/libhermes-executor-debug.so',
+      '**/libhermes_executor.so',
+      '**/libreactnative.so',
+      '**/libreactnativejni.so',
+      '**/libturbomodulejsijni.so',
+      '**/libreact_nativemodule_core.so',
+      '**/libjscexecutor.so'
+    ]
   }
 }
 
+repositories {
+  mavenCentral()
+  google()
+}
+
+configurations.configureEach {
+  resolutionStrategy.force 'com.google.guava:listenablefuture:1.0'
+}
+
 dependencies {
-  compileOnly("androidx.camera:camera-core:1.7.0-alpha01")
+  compileOnly('androidx.camera:camera-core:1.7.0-alpha01')
+  implementation project(':react-native-nitro-modules')
+  implementation project(':react-native-vision-camera')
 }
