@@ -18,11 +18,11 @@ export function instructionForDetectionMode(mode: DetectionMode, hasCandidate: b
     case 'manual':
       return hasCandidate ? 'Manual fallback point is being scored.' : 'Tap subject point.';
     case 'auto-placeholder':
-      return hasCandidate ? 'No real object detection yet.' : 'Tap subject or switch Auto.';
+      return hasCandidate ? 'Placeholder candidate is being scored.' : 'Tap subject or switch Auto.';
     case 'simulated-detector':
       return 'Testing auto-capture flow.';
     case 'native-heuristic':
-      return hasCandidate ? 'Real luminance analysis. No semantic object detection yet.' : 'Tap subject or switch mode.';
+      return hasCandidate ? 'Live luminance analysis. No semantic detection is used.' : 'Native mode waiting for a strong contrast candidate.';
   }
 }
 
