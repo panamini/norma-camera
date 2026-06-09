@@ -2,7 +2,8 @@ import { nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness } fr
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
-export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.14;
+export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.2;
+export const NATIVE_HELD_CONFIDENCE_MIN = 0.14;
 
 export type NativeCandidateAdapterResult = {
   candidate: CompositionCandidate | null;
@@ -84,10 +85,19 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   const qualityIsReal = nativeFrameAnalysisHasRealQuality(analysis);
   const subject = analysis.subject;
 
-  if (!subject || subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
+  if (!subject || subject.confidence < NATIVE_HELD_CONFIDENCE_MIN) {
     return {
       candidate: null,
       modeLabel: 'NATIVE VISUAL MASS · no strong native candidate',
+      explanation: explainNativeFrameAnalysis(analysis),
+      qualityIsReal
+    };
+  }
+
+  if (subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
+    return {
+      candidate: null,
+      modeLabel: `NATIVE VISUAL MASS · ${nativeVisualMassStateForAnalysis(analysis)}`,
       explanation: explainNativeFrameAnalysis(analysis),
       qualityIsReal
     };
