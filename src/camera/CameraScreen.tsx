@@ -154,7 +154,7 @@ function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
-  const analyzer = useMemo(getNormaFrameAnalyzer, []);
+  const analyzer = getNormaFrameAnalyzer();
   const nativeReadinessFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
     dropFramesWhileBusy: true,
