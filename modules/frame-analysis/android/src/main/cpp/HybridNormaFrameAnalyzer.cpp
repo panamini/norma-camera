@@ -29,9 +29,11 @@ bool HybridNormaFrameAnalyzer::analyze(const std::shared_ptr<margelo::nitro::cam
   auto javaFrame = std::dynamic_pointer_cast<margelo::nitro::camera::JHybridFrameSpec>(frame);
   if (javaFrame == nullptr) return false;
 
-  return jni::ThreadScope::WithClassLoader([&]() -> bool {
-    return NormaVisionCameraFrameAnalyzerBridge::analyze(javaFrame->getJavaPart());
+  bool analyzed = false;
+  jni::ThreadScope::WithClassLoader([&] {
+    analyzed = NormaVisionCameraFrameAnalyzerBridge::analyze(javaFrame->getJavaPart());
   });
+  return analyzed;
 }
 
 void HybridNormaFrameAnalyzer::loadHybridMethods() {
