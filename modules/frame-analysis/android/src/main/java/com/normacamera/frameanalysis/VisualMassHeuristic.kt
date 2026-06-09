@@ -115,7 +115,10 @@ internal object VisualMassHeuristic {
     }
 
     val activeMeanWeight = totalWeight / activeCount
-    val bboxThreshold = max(peakWeight * BBOX_PEAK_FRACTION, activeMeanWeight * BBOX_ACTIVE_MEAN_MULTIPLIER)
+    val bboxThreshold = min(
+      peakWeight,
+      max(peakWeight * BBOX_PEAK_FRACTION, activeMeanWeight * BBOX_ACTIVE_MEAN_MULTIPLIER)
+    )
     var minX = width
     var minY = height
     var maxX = -1
@@ -158,12 +161,13 @@ internal object VisualMassHeuristic {
       y = clamp(weightedY / totalWeight, 0.0, 1.0)
     )
 
+    val interiorSampleCount = max(1.0, ((width - 2) * (height - 2)).toDouble())
     val confidence = computeConfidence(
       peakWeight = peakWeight,
       totalWeight = totalWeight,
-      activeAreaRatio = activeCount / sampleCount,
+      activeAreaRatio = activeCount / interiorSampleCount,
       boundsArea = bounds.width * bounds.height,
-      sampleCount = sampleCount
+      sampleCount = interiorSampleCount
     )
 
     if (confidence < MIN_CONFIDENCE) return null
@@ -221,7 +225,7 @@ internal object VisualMassHeuristic {
     val normalized = when (valueRange) {
       LumaValueRange.BYTE -> value / 255.0
       LumaValueRange.UNIT -> value
-      LumaValueRange.AUTO -> value
+      LumaValueRange.AUTO -> error("toUnitLuma called with unresolved AUTO range")
     }
     return clamp(normalized, 0.0, 1.0)
   }
