@@ -34,8 +34,16 @@ export function nativeFrameAnalysisHasRealQuality(analysis: NativeFrameAnalysisR
 }
 
 export function explainNativeFrameAnalysis(analysis: NativeFrameAnalysisResult | null | undefined): string {
-  if (!analysis || analysis.status === 'unavailable') {
+  if (!analysis) {
     return 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.';
+  }
+
+  if (analysis.analysisSource === 'stale-live-frame') {
+    return analysis.explanation || 'Stale live frame analysis. Waiting for fresh VisionCamera frames.';
+  }
+
+  if (analysis.status === 'unavailable') {
+    return analysis.explanation || 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.';
   }
 
   if (analysis.status === 'error') {
