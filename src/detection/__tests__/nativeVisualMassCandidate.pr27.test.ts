@@ -41,15 +41,15 @@ describe('PR2.7 native visual mass adapter', () => {
     expect(result.explanation).toContain('No recognition is used');
   });
 
-  it('maps a stabilized retained native subject above the lower retention threshold as held briefly', () => {
+  it('keeps a stabilized retained native subject readout-only as held briefly', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
       analysis: makeAnalysis('low-confidence', 0.16),
       nowMs: 3_000
     });
 
-    expect(result.candidate?.source).toBe('native-heuristic');
-    expect(result.candidate?.confidence).toBeCloseTo(0.16);
+    expect(result.candidate).toBeNull();
     expect(result.modeLabel).toBe('NATIVE VISUAL MASS · held briefly');
+    expect(result.explanation).toContain('No recognition is used');
   });
 
   it('still rejects a weak conservative native subject below the retention threshold', () => {
