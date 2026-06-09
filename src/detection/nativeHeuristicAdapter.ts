@@ -1,7 +1,7 @@
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
-export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.22;
+export const NATIVE_CANDIDATE_CONFIDENCE_MIN = 0.14;
 
 export type NativeCandidateAdapterResult = {
   candidate: CompositionCandidate | null;
