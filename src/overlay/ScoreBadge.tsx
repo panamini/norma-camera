@@ -33,6 +33,12 @@ type Props = {
   debugQualityMode: DebugQualityMode;
 };
 
+function splitQualityLine(value: string): { summary: string; nativeDebug: string | null } {
+  const [summary, ...nativeLines] = value.split('\n');
+  const nativeDebug = nativeLines.join('\n').trim();
+  return { summary, nativeDebug: nativeDebug.length > 0 ? nativeDebug : null };
+}
+
 function ScoreBadgeComponent({
   modeLabel,
   title,
@@ -46,6 +52,8 @@ function ScoreBadgeComponent({
   captureBanner,
   debugQualityMode
 }: Props) {
+  const quality = splitQualityLine(qualityLine);
+
   return (
     <View pointerEvents="none" style={styles.root}>
       {captureBanner ? (
@@ -66,7 +74,14 @@ function ScoreBadgeComponent({
       <Text style={styles.status}>{statusLine}</Text>
       <Text style={styles.meta}>{gateReasonLine}</Text>
       {stabilityLine ? <Text style={styles.meta}>{stabilityLine}</Text> : null}
-      <Text style={styles.meta}>{qualityLine}</Text>
+      <Text style={styles.meta}>{quality.summary}</Text>
+
+      {quality.nativeDebug ? (
+        <View style={styles.liveBlock}>
+          <Text style={styles.liveTitle}>LIVE FRAME ANALYSIS</Text>
+          <Text style={styles.liveText}>{quality.nativeDebug}</Text>
+        </View>
+      ) : null}
 
       {snapshot.hasCandidate ? (
         <View style={styles.debugBlock}>
@@ -148,6 +163,28 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 12,
     fontWeight: '900'
+  },
+  liveBlock: {
+    marginTop: 6,
+    marginBottom: 4,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: 'rgba(242,184,75,0.42)',
+    backgroundColor: 'rgba(242,184,75,0.12)',
+    paddingHorizontal: 9,
+    paddingVertical: 7
+  },
+  liveTitle: {
+    color: '#f2b84b',
+    fontSize: 10,
+    fontWeight: '900',
+    letterSpacing: 0.8
+  },
+  liveText: {
+    marginTop: 3,
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '800'
   },
   debugBlock: {
     marginTop: 6,
