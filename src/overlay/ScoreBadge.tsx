@@ -39,9 +39,16 @@ function splitQualityLine(value: string): { summary: string; nativeDebug: string
   return { summary, nativeDebug: nativeDebug.length > 0 ? nativeDebug : null };
 }
 
+function nativeVisualMassStateFromModeLabel(modeLabel: string): string | null {
+  const prefix = 'NATIVE VISUAL MASS · ';
+  if (!modeLabel.startsWith(prefix)) return null;
+  return modeLabel.slice(prefix.length).trim() || null;
+}
+
 function noCandidateReadout(modeLabel: string): string {
-  if (modeLabel.startsWith('NATIVE VISUAL MASS')) {
-    return 'native visual mass: no strong native candidate · visual confidence n/a · guide score n/a';
+  const nativeState = nativeVisualMassStateFromModeLabel(modeLabel);
+  if (nativeState) {
+    return `native visual mass: ${nativeState} · visual confidence n/a · guide score n/a`;
   }
 
   return 'source no candidate · visual confidence n/a · guide score n/a';
