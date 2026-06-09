@@ -15,9 +15,10 @@ object NormaFrameAnalysisStore {
     updateCount: Long? = null,
     analysisFps: Double? = null
   ): Map<String, Any?> {
+    val analysisNowMs = System.currentTimeMillis()
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
     val rawSubject = VisualMassHeuristic.detect(values, width, height, valueRange)
-    val subject = VisualMassCandidateStabilizer.stabilize(rawSubject, metrics, createdAtMs)
+    val subject = VisualMassCandidateStabilizer.stabilize(rawSubject, metrics, analysisNowMs)
     val explanation = when {
       analysisSource == "live-frame" && subject != null ->
         "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
