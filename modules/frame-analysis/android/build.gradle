@@ -49,6 +49,8 @@ repositories {
 
 dependencies {
   compileOnly('androidx.camera:camera-core:1.7.0-alpha01')
+  implementation('com.facebook.fbjni:fbjni')
+  implementation('com.facebook.react:react-android')
   implementation project(':react-native-nitro-modules')
   implementation project(':react-native-vision-camera')
 }
