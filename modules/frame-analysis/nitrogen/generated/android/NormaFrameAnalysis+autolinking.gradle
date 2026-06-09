@@ -1,6 +1,0 @@
-// PR2.6 keeps the local NormaFrameAnalysis Nitro bridge wired explicitly in
-// modules/frame-analysis/android/CMakeLists.txt and android/src/main/cpp.
-// This shim exists because android/build.gradle applies the conventional
-// Nitrogen autolinking path, but this local module does not generate specs yet.
-
-logger.warn('[NormaFrameAnalysis] Using explicit PR2.6 native sources; no generated Nitro autolinking sources to add.')
