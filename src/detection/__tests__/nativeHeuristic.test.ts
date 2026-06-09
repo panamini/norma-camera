@@ -59,6 +59,18 @@ describe('native visual-mass candidate adapter', () => {
     expect(result.explanation).toBe('native failure');
   });
 
+  it('stale live-frame analysis returns no candidate and stale mode label', () => {
+    const result = selectCompositionCandidate({
+      nowMs: 3_600,
+      autoMode: 'native-heuristic',
+      nativeFrameAnalysis: makeNativeAnalysis({ analysisSource: 'live-frame' })
+    });
+
+    expect(result.candidate).toBeNull();
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · stale live frame');
+    expect(result.explanation).toContain('Stale live frame analysis');
+  });
+
   it('native low confidence returns no candidate', () => {
     const result = selectCompositionCandidate({
       nowMs: 1_000,
