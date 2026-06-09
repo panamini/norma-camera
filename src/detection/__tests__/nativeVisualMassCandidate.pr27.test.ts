@@ -43,18 +43,18 @@ describe('PR2.7 native visual mass adapter', () => {
 
   it('maps a stabilized retained native subject above the lower retention threshold', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
-      analysis: makeAnalysis('low-confidence', 0.24),
+      analysis: makeAnalysis('low-confidence', 0.16),
       nowMs: 3_000
     });
 
     expect(result.candidate?.source).toBe('native-heuristic');
-    expect(result.candidate?.confidence).toBeCloseTo(0.24);
+    expect(result.candidate?.confidence).toBeCloseTo(0.16);
     expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
   });
 
   it('still rejects a weak conservative native subject below the retention threshold', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
-      analysis: makeAnalysis('low-confidence', 0.2),
+      analysis: makeAnalysis('low-confidence', 0.12),
       nowMs: 3_000
     });
 
