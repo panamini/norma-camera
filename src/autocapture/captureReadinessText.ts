@@ -10,7 +10,7 @@ export function captureReadinessNoCandidateLine(params: { detectionMode: Detecti
   if (modeLabel.includes('stale live frame')) {
     return 'ARMED · no subject · stale live frame';
   }
-  if (modeLabel.includes('error')) {
+  if (modeLabel.includes(' · error')) {
     return 'ARMED · no subject · native error';
   }
   if (modeLabel.includes('unavailable')) {
