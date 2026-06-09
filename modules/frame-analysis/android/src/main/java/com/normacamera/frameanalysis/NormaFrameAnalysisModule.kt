@@ -4,6 +4,10 @@ import expo.modules.kotlin.modules.Module
 import expo.modules.kotlin.modules.ModuleDefinition
 
 class NormaFrameAnalysisModule : Module() {
+  init {
+    loadNitroRegistry()
+  }
+
   override fun definition() = ModuleDefinition {
     Name("NormaFrameAnalysis")
 
@@ -18,6 +22,7 @@ class NormaFrameAnalysisModule : Module() {
 
     Function("reset") {
       NormaFrameAnalysisStore.reset()
+      NormaVisionCameraFrameAnalyzer.reset()
     }
   }
 
@@ -31,5 +36,21 @@ class NormaFrameAnalysisModule : Module() {
 
   private fun isFiniteDouble(value: Double): Boolean {
     return !value.isNaN() && !value.isInfinite()
+  }
+
+  private companion object {
+    @Volatile
+    private var nitroRegistryLoaded = false
+
+    @Synchronized
+    fun loadNitroRegistry() {
+      if (nitroRegistryLoaded) return
+      try {
+        System.loadLibrary("NormaFrameAnalysis")
+        nitroRegistryLoaded = true
+      } catch (_: UnsatisfiedLinkError) {
+        nitroRegistryLoaded = false
+      }
+    }
   }
 }
