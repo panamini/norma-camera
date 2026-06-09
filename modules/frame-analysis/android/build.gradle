@@ -10,6 +10,11 @@ static def safeExtGet(project, prop, fallback) {
   return project.rootProject.ext.has(prop) ? project.rootProject.ext.get(prop) : fallback
 }
 
+static def reactNativeArchitectures(project) {
+  def value = project.findProperty('reactNativeArchitectures')
+  return value ? value.split(',').collect { it.trim() }.findAll { it.length() > 0 } : ['armeabi-v7a', 'x86', 'x86_64', 'arm64-v8a']
+}
+
 apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
 applyKotlinExpoModulesCorePlugin()
 useCoreDependencies()
@@ -22,6 +27,10 @@ android {
   defaultConfig {
     minSdkVersion safeExtGet(project, 'minSdkVersion', 23)
     targetSdkVersion safeExtGet(project, 'targetSdkVersion', 35)
+
+    ndk {
+      abiFilters(*reactNativeArchitectures(project))
+    }
 
     externalNativeBuild {
       cmake {
