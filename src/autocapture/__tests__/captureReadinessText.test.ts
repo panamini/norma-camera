@@ -30,4 +30,11 @@ describe('capture readiness no-candidate copy', () => {
     expect(line).toBe('ARMED · no subject · native analyzer unavailable');
     expect(line).not.toMatch(forbiddenSemanticWords);
   });
+
+  it('keeps native error distinct from unavailable', () => {
+    const line = captureReadinessNoCandidateLine({ detectionMode: 'native-heuristic', modeLabel: 'NATIVE VISUAL MASS · error' });
+
+    expect(line).toBe('ARMED · no subject · native error');
+    expect(line).not.toMatch(forbiddenSemanticWords);
+  });
 });
