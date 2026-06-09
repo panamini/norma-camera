@@ -36,7 +36,9 @@ bool HybridNormaFrameAnalyzer::analyze(const std::shared_ptr<margelo::nitro::cam
 
 void HybridNormaFrameAnalyzer::loadHybridMethods() {
   HybridObject::loadHybridMethods();
-  registerHybridMethod("analyze", &HybridNormaFrameAnalyzer::analyze);
+  registerHybrids(this, [](margelo::nitro::Prototype& prototype) {
+    prototype.registerHybridMethod("analyze", &HybridNormaFrameAnalyzer::analyze);
+  });
 }
 
 void registerNormaFrameAnalyzerHybridObject() {
