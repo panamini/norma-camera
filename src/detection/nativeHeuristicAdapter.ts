@@ -1,3 +1,4 @@
+import { nativeVisualMassStateForAnalysis } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
@@ -78,7 +79,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   if (!subject || subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
     return {
       candidate: null,
-      modeLabel: 'NATIVE VISUAL MASS · no strong candidate',
+      modeLabel: 'NATIVE VISUAL MASS · no strong native candidate',
       explanation: explainNativeFrameAnalysis(analysis),
       qualityIsReal
     };
@@ -86,7 +87,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
 
   return {
     candidate: makeNativeVisualMassCandidate(subject, analysis, params.nowMs),
-    modeLabel: 'NATIVE VISUAL MASS · low confidence',
+    modeLabel: `NATIVE VISUAL MASS · ${nativeVisualMassStateForAnalysis(analysis)}`,
     explanation: explainNativeFrameAnalysis(analysis),
     qualityIsReal
   };
