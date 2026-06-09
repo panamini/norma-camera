@@ -22,7 +22,7 @@ function makeAnalysis(status: NativeFrameAnalysisResult['status'], confidence: n
       sharpnessScore: 74,
       edgeEnergy: 0.31
     },
-    explanation: 'Real live Android luminance metrics and a coarse native visual-mass candidate are available. This is not semantic object detection.'
+    explanation: 'Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used.'
   };
 }
 
@@ -38,10 +38,21 @@ describe('PR2.7 native visual mass adapter', () => {
     expect(result.candidate?.bounds).toEqual({ x: 0.24, y: 0.38, width: 0.18, height: 0.24 });
     expect(result.candidate?.confidence).toBeCloseTo(0.72);
     expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
-    expect(result.explanation).toContain('not semantic object detection');
+    expect(result.explanation).toContain('No recognition is used');
   });
 
-  it('still rejects a weak conservative native subject below threshold', () => {
+  it('maps a stabilized retained native subject above the lower retention threshold', () => {
+    const result = adaptNativeFrameAnalysisToCandidate({
+      analysis: makeAnalysis('low-confidence', 0.24),
+      nowMs: 3_000
+    });
+
+    expect(result.candidate?.source).toBe('native-heuristic');
+    expect(result.candidate?.confidence).toBeCloseTo(0.24);
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
+  });
+
+  it('still rejects a weak conservative native subject below the retention threshold', () => {
     const result = adaptNativeFrameAnalysisToCandidate({
       analysis: makeAnalysis('low-confidence', 0.2),
       nowMs: 3_000
