@@ -39,6 +39,14 @@ function splitQualityLine(value: string): { summary: string; nativeDebug: string
   return { summary, nativeDebug: nativeDebug.length > 0 ? nativeDebug : null };
 }
 
+function noCandidateReadout(modeLabel: string): string {
+  if (modeLabel.startsWith('NATIVE VISUAL MASS')) {
+    return 'native visual mass: no strong native candidate · visual confidence n/a · guide score n/a';
+  }
+
+  return 'source no candidate · visual confidence n/a · guide score n/a';
+}
+
 function ScoreBadgeComponent({
   modeLabel,
   title,
@@ -93,7 +101,7 @@ function ScoreBadgeComponent({
           <Text style={styles.guideScore}>guide score {Math.round(score)} / 100</Text>
         </View>
       ) : (
-        <Text style={styles.meta}>source no subject · visual confidence 0% · guide score 0 / 100</Text>
+        <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text>
       )}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
