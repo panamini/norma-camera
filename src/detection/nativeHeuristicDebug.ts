@@ -3,6 +3,8 @@ import { nowMs } from '../shared/time';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
 export const NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN = 0.2;
+// Keep this equal to NATIVE_CANDIDATE_CONFIDENCE_MIN in nativeHeuristicAdapter.
+// The adapter admission floor and the 'held briefly' display floor share one boundary.
 export const NATIVE_VISUAL_MASS_HELD_CONFIDENCE_MIN = 0.14;
 
 type NativeVisualMassState = 'active' | 'held briefly' | 'low confidence' | 'no strong native candidate' | 'stale live frame' | 'unavailable' | 'error';
