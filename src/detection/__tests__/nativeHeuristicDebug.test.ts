@@ -25,6 +25,18 @@ function makeLiveAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): N
   };
 }
 
+function makeAnalyzerUnavailableAnalysis(): NativeFrameAnalysisResult {
+  return {
+    status: 'unavailable',
+    createdAtMs: 10_000,
+    subject: null,
+    exposure: null,
+    sharpness: null,
+    explanation: 'Native analyzer unavailable: frame is not a NativeFrame.',
+    analysisSource: 'analyzer-unavailable'
+  };
+}
+
 describe('native live frame debug formatting', () => {
   it('formats live meanLuma and edgeEnergy with source, status, age, and updates', () => {
     const line = makeNativeAnalysisDebugLine(makeLiveAnalysis(), true, 10_250);
@@ -47,6 +59,17 @@ describe('native live frame debug formatting', () => {
 
     const line = makeNativeAnalysisDebugLine(stale, true, 10_000 + STALE_NATIVE_ANALYSIS_MS + 1);
     expect(line).toContain('analysis source: stale live frame');
+    expect(line).toContain('meanLuma n/a');
+    expect(line).toContain('edgeEnergy n/a');
+  });
+
+  it('formats analyzer unavailable state with n/a metrics', () => {
+    const line = makeNativeAnalysisDebugLine(makeAnalyzerUnavailableAnalysis(), true, 10_250);
+
+    expect(line).toContain('analysis source: analyzer unavailable');
+    expect(line).toContain('status unavailable');
+    expect(line).toContain('age 250 ms');
+    expect(line).toContain('updates n/a');
     expect(line).toContain('meanLuma n/a');
     expect(line).toContain('edgeEnergy n/a');
   });
