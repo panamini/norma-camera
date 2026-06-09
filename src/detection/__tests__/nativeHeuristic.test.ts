@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { DEFAULT_AUTO_CAPTURE_CONFIG, decideAutoCapture } from '../../autocapture/decideAutoCapture';
 import type { FrameQuality } from '../../autocapture/types';
+import { STALE_NATIVE_ANALYSIS_MS } from '../nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 import { NATIVE_CANDIDATE_CONFIDENCE_MIN, adaptNativeFrameAnalysisToCandidate, nativeFrameAnalysisHasRealQuality } from '../nativeHeuristicAdapter';
 import { scoreNativeFrameAnalysis } from '../scoreNativeFrameAnalysis';
@@ -60,10 +61,11 @@ describe('native visual-mass candidate adapter', () => {
   });
 
   it('stale live-frame analysis returns no candidate and stale mode label', () => {
+    const createdAtMs = 2_000;
     const result = selectCompositionCandidate({
-      nowMs: 3_600,
+      nowMs: createdAtMs + STALE_NATIVE_ANALYSIS_MS + 500,
       autoMode: 'native-heuristic',
-      nativeFrameAnalysis: makeNativeAnalysis({ analysisSource: 'live-frame' })
+      nativeFrameAnalysis: makeNativeAnalysis({ analysisSource: 'live-frame', createdAtMs })
     });
 
     expect(result.candidate).toBeNull();
