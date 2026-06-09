@@ -33,7 +33,7 @@ function makeNativeAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}):
       sharpnessScore: 74,
       edgeEnergy: 0.31
     },
-    explanation: 'Real luminance analysis. Real contrast candidate. No semantic object detection yet.',
+    explanation: 'Real luminance analysis. Real contrast candidate. No semantic detection is used.',
     ...overrides
   };
 }
@@ -67,7 +67,7 @@ describe('native visual-mass candidate adapter', () => {
     });
 
     expect(result.candidate).toBeNull();
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · no strong candidate');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · no strong native candidate');
     expect(result.explanation).toContain('no strong contrast candidate');
   });
 
@@ -83,7 +83,7 @@ describe('native visual-mass candidate adapter', () => {
     const adapted = adaptNativeFrameAnalysisToCandidate({ analysis, nowMs: 3_000 });
 
     expect(adapted.candidate).toBeNull();
-    expect(adapted.modeLabel).toBe('NATIVE VISUAL MASS · no strong candidate');
+    expect(adapted.modeLabel).toBe('NATIVE VISUAL MASS · no strong native candidate');
     expect(adapted.qualityIsReal).toBe(true);
   });
 
@@ -94,7 +94,7 @@ describe('native visual-mass candidate adapter', () => {
     expect(result.candidate?.label).toBe('native visual mass');
     expect(result.candidate?.center.x).toBeCloseTo(1 / 3);
     expect(result.candidate?.confidence).toBeCloseTo(0.72);
-    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · low confidence');
+    expect(result.modeLabel).toBe('NATIVE VISUAL MASS · active');
   });
 
   it('native ready with exposure and sharpness marks quality as real', () => {
