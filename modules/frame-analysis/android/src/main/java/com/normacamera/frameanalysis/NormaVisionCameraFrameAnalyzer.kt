@@ -10,11 +10,15 @@ object NormaVisionCameraFrameAnalyzer {
   private const val TARGET_GRID_WIDTH = 32
   private const val TARGET_GRID_HEIGHT = 24
   private const val MIN_ANALYSIS_INTERVAL_MS = 250L
+  private const val MIN_UNAVAILABLE_INTERVAL_MS = 1_000L
 
   private val busy = AtomicBoolean(false)
 
   @Volatile
   private var lastAnalysisAtMs = 0L
+
+  @Volatile
+  private var lastUnavailableAtMs = 0L
 
   @Volatile
   private var firstAnalysisAtMs = 0L
@@ -34,8 +38,8 @@ object NormaVisionCameraFrameAnalyzer {
     }
 
     try {
-      val image = imageProxyFromFrame(frame) ?: return null
-      val grid = downsampleYPlane(image) ?: return null
+      val nativeFrame = frame as? NativeFrame ?: return recordAnalyzerUnavailable(nowMs, "frame is not a NativeFrame")
+      val grid = downsampleYPlane(nativeFrame.image) ?: return recordAnalyzerUnavailable(nowMs, "Y plane downsample unavailable")
       val previousFirstAnalysisAtMs = firstAnalysisAtMs
       val nextUpdateCount = updateCount + 1
       updateCount = nextUpdateCount
@@ -59,7 +63,7 @@ object NormaVisionCameraFrameAnalyzer {
         analysisFps = analysisFps
       )
     } catch (_: Exception) {
-      return null
+      return recordAnalyzerUnavailable(nowMs, "native analyzer exception")
     } finally {
       busy.set(false)
     }
@@ -69,6 +73,7 @@ object NormaVisionCameraFrameAnalyzer {
     if (!busy.compareAndSet(false, true)) return
     try {
       lastAnalysisAtMs = 0L
+      lastUnavailableAtMs = 0L
       firstAnalysisAtMs = 0L
       updateCount = 0L
     } finally {
@@ -76,9 +81,14 @@ object NormaVisionCameraFrameAnalyzer {
     }
   }
 
-  private fun imageProxyFromFrame(frame: HybridFrameSpec?): ImageProxy? {
-    val nativeFrame = frame as? NativeFrame ?: return null
-    return nativeFrame.image
+  private fun recordAnalyzerUnavailable(nowMs: Long, reason: String): Map<String, Any?>? {
+    val latest = NormaFrameAnalysisStore.getLatestAnalysis()
+    if (nowMs - lastUnavailableAtMs < MIN_UNAVAILABLE_INTERVAL_MS) {
+      return latest
+    }
+
+    lastUnavailableAtMs = nowMs
+    return NormaFrameAnalysisStore.recordAnalyzerUnavailable(createdAtMs = nowMs, reason = reason)
   }
 
   private fun downsampleYPlane(image: ImageProxy): LumaGridSample? {
