@@ -7,7 +7,7 @@ export const NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN = 0.2;
 // The adapter admission floor and the 'held briefly' display floor share one boundary.
 export const NATIVE_VISUAL_MASS_HELD_CONFIDENCE_MIN = 0.14;
 
-type NativeVisualMassState = 'active' | 'held briefly' | 'low confidence' | 'no strong native candidate' | 'stale live frame' | 'unavailable' | 'error';
+type NativeVisualMassState = 'active' | 'held briefly' | 'no strong native candidate' | 'stale live frame' | 'unavailable' | 'error';
 
 function formatFixedMetric(value: number | undefined, digits: number): string {
   return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'n/a';
@@ -41,7 +41,7 @@ export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisRe
   if (typeof confidence !== 'number' || !Number.isFinite(confidence)) return 'no strong native candidate';
   if (confidence >= NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN) return 'active';
   if (confidence >= NATIVE_VISUAL_MASS_HELD_CONFIDENCE_MIN) return 'held briefly';
-  return 'low confidence';
+  return 'no strong native candidate';
 }
 
 function formatNativeReadout(params: {
