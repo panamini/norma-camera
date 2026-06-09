@@ -3,6 +3,7 @@ import { nowMs } from '../shared/time';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
 export const NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN = 0.2;
+export const NATIVE_VISUAL_MASS_HELD_CONFIDENCE_MIN = 0.14;
 
 type NativeVisualMassState = 'active' | 'held briefly' | 'low confidence' | 'no strong native candidate' | 'stale live frame' | 'unavailable' | 'error';
 
@@ -37,7 +38,7 @@ export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisRe
   const confidence = analysis.subject?.confidence;
   if (typeof confidence !== 'number' || !Number.isFinite(confidence)) return 'no strong native candidate';
   if (confidence >= NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN) return 'active';
-  if (confidence >= 0) return 'held briefly';
+  if (confidence >= NATIVE_VISUAL_MASS_HELD_CONFIDENCE_MIN) return 'held briefly';
   return 'low confidence';
 }
 
