@@ -23,7 +23,7 @@ function formatVisualConfidence(analysis: NativeFrameAnalysisResult): string {
 }
 
 function formatGuideScore(guideScore: number | null | undefined): string {
-  return typeof guideScore === 'number' && Number.isFinite(guideScore) ? `${Math.round(Math.max(0, Math.min(100, guideScore)))}` : 'n/a';
+  return typeof guideScore === 'number' && Number.isFinite(guideScore) ? `${Math.round(Math.max(0, Math.min(100, guideScore)))} / 100` : 'n/a';
 }
 
 function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
