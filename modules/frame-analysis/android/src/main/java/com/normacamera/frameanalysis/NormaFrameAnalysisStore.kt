@@ -16,6 +16,11 @@ object NormaFrameAnalysisStore {
     analysisFps: Double? = null
   ): Map<String, Any?> {
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
+    val explanation = if (analysisSource == "live-frame") {
+      "Real live Android luminance metrics from VisionCamera frames are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
+    } else {
+      "Real Android luminance quality metrics are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
+    }
     val result = mutableMapOf<String, Any?>(
       "status" to "low-confidence",
       "createdAtMs" to createdAtMs,
@@ -30,13 +35,28 @@ object NormaFrameAnalysisStore {
         "sharpnessScore" to metrics.sharpness.sharpnessScore,
         "edgeEnergy" to metrics.sharpness.edgeEnergy
       ),
-      "explanation" to "Real Android luminance quality metrics are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
+      "explanation" to explanation
     )
 
     if (analysisSource != null) result["analysisSource"] = analysisSource
     if (updateCount != null) result["updateCount"] = updateCount.toDouble()
     if (analysisFps != null) result["analysisFps"] = analysisFps
 
+    latestAnalysis = result
+    return result
+  }
+
+  @Synchronized
+  fun recordAnalyzerUnavailable(createdAtMs: Long, reason: String): Map<String, Any?> {
+    val result = mapOf<String, Any?>(
+      "status" to "unavailable",
+      "createdAtMs" to createdAtMs,
+      "subject" to null,
+      "exposure" to null,
+      "sharpness" to null,
+      "analysisSource" to "analyzer-unavailable",
+      "explanation" to "Native analyzer unavailable: $reason."
+    )
     latestAnalysis = result
     return result
   }

@@ -1,14 +1,16 @@
 package com.normacamera.frameanalysis
 
 import androidx.camera.core.ImageProxy
+import com.margelo.nitro.camera.HybridFrameSpec
+import com.margelo.nitro.camera.public.NativeFrame
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.max
 import kotlin.math.min
 
 object NormaVisionCameraFrameAnalyzer {
   private const val TARGET_GRID_WIDTH = 32
   private const val TARGET_GRID_HEIGHT = 24
   private const val MIN_ANALYSIS_INTERVAL_MS = 250L
+  private const val MIN_UNAVAILABLE_INTERVAL_MS = 1_000L
 
   private val busy = AtomicBoolean(false)
 
@@ -16,12 +18,15 @@ object NormaVisionCameraFrameAnalyzer {
   private var lastAnalysisAtMs = 0L
 
   @Volatile
+  private var lastUnavailableAtMs = 0L
+
+  @Volatile
   private var firstAnalysisAtMs = 0L
 
   @Volatile
   private var updateCount = 0L
 
-  fun analyzeFrame(frame: Any?): Map<String, Any?>? {
+  fun analyzeFrame(frame: HybridFrameSpec?): Map<String, Any?>? {
     val nowMs = System.currentTimeMillis()
 
     if (nowMs - lastAnalysisAtMs < MIN_ANALYSIS_INTERVAL_MS) {
@@ -33,15 +38,19 @@ object NormaVisionCameraFrameAnalyzer {
     }
 
     try {
-      val image = imageProxyFromFrame(frame) ?: return null
-      val grid = downsampleYPlane(image) ?: return null
+      val nativeFrame = frame as? NativeFrame ?: return recordAnalyzerUnavailable(nowMs, "frame is not a NativeFrame")
+      val grid = downsampleYPlane(nativeFrame.image) ?: return recordAnalyzerUnavailable(nowMs, "Y plane downsample unavailable")
+      val previousFirstAnalysisAtMs = firstAnalysisAtMs
       val nextUpdateCount = updateCount + 1
       updateCount = nextUpdateCount
-      if (firstAnalysisAtMs == 0L) firstAnalysisAtMs = nowMs
+      if (previousFirstAnalysisAtMs == 0L) firstAnalysisAtMs = nowMs
       lastAnalysisAtMs = nowMs
 
-      val elapsedSeconds = max(0.001, (nowMs - firstAnalysisAtMs) / 1000.0)
-      val analysisFps = nextUpdateCount / elapsedSeconds
+      val analysisFps = if (previousFirstAnalysisAtMs > 0L && nowMs > previousFirstAnalysisAtMs) {
+        (nextUpdateCount - 1) / ((nowMs - previousFirstAnalysisAtMs) / 1000.0)
+      } else {
+        null
+      }
 
       return NormaFrameAnalysisStore.analyzeDownsampledLumaGrid(
         values = grid.values,
@@ -54,25 +63,32 @@ object NormaVisionCameraFrameAnalyzer {
         analysisFps = analysisFps
       )
     } catch (_: Exception) {
-      return null
+      return recordAnalyzerUnavailable(nowMs, "native analyzer exception")
     } finally {
       busy.set(false)
     }
   }
 
-  @Synchronized
   fun reset() {
-    lastAnalysisAtMs = 0L
-    firstAnalysisAtMs = 0L
-    updateCount = 0L
+    if (!busy.compareAndSet(false, true)) return
+    try {
+      lastAnalysisAtMs = 0L
+      lastUnavailableAtMs = 0L
+      firstAnalysisAtMs = 0L
+      updateCount = 0L
+    } finally {
+      busy.set(false)
+    }
   }
 
-  private fun imageProxyFromFrame(frame: Any?): ImageProxy? {
-    if (frame == null) return null
-    val imageGetter = frame.javaClass.methods.firstOrNull { method ->
-      method.name == "getImage" && method.parameterTypes.isEmpty()
-    } ?: return null
-    return imageGetter.invoke(frame) as? ImageProxy
+  private fun recordAnalyzerUnavailable(nowMs: Long, reason: String): Map<String, Any?>? {
+    val latest = NormaFrameAnalysisStore.getLatestAnalysis()
+    if (nowMs - lastUnavailableAtMs < MIN_UNAVAILABLE_INTERVAL_MS) {
+      return latest
+    }
+
+    lastUnavailableAtMs = nowMs
+    return NormaFrameAnalysisStore.recordAnalyzerUnavailable(createdAtMs = nowMs, reason = reason)
   }
 
   private fun downsampleYPlane(image: ImageProxy): LumaGridSample? {
