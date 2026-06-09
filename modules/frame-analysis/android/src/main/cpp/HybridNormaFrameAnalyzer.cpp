@@ -9,8 +9,6 @@
 namespace normacamera::frameanalysis {
 
 namespace jni = facebook::jni;
-using margelo::nitro::Prototype;
-using margelo::nitro::registerHybrids;
 
 struct NormaVisionCameraFrameAnalyzerBridge : jni::JavaClass<NormaVisionCameraFrameAnalyzerBridge> {
   static constexpr auto kJavaDescriptor = "Lcom/normacamera/frameanalysis/NormaVisionCameraFrameAnalyzerBridge;";
@@ -38,9 +36,7 @@ bool HybridNormaFrameAnalyzer::analyze(const std::shared_ptr<margelo::nitro::cam
 
 void HybridNormaFrameAnalyzer::loadHybridMethods() {
   HybridObject::loadHybridMethods();
-  registerHybrids(this, [](Prototype& prototype) {
-    prototype.registerHybridMethod("analyze", &HybridNormaFrameAnalyzer::analyze);
-  });
+  registerHybridMethod("analyze", &HybridNormaFrameAnalyzer::analyze);
 }
 
 void registerNormaFrameAnalyzerHybridObject() {
