@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DEFAULT_AUTO_CAPTURE_CONFIG, decideAutoCapture } from '../../autocapture/decideAutoCapture';
+import { decideAutoCapture } from '../../autocapture/decideAutoCapture';
 import { captureReadinessNoCandidateLine } from '../../autocapture/captureReadinessText';
 import type { FrameQuality } from '../../autocapture/types';
 import {
