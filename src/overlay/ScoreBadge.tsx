@@ -60,7 +60,7 @@ function ScoreBadgeComponent({
         <View style={styles.captureBanner}>
           <Text style={styles.captureTitle}>{captureBanner.trigger === 'auto' ? 'AUTO CAPTURED' : 'CAPTURED'}</Text>
           <Text numberOfLines={2} style={styles.captureMeta}>
-            score {captureBanner.score} · {captureBanner.uri}
+            guide score {captureBanner.score} · {captureBanner.uri}
           </Text>
         </View>
       ) : null}
@@ -86,14 +86,14 @@ function ScoreBadgeComponent({
       {snapshot.hasCandidate ? (
         <View style={styles.debugBlock}>
           <Text style={styles.meta}>source {snapshot.candidateSourceText}</Text>
-          <Text style={styles.meta}>confidence {snapshot.candidateConfidenceText}</Text>
+          <Text style={styles.meta}>visual confidence {snapshot.candidateConfidenceText}</Text>
           <Text style={styles.meta}>point {snapshot.subjectText}</Text>
           {snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
           <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text>
-          <Text style={styles.meta}>score {Math.round(score)} / 100</Text>
+          <Text style={styles.guideScore}>guide score {Math.round(score)} / 100</Text>
         </View>
       ) : (
-        <Text style={styles.meta}>source no subject · confidence 0%</Text>
+        <Text style={styles.meta}>source no subject · visual confidence 0% · guide score 0 / 100</Text>
       )}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
@@ -194,6 +194,11 @@ const styles = StyleSheet.create({
     color: 'rgba(255,255,255,0.72)',
     fontSize: 11,
     fontWeight: '700'
+  },
+  guideScore: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '900'
   },
   reason: {
     marginTop: 6,
