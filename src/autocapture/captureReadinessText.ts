@@ -16,5 +16,8 @@ export function captureReadinessNoCandidateLine(params: { detectionMode: Detecti
   if (modeLabel.includes('unavailable')) {
     return 'ARMED · no subject · native analyzer unavailable';
   }
+  if (modeLabel.includes('held briefly')) {
+    return 'ARMED · held briefly · wait for active native visual mass';
+  }
   return 'ARMED · no subject · no strong native candidate';
 }
