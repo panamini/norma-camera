@@ -5,17 +5,17 @@ import kotlin.math.max
 import kotlin.math.min
 
 internal object VisualMassCandidateStabilizer {
-  const val ACTIVATION_CONFIDENCE = 0.30
-  const val RETENTION_CONFIDENCE = 0.22
+  const val ACTIVATION_CONFIDENCE = 0.20
+  const val RETENTION_CONFIDENCE = 0.14
 
-  private const val MAX_RETENTION_MS = 800L
-  private const val MAX_NULL_HOLD_MS = 650L
+  private const val MAX_RETENTION_MS = 900L
+  private const val MAX_NULL_HOLD_MS = 700L
   private const val FLAT_EDGE_ENERGY_CLEAR = 0.012
-  private const val NEAR_CENTER_DISTANCE = 0.18
-  private const val NEAR_BOUNDS_DISTANCE = 0.22
-  private const val STRONG_SMOOTH_ALPHA = 0.42
-  private const val WEAK_SMOOTH_ALPHA = 0.24
-  private const val HELD_CONFIDENCE_DECAY = 0.90
+  private const val NEAR_CENTER_DISTANCE = 0.22
+  private const val NEAR_BOUNDS_DISTANCE = 0.28
+  private const val STRONG_SMOOTH_ALPHA = 0.38
+  private const val WEAK_SMOOTH_ALPHA = 0.22
+  private const val HELD_CONFIDENCE_DECAY = 0.92
 
   private var lastCandidate: VisualMassSubjectCandidate? = null
   private var lastStrongAtMs = 0L
