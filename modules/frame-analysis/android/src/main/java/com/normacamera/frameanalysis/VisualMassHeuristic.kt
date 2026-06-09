@@ -41,15 +41,15 @@ internal data class VisualMassSubjectCandidate(
 internal object VisualMassHeuristic {
   private const val MIN_GRID_WIDTH = 4
   private const val MIN_GRID_HEIGHT = 4
-  private const val EDGE_FLOOR = 0.055
-  private const val LUMA_DELTA_FLOOR = 0.045
+  private const val EDGE_FLOOR = 0.045
+  private const val LUMA_DELTA_FLOOR = 0.04
   private const val LUMA_DELTA_WEIGHT = 0.55
   private const val CLIPPED_WEIGHT_MULTIPLIER = 0.55
-  private const val MIN_TOTAL_WEIGHT = 0.65
-  private const val MIN_PEAK_WEIGHT = 0.09
+  private const val MIN_TOTAL_WEIGHT = 0.48
+  private const val MIN_PEAK_WEIGHT = 0.07
   private const val BBOX_PEAK_FRACTION = 0.42
   private const val BBOX_ACTIVE_MEAN_MULTIPLIER = 1.15
-  private const val MIN_CONFIDENCE = 0.35
+  private const val MIN_CONFIDENCE = VisualMassCandidateStabilizer.RETENTION_CONFIDENCE
   private const val MAX_CONFIDENCE = 0.86
 
   fun detect(
