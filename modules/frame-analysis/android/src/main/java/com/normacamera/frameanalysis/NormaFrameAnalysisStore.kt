@@ -16,15 +16,21 @@ object NormaFrameAnalysisStore {
     analysisFps: Double? = null
   ): Map<String, Any?> {
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
-    val explanation = if (analysisSource == "live-frame") {
-      "Real live Android luminance metrics from VisionCamera frames are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
-    } else {
-      "Real Android luminance quality metrics are available. Visual-mass candidate selection is deferred, and no semantic object detection is used."
+    val subject = VisualMassHeuristic.detect(values, width, height, valueRange)
+    val explanation = when {
+      analysisSource == "live-frame" && subject != null ->
+        "Real live Android luminance metrics and a coarse native visual-mass candidate are available. This is not semantic object detection."
+      analysisSource == "live-frame" ->
+        "Real live Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No semantic object detection is used."
+      subject != null ->
+        "Real Android luminance metrics and a coarse native visual-mass candidate are available. This is not semantic object detection."
+      else ->
+        "Real Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No semantic object detection is used."
     }
     val result = mutableMapOf<String, Any?>(
       "status" to "low-confidence",
       "createdAtMs" to createdAtMs,
-      "subject" to null,
+      "subject" to subject?.toMap(),
       "exposure" to mapOf(
         "exposureScore" to metrics.exposure.exposureScore,
         "meanLuma" to metrics.exposure.meanLuma,
