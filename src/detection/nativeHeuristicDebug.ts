@@ -46,6 +46,11 @@ export function makeNativeAnalysisDebugLine(analysis: NativeFrameAnalysisResult 
     return `analysis source: stale live frame · status unavailable · age ${ageMs} ms · updates n/a · meanLuma n/a · edgeEnergy n/a`;
   }
 
+  if (freshAnalysis?.analysisSource === 'analyzer-unavailable') {
+    const ageMs = analysisAgeMs(freshAnalysis, currentNowMs);
+    return `analysis source: analyzer unavailable · status unavailable · age ${ageMs} ms · updates n/a · meanLuma n/a · edgeEnergy n/a`;
+  }
+
   if (!showNativeDebug) return null;
   return 'analysis source: bridge inactive · status unavailable · age n/a · updates n/a · meanLuma n/a · edgeEnergy n/a';
 }
