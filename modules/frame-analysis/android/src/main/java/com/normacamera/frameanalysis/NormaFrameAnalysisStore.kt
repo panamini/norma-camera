@@ -47,6 +47,21 @@ object NormaFrameAnalysisStore {
   }
 
   @Synchronized
+  fun recordAnalyzerUnavailable(createdAtMs: Long, reason: String): Map<String, Any?> {
+    val result = mapOf<String, Any?>(
+      "status" to "unavailable",
+      "createdAtMs" to createdAtMs,
+      "subject" to null,
+      "exposure" to null,
+      "sharpness" to null,
+      "analysisSource" to "analyzer-unavailable",
+      "explanation" to "Native analyzer unavailable: $reason."
+    )
+    latestAnalysis = result
+    return result
+  }
+
+  @Synchronized
   fun getLatestAnalysis(): Map<String, Any?>? = latestAnalysis
 
   @Synchronized
