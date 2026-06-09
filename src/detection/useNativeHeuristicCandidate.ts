@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
+import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
+import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -18,7 +20,7 @@ type NativeModulesWithFrameAnalysis = typeof NativeModules & {
 function getFrameAnalysisModule(): NativeFrameAnalysisModule | null {
   if (Platform.OS !== 'android') return null;
   const modules = NativeModules as NativeModulesWithFrameAnalysis;
-  return modules.NormaFrameAnalysis ?? null;
+  return modules.NormaFrameAnalysis ?? getNormaFrameAnalysisPlugin();
 }
 
 function unavailableState(): NativeHeuristicHookState {
@@ -50,7 +52,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
 
     async function pollLatestAnalysis() {
       try {
-        const latest = await frameAnalysisModule.getLatestAnalysis?.();
+        const latest = normalizeNativeAnalysisFreshness((await frameAnalysisModule.getLatestAnalysis?.()) ?? null);
         if (cancelled) return;
 
         if (!latest) {

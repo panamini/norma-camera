@@ -1,6 +1,7 @@
 import type { NormalizedPoint, NormalizedRect } from './types';
 
 export type NativeHeuristicStatus = 'unavailable' | 'ready' | 'low-confidence' | 'error';
+export type NativeLumaValueRange = 'auto' | 'unit' | 'byte';
 
 export type NativeSubjectCandidate = {
   center: NormalizedPoint;
@@ -39,9 +40,19 @@ export type NativeFrameAnalysisResult = {
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
   explanation: string;
+  analysisSource?: 'live-frame' | 'debug-grid' | string;
+  updateCount?: number;
   analysisFps?: number;
 };
 
 export type NativeFrameAnalysisModule = {
   getLatestAnalysis?: () => Promise<NativeFrameAnalysisResult | null>;
+  analyzeDownsampledLumaGrid?: (
+    values: number[],
+    width: number,
+    height: number,
+    createdAtMs?: number,
+    valueRange?: NativeLumaValueRange
+  ) => Promise<NativeFrameAnalysisResult>;
+  reset?: () => void | Promise<void>;
 };

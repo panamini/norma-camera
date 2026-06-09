@@ -1,0 +1,65 @@
+plugins {
+  id 'com.android.library'
+  id 'org.jetbrains.kotlin.android'
+}
+
+group = 'com.normacamera.frameanalysis'
+version = '0.1.0'
+
+static def safeExtGet(project, prop, fallback) {
+  return project.rootProject.ext.has(prop) ? project.rootProject.ext.get(prop) : fallback
+}
+
+static def reactNativeArchitectures(project) {
+  def value = project.findProperty('reactNativeArchitectures')
+  return value ? value.split(',').collect { it.trim() }.findAll { it.length() > 0 } : ['armeabi-v7a', 'x86', 'x86_64', 'arm64-v8a']
+}
+
+apply from: new File(project(':expo-modules-core').projectDir.absolutePath, 'ExpoModulesCorePlugin.gradle')
+applyKotlinExpoModulesCorePlugin()
+useCoreDependencies()
+
+android {
+  namespace 'com.normacamera.frameanalysis'
+  compileSdkVersion safeExtGet(project, 'compileSdkVersion', 35)
+  ndkVersion safeExtGet(project, 'ndkVersion', '28.1.13356709')
+
+  defaultConfig {
+    minSdkVersion safeExtGet(project, 'minSdkVersion', 23)
+    targetSdkVersion safeExtGet(project, 'targetSdkVersion', 35)
+
+    ndk {
+      abiFilters(*reactNativeArchitectures(project))
+    }
+
+    externalNativeBuild {
+      cmake {
+        cppFlags '-frtti -fexceptions -Wall -Wextra'
+        arguments '-DANDROID_STL=c++_shared'
+      }
+    }
+  }
+
+  externalNativeBuild {
+    cmake {
+      path 'CMakeLists.txt'
+    }
+  }
+
+  buildFeatures {
+    prefab true
+  }
+}
+
+repositories {
+  mavenCentral()
+  google()
+}
+
+dependencies {
+  compileOnly('androidx.camera:camera-core:1.7.0-alpha01')
+  implementation('com.facebook.fbjni:fbjni')
+  implementation('com.facebook.react:react-android')
+  implementation project(':react-native-nitro-modules')
+  implementation project(':react-native-vision-camera')
+}
