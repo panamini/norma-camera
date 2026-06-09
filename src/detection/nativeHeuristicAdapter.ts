@@ -1,4 +1,4 @@
-import { nativeVisualMassStateForAnalysis } from './nativeHeuristicDebug';
+import { nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult, NativeSubjectCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, NormalizedPoint } from './types';
 
@@ -53,12 +53,12 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   analysis: NativeFrameAnalysisResult | null | undefined;
   nowMs: number;
 }): NativeCandidateAdapterResult {
-  const analysis = params.analysis ?? null;
+  const analysis = normalizeNativeAnalysisFreshness(params.analysis ?? null, params.nowMs);
 
   if (!analysis || analysis.status === 'unavailable') {
     return {
       candidate: null,
-      modeLabel: 'NATIVE VISUAL MASS · unavailable',
+      modeLabel: `NATIVE VISUAL MASS · ${nativeVisualMassStateForAnalysis(analysis)}`,
       explanation: explainNativeFrameAnalysis(analysis),
       qualityIsReal: false
     };
