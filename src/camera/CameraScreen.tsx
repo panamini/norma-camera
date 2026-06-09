@@ -10,9 +10,9 @@ import { guideKindsForOverlayMode } from '../composition/guides';
 import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
-import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
-import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
+import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
+import { getNormaFrameAnalyzer } from '../detection/normaFrameAnalyzer';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
@@ -56,21 +56,6 @@ function uriForFilePath(filePath: string): string {
 function formatBounds(bounds: NormalizedRect | undefined): string | null {
   if (!bounds) return null;
   return `x=${bounds.x.toFixed(3)} · y=${bounds.y.toFixed(3)} · w=${bounds.width.toFixed(3)} · h=${bounds.height.toFixed(3)}`;
-}
-
-function formatFixedMetric(value: number | undefined, digits: number): string {
-  return typeof value === 'number' && Number.isFinite(value) ? value.toFixed(digits) : 'n/a';
-}
-
-function makeNativeAnalysisDebugLine(analysis: NativeFrameAnalysisResult | null, showNativeDebug: boolean): string | null {
-  if (analysis?.analysisSource === 'live-frame') {
-    const ageMs = Math.max(0, Math.round(nowMs() - analysis.createdAtMs));
-    const updateText = typeof analysis.updateCount === 'number' ? `updates ${Math.round(analysis.updateCount)}` : `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
-    return `analysis source: live frame · age ${ageMs} ms · ${updateText} · meanLuma ${formatFixedMetric(analysis.exposure?.meanLuma, 3)} · edgeEnergy ${formatFixedMetric(analysis.sharpness?.edgeEnergy, 4)}`;
-  }
-
-  if (!showNativeDebug) return null;
-  return 'analysis source: bridge inactive · age n/a · updates n/a · meanLuma n/a · edgeEnergy n/a';
 }
 
 function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
@@ -169,13 +154,14 @@ function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
+  const analyzer = useMemo(getNormaFrameAnalyzer, []);
   const nativeReadinessFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
+    dropFramesWhileBusy: true,
     onFrame(frame) {
       'worklet';
       try {
-        // The Expo module proxy is not worklet-safe here. Keep native mode stable
-        // until a Nitro/worklet-safe frame analyzer entrypoint is implemented.
+        analyzer?.analyze(frame);
       } finally {
         frame.dispose();
       }
