@@ -1,6 +1,8 @@
 package com.normacamera.frameanalysis
 
 import androidx.camera.core.ImageProxy
+import com.margelo.nitro.camera.HybridFrameSpec
+import com.margelo.nitro.camera.public.NativeFrame
 import java.util.concurrent.atomic.AtomicBoolean
 import kotlin.math.min
 
@@ -20,7 +22,7 @@ object NormaVisionCameraFrameAnalyzer {
   @Volatile
   private var updateCount = 0L
 
-  fun analyzeFrame(frame: Any?): Map<String, Any?>? {
+  fun analyzeFrame(frame: HybridFrameSpec?): Map<String, Any?>? {
     val nowMs = System.currentTimeMillis()
 
     if (nowMs - lastAnalysisAtMs < MIN_ANALYSIS_INTERVAL_MS) {
@@ -74,12 +76,9 @@ object NormaVisionCameraFrameAnalyzer {
     }
   }
 
-  private fun imageProxyFromFrame(frame: Any?): ImageProxy? {
-    if (frame == null) return null
-    val imageGetter = frame.javaClass.methods.firstOrNull { method ->
-      method.name == "getImage" && method.parameterTypes.isEmpty()
-    } ?: return null
-    return imageGetter.invoke(frame) as? ImageProxy
+  private fun imageProxyFromFrame(frame: HybridFrameSpec?): ImageProxy? {
+    val nativeFrame = frame as? NativeFrame ?: return null
+    return nativeFrame.image
   }
 
   private fun downsampleYPlane(image: ImageProxy): LumaGridSample? {
