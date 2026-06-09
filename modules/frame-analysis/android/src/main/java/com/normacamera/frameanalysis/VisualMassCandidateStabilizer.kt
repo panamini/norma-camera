@@ -21,6 +21,7 @@ internal object VisualMassCandidateStabilizer {
   private var lastStrongAtMs = 0L
   private var lastUpdatedAtMs = 0L
 
+  @Synchronized
   fun stabilize(
     rawCandidate: VisualMassSubjectCandidate?,
     metrics: LumaQualityMetrics,
@@ -70,6 +71,7 @@ internal object VisualMassCandidateStabilizer {
     return null
   }
 
+  @Synchronized
   fun reset() {
     lastCandidate = null
     lastStrongAtMs = 0L
