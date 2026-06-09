@@ -42,7 +42,7 @@ export function explainNativeFrameAnalysis(analysis: NativeFrameAnalysisResult |
   }
 
   if (analysis.status === 'low-confidence') {
-    return analysis.explanation || 'Real luminance analysis ran, but no strong contrast candidate passed confidence threshold.';
+    return analysis.explanation || 'Real luminance analysis ran conservatively. No semantic object detection yet.';
   }
 
   return analysis.explanation || 'Real luminance analysis. Real contrast candidate. No semantic object detection yet.';
@@ -75,7 +75,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
   const qualityIsReal = nativeFrameAnalysisHasRealQuality(analysis);
   const subject = analysis.subject;
 
-  if (!subject || analysis.status === 'low-confidence' || subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
+  if (!subject || subject.confidence < NATIVE_CANDIDATE_CONFIDENCE_MIN) {
     return {
       candidate: null,
       modeLabel: 'NATIVE VISUAL MASS · no strong candidate',
@@ -86,7 +86,7 @@ export function adaptNativeFrameAnalysisToCandidate(params: {
 
   return {
     candidate: makeNativeVisualMassCandidate(subject, analysis, params.nowMs),
-    modeLabel: 'NATIVE VISUAL MASS',
+    modeLabel: analysis.status === 'low-confidence' ? 'NATIVE VISUAL MASS · low confidence' : 'NATIVE VISUAL MASS',
     explanation: explainNativeFrameAnalysis(analysis),
     qualityIsReal
   };
