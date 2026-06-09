@@ -24,7 +24,7 @@ describe('selectCompositionCandidate', () => {
     expect(result.candidate?.source).toBe('heuristic-placeholder');
     expect(result.candidate?.label).toBe('placeholder subject');
     expect(result.candidate?.center.x).toBeCloseTo(1 / 3);
-    expect(result.explanation).toContain('No real object detection yet');
+    expect(result.explanation).toContain('Placeholder subject is placed on the left third');
   });
 
   it('auto placeholder mode prefers manual tap if present', () => {
@@ -32,7 +32,7 @@ describe('selectCompositionCandidate', () => {
 
     expect(result.candidate?.source).toBe('manual');
     expect(result.candidate?.center).toEqual({ x: 0.7, y: 0.2 });
-    expect(result.explanation).toContain('No real object detection yet');
+    expect(result.explanation).toContain('Manual fallback is overriding the placeholder candidate');
   });
 
   it('simulated detector returns deterministic candidate', () => {
