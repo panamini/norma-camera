@@ -2,7 +2,6 @@ package com.normacamera.frameanalysis
 
 import androidx.camera.core.ImageProxy
 import java.util.concurrent.atomic.AtomicBoolean
-import kotlin.math.max
 import kotlin.math.min
 
 object NormaVisionCameraFrameAnalyzer {
@@ -35,13 +34,17 @@ object NormaVisionCameraFrameAnalyzer {
     try {
       val image = imageProxyFromFrame(frame) ?: return null
       val grid = downsampleYPlane(image) ?: return null
+      val previousFirstAnalysisAtMs = firstAnalysisAtMs
       val nextUpdateCount = updateCount + 1
       updateCount = nextUpdateCount
-      if (firstAnalysisAtMs == 0L) firstAnalysisAtMs = nowMs
+      if (previousFirstAnalysisAtMs == 0L) firstAnalysisAtMs = nowMs
       lastAnalysisAtMs = nowMs
 
-      val elapsedSeconds = max(0.001, (nowMs - firstAnalysisAtMs) / 1000.0)
-      val analysisFps = nextUpdateCount / elapsedSeconds
+      val analysisFps = if (previousFirstAnalysisAtMs > 0L && nowMs > previousFirstAnalysisAtMs) {
+        (nextUpdateCount - 1) / ((nowMs - previousFirstAnalysisAtMs) / 1000.0)
+      } else {
+        null
+      }
 
       return NormaFrameAnalysisStore.analyzeDownsampledLumaGrid(
         values = grid.values,
@@ -60,11 +63,15 @@ object NormaVisionCameraFrameAnalyzer {
     }
   }
 
-  @Synchronized
   fun reset() {
-    lastAnalysisAtMs = 0L
-    firstAnalysisAtMs = 0L
-    updateCount = 0L
+    if (!busy.compareAndSet(false, true)) return
+    try {
+      lastAnalysisAtMs = 0L
+      firstAnalysisAtMs = 0L
+      updateCount = 0L
+    } finally {
+      busy.set(false)
+    }
   }
 
   private fun imageProxyFromFrame(frame: Any?): ImageProxy? {
