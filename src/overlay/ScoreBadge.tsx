@@ -68,6 +68,7 @@ function ScoreBadgeComponent({
   debugQualityMode
 }: Props) {
   const quality = splitQualityLine(qualityLine);
+  const shouldShowNoCandidateReadout = !quality.nativeDebug || !modeLabel.startsWith('NATIVE VISUAL MASS');
 
   return (
     <View pointerEvents="none" style={styles.root}>
@@ -107,9 +108,9 @@ function ScoreBadgeComponent({
           <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text>
           <Text style={styles.guideScore}>guide score {Math.round(score)} / 100</Text>
         </View>
-      ) : (
+      ) : shouldShowNoCandidateReadout ? (
         <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text>
-      )}
+      ) : null}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
       <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>
