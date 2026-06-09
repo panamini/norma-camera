@@ -139,10 +139,18 @@ function buildStabilityLine(decision: AutoCaptureDecision): string | null {
   return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
 }
 
-function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean; nativeAnalysis: NativeFrameAnalysisResult | null; showNativeDebug: boolean }): string {
+function buildQualityLine(params: {
+  sharpnessScore: number;
+  exposureScore: number;
+  motionScore: number;
+  nativeQualityIsReal: boolean;
+  nativeAnalysis: NativeFrameAnalysisResult | null;
+  showNativeDebug: boolean;
+  guideScore: number | null;
+}): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
   const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
-  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug);
+  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug, nowMs(), params.guideScore);
   return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
@@ -217,7 +225,7 @@ export function CameraScreen() {
     boundsText: null,
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
-    candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No semantic object detection yet.'
+    candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No semantic detection yet.'
   });
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
@@ -334,7 +342,8 @@ export function CameraScreen() {
           motionScore: sharedValues.motionScore.value,
           nativeQualityIsReal,
           nativeAnalysis: nativeHeuristic.analysis,
-          showNativeDebug: detectionMode === 'native-heuristic'
+          showNativeDebug: detectionMode === 'native-heuristic',
+          guideScore: hasCandidate ? result.score : null
         })
       );
     },
