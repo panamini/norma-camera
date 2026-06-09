@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
+import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
@@ -51,7 +52,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
 
     async function pollLatestAnalysis() {
       try {
-        const latest = await frameAnalysisModule.getLatestAnalysis?.();
+        const latest = normalizeNativeAnalysisFreshness((await frameAnalysisModule.getLatestAnalysis?.()) ?? null);
         if (cancelled) return;
 
         if (!latest) {

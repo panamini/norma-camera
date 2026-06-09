@@ -12,10 +12,13 @@ import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composit
 import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
-import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
+import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
+import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
+import { getNormaFrameAnalyzer } from '../detection/normaFrameAnalyzer';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
+import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
 import { CompositionOverlay } from '../overlay/CompositionOverlay';
 import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../overlay/ScoreBadge';
 import { clamp } from '../shared/clamp';
@@ -136,9 +139,11 @@ function buildStabilityLine(decision: AutoCaptureDecision): string | null {
   return `stability ${progress}% · ${stableForMs} / ${DEFAULT_AUTO_CAPTURE_CONFIG.stableDurationMs} ms`;
 }
 
-function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean }): string {
+function buildQualityLine(params: { sharpnessScore: number; exposureScore: number; motionScore: number; nativeQualityIsReal: boolean; nativeAnalysis: NativeFrameAnalysisResult | null; showNativeDebug: boolean }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
-  return `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
+  const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
+  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug);
+  return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
 function titleForCandidate(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
@@ -151,12 +156,14 @@ function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
+  const analyzer = getNormaFrameAnalyzer();
   const nativeReadinessFrameOutput = useFrameOutput({
     pixelFormat: 'yuv',
+    dropFramesWhileBusy: true,
     onFrame(frame) {
       'worklet';
       try {
-        // Readiness only. Do not read pixels or compute metrics in JS.
+        analyzer?.analyze(frame);
       } finally {
         frame.dispose();
       }
@@ -325,11 +332,13 @@ export function CameraScreen() {
           sharpnessScore: sharedValues.sharpnessScore.value,
           exposureScore: sharedValues.exposureScore.value,
           motionScore: sharedValues.motionScore.value,
-          nativeQualityIsReal
+          nativeQualityIsReal,
+          nativeAnalysis: nativeHeuristic.analysis,
+          showNativeDebug: detectionMode === 'native-heuristic'
         })
       );
     },
-    [armed, detectionMode, nativeQualityIsReal, sharedValues]
+    [armed, detectionMode, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -380,8 +389,8 @@ export function CameraScreen() {
             {},
             {
               onWillBeginCapture: () => {},
-              onDidCapturePhoto: () => {},
-            },
+              onDidCapturePhoto: () => {}
+            }
           );
           uri = uriForFilePath(filePath);
         } else {

@@ -40,6 +40,8 @@ export type NativeFrameAnalysisResult = {
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
   explanation: string;
+  analysisSource?: 'live-frame' | 'debug-grid' | string;
+  updateCount?: number;
   analysisFps?: number;
 };
 
