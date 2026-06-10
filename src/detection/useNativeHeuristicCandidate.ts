@@ -1,7 +1,8 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
 import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
+import { hasRenderableHorizontalLine, retainRecentHorizontalLine } from './nativeLineDiagnosticRetention';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
 const POLL_INTERVAL_MS = 250;
@@ -34,15 +35,18 @@ function unavailableState(): NativeHeuristicHookState {
 
 export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHookState {
   const module = useMemo(getFrameAnalysisModule, []);
+  const lastAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
   const [state, setState] = useState<NativeHeuristicHookState>(() => unavailableState());
 
   useEffect(() => {
     if (!enabled) {
+      lastAnalysisWithLineRef.current = null;
       setState(unavailableState());
       return;
     }
 
     if (!module || typeof module.getLatestAnalysis !== 'function') {
+      lastAnalysisWithLineRef.current = null;
       setState(unavailableState());
       return;
     }
@@ -52,12 +56,20 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
 
     async function pollLatestAnalysis() {
       try {
-        const latest = normalizeNativeAnalysisFreshness((await frameAnalysisModule.getLatestAnalysis?.()) ?? null);
+        const rawLatest = normalizeNativeAnalysisFreshness((await frameAnalysisModule.getLatestAnalysis?.()) ?? null);
         if (cancelled) return;
 
-        if (!latest) {
+        if (!rawLatest) {
+          lastAnalysisWithLineRef.current = null;
           setState(unavailableState());
           return;
+        }
+
+        const latest = retainRecentHorizontalLine(rawLatest, lastAnalysisWithLineRef.current);
+        if (hasRenderableHorizontalLine(rawLatest)) {
+          lastAnalysisWithLineRef.current = rawLatest;
+        } else if (rawLatest.analysisSource !== 'live-frame') {
+          lastAnalysisWithLineRef.current = null;
         }
 
         setState({
@@ -68,12 +80,14 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         });
       } catch (error) {
         if (cancelled) return;
+        lastAnalysisWithLineRef.current = null;
         const message = error instanceof Error ? error.message : 'Unknown native visual-mass analysis error';
         setState({
           analysis: {
             status: 'error',
             createdAtMs: Date.now(),
             subject: null,
+            lineCandidate: null,
             exposure: null,
             sharpness: null,
             explanation: message

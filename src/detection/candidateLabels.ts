@@ -22,7 +22,7 @@ export function instructionForDetectionMode(mode: DetectionMode, hasCandidate: b
     case 'simulated-detector':
       return 'Testing auto-capture flow.';
     case 'native-heuristic':
-      return hasCandidate ? 'Live luminance analysis. No semantic detection is used.' : 'Native mode waiting for a strong contrast candidate.';
+      return hasCandidate ? 'Live luminance analysis. No recognition is used.' : 'Native mode waiting for a strong contrast candidate.';
   }
 }
 
