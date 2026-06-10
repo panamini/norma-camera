@@ -34,10 +34,14 @@ export type ScorePointResult = {
 export type CompositionScoreInput = {
   subjectCenter?: NormalizedPoint | null;
   activeGuideKinds: GuideKind[];
+  lineAlignmentScore?: number | null;
 };
 
 export type CompositionScoreResult = {
   score: number;
+  baseGuideScore: number;
+  lineAlignmentScore: number | null;
+  lineContribution: number;
   bestHit: GuideHit | null;
   label: string;
   isInteresting: boolean;

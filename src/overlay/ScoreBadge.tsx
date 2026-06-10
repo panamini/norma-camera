@@ -16,6 +16,7 @@ export type CandidateScoreSnapshot = {
   boundsText: string | null;
   nearestGuideText: string | null;
   scoreReason: string;
+  lineContributionText: string | null;
   candidateExplanation: string;
 };
 
@@ -24,6 +25,7 @@ type Props = {
   title: string;
   instruction: string;
   score: number;
+  retainedGuideScore: number | null;
   statusLine: string;
   gateReasonLine: string;
   stabilityLine: string | null;
@@ -59,6 +61,7 @@ function ScoreBadgeComponent({
   title,
   instruction,
   score,
+  retainedGuideScore,
   statusLine,
   gateReasonLine,
   stabilityLine,
@@ -69,6 +72,9 @@ function ScoreBadgeComponent({
 }: Props) {
   const quality = splitQualityLine(qualityLine);
   const shouldShowNoCandidateReadout = !quality.nativeDebug || !modeLabel.startsWith('NATIVE VISUAL MASS');
+
+  const showGuideScore = snapshot.hasCandidate || retainedGuideScore !== null;
+  const guideScoreValue = snapshot.hasCandidate ? Math.round(score) : retainedGuideScore !== null ? Math.round(retainedGuideScore) : null;
 
   return (
     <View pointerEvents="none" style={styles.root}>
@@ -99,18 +105,19 @@ function ScoreBadgeComponent({
         </View>
       ) : null}
 
-      {snapshot.hasCandidate ? (
+      {showGuideScore ? (
         <View style={styles.debugBlock}>
-          <Text style={styles.meta}>source {snapshot.candidateSourceText}</Text>
-          <Text style={styles.meta}>visual confidence {snapshot.candidateConfidenceText}</Text>
-          <Text style={styles.meta}>point {snapshot.subjectText}</Text>
-          {snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
-          <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text>
-          <Text style={styles.guideScore}>guide score {Math.round(score)} / 100</Text>
+          {snapshot.hasCandidate ? <Text style={styles.meta}>source {snapshot.candidateSourceText}</Text> : null}
+          {snapshot.hasCandidate ? <Text style={styles.meta}>visual confidence {snapshot.candidateConfidenceText}</Text> : null}
+          {snapshot.hasCandidate ? <Text style={styles.meta}>point {snapshot.subjectText}</Text> : null}
+          {snapshot.hasCandidate && snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
+          {snapshot.hasCandidate ? <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text> : null}
+          <Text style={styles.guideScore}>guide score {guideScoreValue} / 100</Text>
+          {snapshot.hasCandidate && snapshot.lineContributionText ? <Text style={styles.meta}>horizontal line {snapshot.lineContributionText}</Text> : null}
         </View>
-      ) : shouldShowNoCandidateReadout ? (
-        <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text>
       ) : null}
+
+      {shouldShowNoCandidateReadout && !snapshot.hasCandidate ? <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text> : null}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
       <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>
