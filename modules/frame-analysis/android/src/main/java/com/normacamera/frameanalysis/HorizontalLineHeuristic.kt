@@ -91,7 +91,7 @@ internal object HorizontalLineHeuristic {
     val coverage = computeCoverage(lumaValues, width, peakRow, localEdgeThreshold)
     if (coverage < MIN_COVERAGE) return null
 
-    val weightedRow = weightedPlateauRow(rowEnergies, peakRowEnergy)
+    val weightedRow = weightedPlateauRow(rowEnergies, peakRowEnergy, peakRow)
     val y = clamp((weightedRow + 0.5) / height.toDouble(), 0.0, 1.0)
     val confidence = computeConfidence(
       peakRowEnergy = peakRowEnergy,
@@ -122,7 +122,7 @@ internal object HorizontalLineHeuristic {
     return covered / width.toDouble()
   }
 
-  private fun weightedPlateauRow(rowEnergies: DoubleArray, peakRowEnergy: Double): Double {
+  private fun weightedPlateauRow(rowEnergies: DoubleArray, peakRowEnergy: Double, peakRow: Int): Double {
     val plateauThreshold = peakRowEnergy * PEAK_PLATEAU_FRACTION
     var weightedRowTotal = 0.0
     var rowWeightTotal = 0.0
@@ -134,7 +134,7 @@ internal object HorizontalLineHeuristic {
       rowWeightTotal += rowEnergy
     }
 
-    return if (rowWeightTotal > 0.0) weightedRowTotal / rowWeightTotal else 0.0
+    return if (rowWeightTotal > 0.0) weightedRowTotal / rowWeightTotal else peakRow.toDouble()
   }
 
   private fun computeConfidence(
