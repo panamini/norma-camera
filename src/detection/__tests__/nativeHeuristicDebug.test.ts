@@ -7,6 +7,7 @@ function makeLiveAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): N
     status: 'low-confidence',
     createdAtMs: 10_000,
     subject: null,
+    lineCandidate: null,
     exposure: {
       exposureScore: 82,
       meanLuma: 0.61,
@@ -30,11 +31,16 @@ function makeAnalyzerUnavailableAnalysis(): NativeFrameAnalysisResult {
     status: 'unavailable',
     createdAtMs: 10_000,
     subject: null,
+    lineCandidate: null,
     exposure: null,
     sharpness: null,
     explanation: 'Native analyzer unavailable: frame is not a NativeFrame.',
     analysisSource: 'analyzer-unavailable'
   };
+}
+
+function expectNoForbiddenSemanticLabels(value: string | null): void {
+  expect(value ?? '').not.toMatch(/horizon detected|object detected|person detected|face detected|AI detected|scene understood|semantic detection/i);
 }
 
 describe('native live frame debug formatting', () => {
@@ -49,6 +55,8 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('native visual mass: no strong native candidate');
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expectNoForbiddenSemanticLabels(line);
   });
 
   it('formats active native visual confidence separately from guide score', () => {
@@ -71,6 +79,71 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('native visual mass: active');
     expect(line).toContain('visual confidence 42%');
     expect(line).toContain('guide score 68');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('formats horizontal line diagnostic without semantic wording', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.335,
+          x2: 1,
+          y2: 0.345,
+          angleDeg: 0,
+          confidence: 0.51,
+          kind: 'horizontal-line'
+        }
+      }),
+      true,
+      10_120,
+      68
+    );
+
+    expect(line).toContain('horizontal line: y 0.34 · confidence 51% · diagnostic only');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('clamps horizontal line confidence in the debug readout', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.5,
+          x2: 1,
+          y2: 0.5,
+          angleDeg: 0,
+          confidence: 1.2,
+          kind: 'horizontal-line'
+        }
+      }),
+      true,
+      10_120
+    );
+
+    expect(line).toContain('horizontal line: y 0.50 · confidence 100% · diagnostic only');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('ignores unknown or malformed line candidates in debug readout', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.4,
+          x2: 1,
+          y2: 0.4,
+          angleDeg: 0,
+          confidence: 0.9,
+          kind: 'unknown-line'
+        }
+      }),
+      true,
+      10_120
+    );
+
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expectNoForbiddenSemanticLabels(line);
   });
 
   it('labels retained native visual mass as held briefly', () => {
@@ -87,11 +160,26 @@ describe('native live frame debug formatting', () => {
     expect(makeNativeAnalysisDebugLine(analysis, true, 10_120, 61)).toContain('native visual mass: held briefly');
   });
 
-  it('marks stale live analysis unavailable and hides stale metrics', () => {
-    const stale = normalizeNativeAnalysisFreshness(makeLiveAnalysis(), 10_000 + STALE_NATIVE_ANALYSIS_MS + 1);
+  it('marks stale live analysis unavailable and hides stale metrics and line diagnostic', () => {
+    const stale = normalizeNativeAnalysisFreshness(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.4,
+          x2: 1,
+          y2: 0.4,
+          angleDeg: 0,
+          confidence: 0.7,
+          kind: 'horizontal-line'
+        }
+      }),
+      10_000 + STALE_NATIVE_ANALYSIS_MS + 1
+    );
 
     expect(stale?.status).toBe('unavailable');
     expect(stale?.analysisSource).toBe('stale-live-frame');
+    expect(stale?.subject).toBeNull();
+    expect(stale?.lineCandidate).toBeNull();
     expect(stale?.exposure).toBeNull();
     expect(stale?.sharpness).toBeNull();
 
@@ -102,6 +190,8 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('edgeEnergy n/a');
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expectNoForbiddenSemanticLabels(line);
   });
 
   it('formats analyzer unavailable state with n/a metrics', () => {
@@ -113,6 +203,8 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('meanLuma n/a');
     expect(line).toContain('edgeEnergy n/a');
     expect(line).toContain('native visual mass: unavailable');
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expectNoForbiddenSemanticLabels(line);
   });
 
   it('keeps bridge inactive state honest when analyzer is unavailable', () => {
@@ -123,5 +215,7 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('native visual mass: unavailable');
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expectNoForbiddenSemanticLabels(line);
   });
 });
