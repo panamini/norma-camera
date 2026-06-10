@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { hasRenderableHorizontalLine, LINE_DIAGNOSTIC_RETENTION_MS, retainRecentHorizontalLine } from '../useNativeHeuristicCandidate';
+import { hasRenderableHorizontalLine, LINE_DIAGNOSTIC_RETENTION_MS, retainRecentHorizontalLine } from '../nativeLineDiagnosticRetention';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 
 function makeAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): NativeFrameAnalysisResult {
