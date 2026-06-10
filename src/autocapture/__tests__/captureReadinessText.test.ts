@@ -17,6 +17,13 @@ describe('capture readiness no-candidate copy', () => {
     expect(line).not.toMatch(forbiddenSemanticWords);
   });
 
+  it('keeps held native visual mass distinct from active capture readiness', () => {
+    const line = captureReadinessNoCandidateLine({ detectionMode: 'native-heuristic', modeLabel: 'NATIVE VISUAL MASS · held briefly' });
+
+    expect(line).toBe('ARMED · held briefly · wait for active native visual mass');
+    expect(line).not.toMatch(forbiddenSemanticWords);
+  });
+
   it('keeps stale live frame distinct from active native candidates', () => {
     const line = captureReadinessNoCandidateLine({ detectionMode: 'native-heuristic', modeLabel: 'NATIVE VISUAL MASS · stale live frame' });
 
