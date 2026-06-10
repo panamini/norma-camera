@@ -226,7 +226,7 @@ export function CameraScreen() {
     boundsText: null,
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
-    candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No semantic detection yet.'
+    candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.'
   });
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
@@ -471,7 +471,15 @@ export function CameraScreen() {
         <PhotoOnlyCameraPreview device={device} photoOutput={photoOutput} />
       )}
       <Pressable accessibilityRole="button" accessibilityLabel="Camera preview, tap to mark manual subject center" onPress={handlePreviewPress} style={StyleSheet.absoluteFill}>
-        <CompositionOverlay width={layout.width} height={layout.height} overlayMode={overlayMode} sharedValues={sharedValues} candidateSource={candidateSource} candidateBounds={candidateBounds} />
+        <CompositionOverlay
+          width={layout.width}
+          height={layout.height}
+          overlayMode={overlayMode}
+          sharedValues={sharedValues}
+          candidateSource={candidateSource}
+          candidateBounds={candidateBounds}
+          lineCandidate={nativeHeuristic.analysis?.lineCandidate}
+        />
       </Pressable>
       <ScoreBadge
         modeLabel={displayModeLabel}
