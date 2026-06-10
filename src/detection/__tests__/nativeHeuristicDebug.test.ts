@@ -56,6 +56,7 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
     expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -79,10 +80,11 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('native visual mass: active');
     expect(line).toContain('visual confidence 42%');
     expect(line).toContain('guide score 68');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 
-  it('formats horizontal line diagnostic without semantic wording', () => {
+  it('formats horizontal line diagnostic and line guide score without semantic wording', () => {
     const line = makeNativeAnalysisDebugLine(
       makeLiveAnalysis({
         lineCandidate: {
@@ -101,6 +103,7 @@ describe('native live frame debug formatting', () => {
     );
 
     expect(line).toContain('horizontal line: y 0.34 · confidence 51% · diagnostic only');
+    expect(line).toContain('line guide score 94 / 100 · nearest upper third · distance 0.007 · diagnostic only');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -122,6 +125,7 @@ describe('native live frame debug formatting', () => {
     );
 
     expect(line).toContain('horizontal line: y 0.50 · confidence 100% · diagnostic only');
+    expect(line).toContain('line guide score 100 / 100 · nearest center · distance 0.000 · diagnostic only');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -143,6 +147,29 @@ describe('native live frame debug formatting', () => {
     );
 
     expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('ignores low-confidence horizontal line candidates in debug readout', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.5,
+          x2: 1,
+          y2: 0.5,
+          angleDeg: 0,
+          confidence: 0.1,
+          kind: 'horizontal-line'
+        }
+      }),
+      true,
+      10_120
+    );
+
+    expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -191,6 +218,7 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
     expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -204,6 +232,7 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('edgeEnergy n/a');
     expect(line).toContain('native visual mass: unavailable');
     expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -216,6 +245,7 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('visual confidence n/a');
     expect(line).toContain('guide score n/a');
     expect(line).toContain('horizontal line: no strong line candidate');
+    expect(line).toContain('line guide score n/a');
     expectNoForbiddenSemanticLabels(line);
   });
 });
