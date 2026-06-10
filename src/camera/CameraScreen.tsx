@@ -10,7 +10,7 @@ import type { AutoCaptureDecision } from '../autocapture/types';
 import { guideKindsForOverlayMode } from '../composition/guides';
 import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
-import type { CompositionScoreResult, GuideHit, NormalizedPoint } from '../composition/types';
+import type { CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
@@ -46,6 +46,7 @@ const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
 const LABEL_UPDATE_INTERVAL_MS = 500;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
+const GUIDE_SCORE_RETENTION_MS = 900;
 
 function findBestAxisHit(hits: GuideHit[], axis: 'x' | 'y'): GuideHit | null {
   const best = hits.filter((hit) => hit.guide.axis === axis).sort((a, b) => b.score - a.score || a.distance - b.distance)[0];
@@ -61,20 +62,31 @@ function formatBounds(bounds: NormalizedRect | undefined): string | null {
   return `x=${bounds.x.toFixed(3)} · y=${bounds.y.toFixed(3)} · w=${bounds.width.toFixed(3)} · h=${bounds.height.toFixed(3)}`;
 }
 
+function lineContributionSuffix(result: CompositionScoreResult): string {
+  if (result.lineContribution <= 0 || result.lineAlignmentScore === null) return '';
+  return ` Horizontal line adds +${result.lineContribution} as a secondary signal.`;
+}
+
+function formatLineContributionText(result: CompositionScoreResult): string | null {
+  if (result.lineContribution <= 0 || result.lineAlignmentScore === null) return null;
+  return `+${result.lineContribution} · alignment ${Math.round(result.lineAlignmentScore)} / 100`;
+}
+
 function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
   if (!candidate) return 'No subject candidate. Tap subject or switch Auto.';
   if (!result.bestHit) return 'No active composition guide is available for this overlay mode.';
 
   const guideName = displayNameForGuide(result.bestHit.guide);
   const distance = result.bestHit.distance.toFixed(3);
+  const lineSuffix = lineContributionSuffix(result);
 
   if (result.score >= READY_SCORE_THRESHOLD) {
-    return `High: ${candidate.label} is ${distance} from the ${guideName}; ready threshold is ${READY_SCORE_THRESHOLD}.`;
+    return `High: ${candidate.label} is ${distance} from the ${guideName}; ready threshold is ${READY_SCORE_THRESHOLD}.${lineSuffix}`;
   }
   if (result.score >= 45) {
-    return `Medium: ${candidate.label} is ${distance} from the ${guideName}; move closer for ${READY_SCORE_THRESHOLD}.`;
+    return `Medium: ${candidate.label} is ${distance} from the ${guideName}; move closer for ${READY_SCORE_THRESHOLD}.${lineSuffix}`;
   }
-  return `Low: ${candidate.label} is ${distance} from the ${guideName}; guide score reaches 0 around ${DEFAULT_MAX_GUIDE_DISTANCE}.`;
+  return `Low: ${candidate.label} is ${distance} from the ${guideName}; guide score reaches 0 around ${DEFAULT_MAX_GUIDE_DISTANCE}.${lineSuffix}`;
 }
 
 function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): CandidateScoreSnapshot {
@@ -88,6 +100,7 @@ function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): Ca
       boundsText: null,
       nearestGuideText: null,
       scoreReason: makeScoreReason(null, detectedScore.composition),
+      lineContributionText: null,
       candidateExplanation: detectedScore.explanation
     };
   }
@@ -100,6 +113,7 @@ function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): Ca
     boundsText: formatBounds(candidate.bounds),
     nearestGuideText: formatGuideHit(detectedScore.composition.bestHit),
     scoreReason: makeScoreReason(candidate, detectedScore.composition),
+    lineContributionText: formatLineContributionText(detectedScore.composition),
     candidateExplanation: detectedScore.explanation
   };
 }
@@ -148,10 +162,11 @@ function buildQualityLine(params: {
   nativeAnalysis: NativeFrameAnalysisResult | null;
   showNativeDebug: boolean;
   guideScore: number | null;
+  activeGuideKinds: GuideKind[];
 }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
   const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
-  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug, nowMs(), params.guideScore);
+  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug, nowMs(), params.guideScore, params.activeGuideKinds);
   return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
@@ -192,6 +207,7 @@ export function CameraScreen() {
   const mountedRef = useRef(true);
   const isCapturingRef = useRef(false);
   const wasArmedRef = useRef(false);
+  const retainedGuideScoreRef = useRef<{ value: number; expiresAtMs: number } | null>(null);
 
   const overlayMode = useCameraUiStore((state) => state.overlayMode);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
@@ -226,10 +242,12 @@ export function CameraScreen() {
     boundsText: null,
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
+    lineContributionText: null,
     candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.'
   });
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
+  const [retainedGuideScore, setRetainedGuideScore] = useState<number | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
 
@@ -248,6 +266,8 @@ export function CameraScreen() {
         setManualSubject(null);
       }
       autoCaptureController.current.reset();
+      retainedGuideScoreRef.current = null;
+      setRetainedGuideScore(null);
       detectionModeRef.current = detectionMode;
     }
   }, [detectionMode]);
@@ -279,7 +299,7 @@ export function CameraScreen() {
         autoMode: detectionMode,
         nativeFrameAnalysis: nativeHeuristic.analysis
       });
-      const detectedScore = scoreDetectedComposition(selection.candidate, activeGuideKinds, selection.explanation);
+      const detectedScore = scoreDetectedComposition(selection.candidate, activeGuideKinds, selection.explanation, nativeHeuristic.analysis?.lineCandidate ?? null);
       const candidate = detectedScore.candidate;
       const result = detectedScore.composition;
 
@@ -326,6 +346,23 @@ export function CameraScreen() {
       const candidate = params.detectedScore.candidate;
       const hasCandidate = Boolean(candidate);
       const result = params.detectedScore.composition;
+      const nowMsValue = nowMs();
+
+      if (hasCandidate && result.score > 0) {
+        retainedGuideScoreRef.current = {
+          value: result.score,
+          expiresAtMs: nowMsValue + GUIDE_SCORE_RETENTION_MS
+        };
+      } else if (retainedGuideScoreRef.current && retainedGuideScoreRef.current.expiresAtMs <= nowMsValue) {
+        retainedGuideScoreRef.current = null;
+      }
+
+      const retainedGuideScoreValue =
+        hasCandidate || !retainedGuideScoreRef.current || retainedGuideScoreRef.current.expiresAtMs <= nowMsValue
+          ? null
+          : retainedGuideScoreRef.current.value;
+      setRetainedGuideScore(retainedGuideScoreValue);
+
       setDisplayModeLabel(params.selection.modeLabel);
       setDisplayTitle(hasCandidate && params.decision.kind === 'candidate' ? 'COMPOSITION READY' : titleForCandidate(candidate, result));
       setDisplayInstruction(instructionForDetectionMode(detectionMode, hasCandidate));
@@ -344,11 +381,12 @@ export function CameraScreen() {
           nativeQualityIsReal,
           nativeAnalysis: nativeHeuristic.analysis,
           showNativeDebug: detectionMode === 'native-heuristic',
-          guideScore: hasCandidate ? result.score : null
+          guideScore: hasCandidate ? result.score : null,
+          activeGuideKinds
         })
       );
     },
-    [armed, detectionMode, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
+    [activeGuideKinds, armed, detectionMode, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -486,6 +524,7 @@ export function CameraScreen() {
         title={displayTitle}
         instruction={displayInstruction}
         score={displayScore}
+        retainedGuideScore={retainedGuideScore}
         statusLine={autoStatusLine}
         gateReasonLine={gateReasonLine}
         stabilityLine={stabilityLine}

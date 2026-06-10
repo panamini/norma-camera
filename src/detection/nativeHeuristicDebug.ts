@@ -40,12 +40,12 @@ function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | nul
   if (!lineCandidate || !lineGuideScore.hasLine || lineGuideScore.lineY === null) return 'horizontal line: no strong line candidate';
 
   const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
-  return `horizontal line: y ${lineGuideScore.lineY.toFixed(2)} · confidence ${confidence}% · diagnostic only`;
+  return `horizontal line: y ${lineGuideScore.lineY.toFixed(2)} · confidence ${confidence}% · secondary composition signal`;
 }
 
 function formatLineGuideScore(lineGuideScore: LineGuideScoreResult): string {
   if (!lineGuideScore.hasLine || lineGuideScore.score === null || lineGuideScore.nearestGuideLabel === null || lineGuideScore.distance === null) return 'line guide score n/a';
-  return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · diagnostic only`;
+  return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · secondary composition signal`;
 }
 
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {

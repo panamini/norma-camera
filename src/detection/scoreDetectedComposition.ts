@@ -1,5 +1,7 @@
 import { scoreFrameComposition } from '../composition/scoreFrameComposition';
 import type { GuideKind } from '../composition/types';
+import { scoreHorizontalLineAgainstGuides } from './lineGuideScore';
+import type { NativeLineCandidate } from './nativeHeuristicTypes';
 import type { CompositionCandidate, DetectedCompositionScore, DetectedCompositionScoreInput } from './types';
 
 function isDetectedCompositionScoreInput(value: CompositionCandidate | DetectedCompositionScoreInput | null): value is DetectedCompositionScoreInput {
@@ -29,25 +31,31 @@ export function scoreDetectedComposition(input: DetectedCompositionScoreInput): 
 export function scoreDetectedComposition(
   candidate: CompositionCandidate | null,
   activeGuideKinds: GuideKind[],
-  fallbackExplanation?: string
+  fallbackExplanation?: string,
+  lineCandidate?: NativeLineCandidate | null
 ): DetectedCompositionScore;
 export function scoreDetectedComposition(
   candidateOrInput: CompositionCandidate | DetectedCompositionScoreInput | null,
   activeGuideKinds: GuideKind[] = [],
-  fallbackExplanation?: string
+  fallbackExplanation?: string,
+  lineCandidateInput?: NativeLineCandidate | null
 ): DetectedCompositionScore {
   const candidate = isDetectedCompositionScoreInput(candidateOrInput) ? candidateOrInput.candidate : candidateOrInput;
   const kinds = isDetectedCompositionScoreInput(candidateOrInput) ? candidateOrInput.activeGuideKinds : activeGuideKinds;
   const explanation = isDetectedCompositionScoreInput(candidateOrInput) ? candidateOrInput.explanation : fallbackExplanation;
+  const lineCandidate = isDetectedCompositionScoreInput(candidateOrInput) ? candidateOrInput.lineCandidate : lineCandidateInput;
+  const lineGuideScore = scoreHorizontalLineAgainstGuides(lineCandidate, kinds);
   const composition = scoreFrameComposition({
     subjectCenter: candidate?.center ?? null,
-    activeGuideKinds: kinds
+    activeGuideKinds: kinds,
+    lineAlignmentScore: candidate && lineGuideScore.hasLine ? lineGuideScore.score : null
   });
 
   return {
     candidate,
     composition,
     scoreResult: composition,
+    lineGuideScore,
     source: candidate?.source ?? 'none',
     confidence: candidate?.confidence ?? 0,
     explanation: explanationForCandidate(candidate, explanation)
