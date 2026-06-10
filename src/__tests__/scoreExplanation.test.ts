@@ -34,13 +34,13 @@ describe('scoreExplanation', () => {
     const point = { x: 0.39, y: 0.1 };
     const result = scoreFrameComposition({ subjectCenter: point, activeGuideKinds: ['third'], lineAlignmentScore: 0 });
 
-    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53', 'Total: 53']);
+    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53']);
   });
 
   it('omits line signal when no line score is present', () => {
     const point = { x: 0.39, y: 0.1 };
     const result = scoreFrameComposition({ subjectCenter: point, activeGuideKinds: ['third'] });
 
-    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53', 'Total: 53']);
+    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53']);
   });
 });

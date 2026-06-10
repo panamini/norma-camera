@@ -8,9 +8,9 @@ export function formatCompositionBreakdown(result: CompositionScoreResult): stri
 
   if (result.lineContribution > 0) {
     lines.push(`Line signal: +${Math.round(result.lineContribution)}`);
+    lines.push(`Total: ${Math.round(result.score)}`);
   }
 
-  lines.push(`Total: ${Math.round(result.score)}`);
   return lines;
 }
 

@@ -114,7 +114,6 @@ function ScoreBadgeComponent({
           {snapshot.hasCandidate && snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
           {snapshot.hasCandidate ? <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text> : null}
           <Text style={styles.guideScore}>guide score {guideScoreValue} / 100</Text>
-          {snapshot.hasCandidate && snapshot.lineContributionText ? <Text style={styles.meta}>horizontal line {snapshot.lineContributionText}</Text> : null}
           {snapshot.hasCandidate && snapshot.compositionBreakdownLines ? (
             <View style={styles.breakdownBlock}>
               {snapshot.compositionBreakdownLines.map((line, index) => (
