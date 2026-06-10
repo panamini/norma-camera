@@ -163,10 +163,18 @@ function buildQualityLine(params: {
   showNativeDebug: boolean;
   guideScore: number | null;
   activeGuideKinds: GuideKind[];
+  lineGuideScore: DetectedCompositionScore['lineGuideScore'];
 }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
   const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
-  const nativeDebug = makeNativeAnalysisDebugLine(params.nativeAnalysis, params.showNativeDebug, nowMs(), params.guideScore, params.activeGuideKinds);
+  const nativeDebug = makeNativeAnalysisDebugLine(
+    params.nativeAnalysis,
+    params.showNativeDebug,
+    nowMs(),
+    params.guideScore,
+    params.activeGuideKinds,
+    params.lineGuideScore
+  );
   return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
 
@@ -382,7 +390,8 @@ export function CameraScreen() {
           nativeAnalysis: nativeHeuristic.analysis,
           showNativeDebug: detectionMode === 'native-heuristic',
           guideScore: hasCandidate ? result.score : null,
-          activeGuideKinds
+          activeGuideKinds,
+          lineGuideScore: params.detectedScore.lineGuideScore
         })
       );
     },

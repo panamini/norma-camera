@@ -117,7 +117,7 @@ function ScoreBadgeComponent({
         </View>
       ) : null}
 
-      {shouldShowNoCandidateReadout && !snapshot.hasCandidate ? <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text> : null}
+      {shouldShowNoCandidateReadout && !showGuideScore ? <Text style={styles.meta}>{noCandidateReadout(modeLabel)}</Text> : null}
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
       <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>

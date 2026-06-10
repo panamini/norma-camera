@@ -67,10 +67,10 @@ export function scoreFrameComposition(input: CompositionScoreInput): Composition
 
   if (isCenteredOnBothAxes(guideScore.hits)) {
     return {
-      score,
-      baseGuideScore,
+      score: 100,
+      baseGuideScore: 100,
       lineAlignmentScore,
-      lineContribution,
+      lineContribution: 0,
       bestHit: guideScore.bestHit,
       label: CENTERED_LABEL,
       isInteresting: true

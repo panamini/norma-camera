@@ -72,8 +72,9 @@ function formatNativeReadout(params: {
   guideScore: number | null | undefined;
   lineCandidate?: NativeLineCandidate | null;
   activeGuideKinds?: GuideKind[];
+  lineGuideScore?: LineGuideScoreResult;
 }): string {
-  const lineGuideScore = scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
+  const lineGuideScore = params.lineGuideScore ?? scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
   return [
     `source ${params.sourceText} · live frame age ${params.ageText} · ${params.updateText}`,
     `meanLuma ${params.meanLumaText} · edgeEnergy ${params.edgeEnergyText}`,
@@ -111,7 +112,8 @@ export function makeNativeAnalysisDebugLine(
   showNativeDebug: boolean,
   currentNowMs: number = nowMs(),
   guideScore?: number | null,
-  activeGuideKinds?: GuideKind[]
+  activeGuideKinds?: GuideKind[],
+  lineGuideScore?: LineGuideScoreResult
 ): string | null {
   const freshAnalysis = normalizeNativeAnalysisFreshness(analysis, currentNowMs);
 
@@ -127,7 +129,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: formatVisualConfidence(freshAnalysis),
       guideScore,
       lineCandidate: freshAnalysis.lineCandidate,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -143,7 +146,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: 'n/a',
       guideScore: null,
       lineCandidate: null,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -159,7 +163,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: 'n/a',
       guideScore: null,
       lineCandidate: null,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -174,6 +179,7 @@ export function makeNativeAnalysisDebugLine(
     visualConfidenceText: 'n/a',
     guideScore: null,
     lineCandidate: null,
-    activeGuideKinds
+    activeGuideKinds,
+    lineGuideScore
   });
 }

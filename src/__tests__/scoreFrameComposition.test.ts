@@ -19,8 +19,15 @@ describe('scoreFrameComposition', () => {
   it('subject at x=1/2 and y=1/2 scores high for centered subject', () => {
     const result = scoreFrameComposition({ subjectCenter: { x: 1 / 2, y: 1 / 2 }, activeGuideKinds: ['half'] });
 
-    expect(result.score).toBeGreaterThanOrEqual(99);
+    expect(result.score).toBe(100);
     expect(result.label).toBe('CENTERED SUBJECT');
+  });
+
+  it('keeps centered subjects at 100 without line contribution', () => {
+    const result = scoreFrameComposition({ subjectCenter: { x: 0.48, y: 0.48 }, activeGuideKinds: ['half'] });
+
+    expect(result.score).toBe(100);
+    expect(result.lineContribution).toBe(0);
   });
 
   it('adds horizontal line alignment as a small secondary contribution', () => {
