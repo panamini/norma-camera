@@ -14,7 +14,7 @@ const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilit
   { value: 'manual', label: 'Manual', accessibilityLabel: 'Use manual tap subject mode' },
   { value: 'auto-placeholder', label: 'Auto placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
   { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' },
-  { value: 'native-heuristic', label: 'Native live', accessibilityLabel: 'Use native live luminance frame analysis mode' }
+  { value: 'native-heuristic', label: 'Native heuristic', accessibilityLabel: 'Use native heuristic visual mass mode' }
 ];
 const QUALITY_MODES: DebugQualityMode[] = ['normal', 'blurry', 'badExposure', 'motion'];
 
@@ -130,6 +130,7 @@ const styles = StyleSheet.create({
     padding: 4
   },
   segmentedWide: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
