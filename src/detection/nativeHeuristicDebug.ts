@@ -1,5 +1,7 @@
-import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
+import type { GuideKind } from '../composition/types';
 import { nowMs } from '../shared/time';
+import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
+import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
 export const NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN = 0.2;
@@ -34,25 +36,16 @@ function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
   return `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
 }
 
-function isRenderableHorizontalLineCandidate(lineCandidate: NativeLineCandidate | null | undefined): lineCandidate is NativeLineCandidate {
-  return Boolean(
-    lineCandidate &&
-      lineCandidate.kind === 'horizontal-line' &&
-      typeof lineCandidate.y1 === 'number' &&
-      Number.isFinite(lineCandidate.y1) &&
-      typeof lineCandidate.y2 === 'number' &&
-      Number.isFinite(lineCandidate.y2) &&
-      typeof lineCandidate.confidence === 'number' &&
-      Number.isFinite(lineCandidate.confidence)
-  );
+function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | null | undefined, lineGuideScore: LineGuideScoreResult): string {
+  if (!lineCandidate || !lineGuideScore.hasLine || lineGuideScore.lineY === null) return 'horizontal line: no strong line candidate';
+
+  const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
+  return `horizontal line: y ${lineGuideScore.lineY.toFixed(2)} · confidence ${confidence}% · diagnostic only`;
 }
 
-function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | null | undefined): string {
-  if (!isRenderableHorizontalLineCandidate(lineCandidate)) return 'horizontal line: no strong line candidate';
-
-  const normalizedY = clamp01((lineCandidate.y1 + lineCandidate.y2) / 2);
-  const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
-  return `horizontal line: y ${normalizedY.toFixed(2)} · confidence ${confidence}% · diagnostic only`;
+function formatLineGuideScore(lineGuideScore: LineGuideScoreResult): string {
+  if (!lineGuideScore.hasLine || lineGuideScore.score === null || lineGuideScore.nearestGuideLabel === null || lineGuideScore.distance === null) return 'line guide score n/a';
+  return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · diagnostic only`;
 }
 
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {
@@ -78,13 +71,16 @@ function formatNativeReadout(params: {
   visualConfidenceText: string;
   guideScore: number | null | undefined;
   lineCandidate?: NativeLineCandidate | null;
+  activeGuideKinds?: GuideKind[];
 }): string {
+  const lineGuideScore = scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
   return [
     `source ${params.sourceText} · live frame age ${params.ageText} · ${params.updateText}`,
     `meanLuma ${params.meanLumaText} · edgeEnergy ${params.edgeEnergyText}`,
     `native visual mass: ${params.visualMassState} · visual confidence ${params.visualConfidenceText}`,
     `guide score ${formatGuideScore(params.guideScore)}`,
-    formatHorizontalLineDiagnostic(params.lineCandidate)
+    formatHorizontalLineDiagnostic(params.lineCandidate, lineGuideScore),
+    formatLineGuideScore(lineGuideScore)
   ].join('\n');
 }
 
@@ -114,7 +110,8 @@ export function makeNativeAnalysisDebugLine(
   analysis: NativeFrameAnalysisResult | null,
   showNativeDebug: boolean,
   currentNowMs: number = nowMs(),
-  guideScore?: number | null
+  guideScore?: number | null,
+  activeGuideKinds?: GuideKind[]
 ): string | null {
   const freshAnalysis = normalizeNativeAnalysisFreshness(analysis, currentNowMs);
 
@@ -129,7 +126,8 @@ export function makeNativeAnalysisDebugLine(
       visualMassState: nativeVisualMassStateForAnalysis(freshAnalysis),
       visualConfidenceText: formatVisualConfidence(freshAnalysis),
       guideScore,
-      lineCandidate: freshAnalysis.lineCandidate
+      lineCandidate: freshAnalysis.lineCandidate,
+      activeGuideKinds
     });
   }
 
@@ -144,7 +142,8 @@ export function makeNativeAnalysisDebugLine(
       visualMassState: 'stale live frame',
       visualConfidenceText: 'n/a',
       guideScore: null,
-      lineCandidate: null
+      lineCandidate: null,
+      activeGuideKinds
     });
   }
 
@@ -159,7 +158,8 @@ export function makeNativeAnalysisDebugLine(
       visualMassState: 'unavailable',
       visualConfidenceText: 'n/a',
       guideScore: null,
-      lineCandidate: null
+      lineCandidate: null,
+      activeGuideKinds
     });
   }
 
@@ -173,6 +173,7 @@ export function makeNativeAnalysisDebugLine(
     visualMassState: 'unavailable',
     visualConfidenceText: 'n/a',
     guideScore: null,
-    lineCandidate: null
+    lineCandidate: null,
+    activeGuideKinds
   });
 }
