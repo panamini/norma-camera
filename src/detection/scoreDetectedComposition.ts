@@ -19,7 +19,7 @@ function explanationForCandidate(candidate: CompositionCandidate | null, fallbac
     case 'simulated-detector':
       return fallbackExplanation ?? 'Simulated subject is being scored to test auto-capture flow.';
     case 'native-heuristic':
-      return fallbackExplanation ?? 'Native visual mass is being scored. Live luminance analysis, no semantic detection.';
+      return fallbackExplanation ?? 'Native visual mass is being scored. Live luminance analysis, no recognition is used.';
     case 'none':
       return fallbackExplanation ?? 'No candidate. Tap subject or switch Auto.';
   }
