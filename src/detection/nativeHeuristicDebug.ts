@@ -40,12 +40,12 @@ function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | nul
   if (!lineCandidate || !lineGuideScore.hasLine || lineGuideScore.lineY === null) return 'horizontal line: no strong line candidate';
 
   const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
-  return `horizontal line: y ${lineGuideScore.lineY.toFixed(2)} · confidence ${confidence}% · diagnostic only`;
+  return `horizontal line: y ${lineGuideScore.lineY.toFixed(2)} · confidence ${confidence}% · secondary composition signal`;
 }
 
 function formatLineGuideScore(lineGuideScore: LineGuideScoreResult): string {
   if (!lineGuideScore.hasLine || lineGuideScore.score === null || lineGuideScore.nearestGuideLabel === null || lineGuideScore.distance === null) return 'line guide score n/a';
-  return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · diagnostic only`;
+  return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · secondary composition signal`;
 }
 
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {
@@ -72,8 +72,9 @@ function formatNativeReadout(params: {
   guideScore: number | null | undefined;
   lineCandidate?: NativeLineCandidate | null;
   activeGuideKinds?: GuideKind[];
+  lineGuideScore?: LineGuideScoreResult;
 }): string {
-  const lineGuideScore = scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
+  const lineGuideScore = params.lineGuideScore ?? scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
   return [
     `source ${params.sourceText} · live frame age ${params.ageText} · ${params.updateText}`,
     `meanLuma ${params.meanLumaText} · edgeEnergy ${params.edgeEnergyText}`,
@@ -111,7 +112,8 @@ export function makeNativeAnalysisDebugLine(
   showNativeDebug: boolean,
   currentNowMs: number = nowMs(),
   guideScore?: number | null,
-  activeGuideKinds?: GuideKind[]
+  activeGuideKinds?: GuideKind[],
+  lineGuideScore?: LineGuideScoreResult
 ): string | null {
   const freshAnalysis = normalizeNativeAnalysisFreshness(analysis, currentNowMs);
 
@@ -127,7 +129,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: formatVisualConfidence(freshAnalysis),
       guideScore,
       lineCandidate: freshAnalysis.lineCandidate,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -143,7 +146,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: 'n/a',
       guideScore: null,
       lineCandidate: null,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -159,7 +163,8 @@ export function makeNativeAnalysisDebugLine(
       visualConfidenceText: 'n/a',
       guideScore: null,
       lineCandidate: null,
-      activeGuideKinds
+      activeGuideKinds,
+      lineGuideScore
     });
   }
 
@@ -174,6 +179,7 @@ export function makeNativeAnalysisDebugLine(
     visualConfidenceText: 'n/a',
     guideScore: null,
     lineCandidate: null,
-    activeGuideKinds
+    activeGuideKinds,
+    lineGuideScore
   });
 }

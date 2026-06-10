@@ -102,8 +102,8 @@ describe('native live frame debug formatting', () => {
       68
     );
 
-    expect(line).toContain('horizontal line: y 0.34 · confidence 51% · diagnostic only');
-    expect(line).toContain('line guide score 94 / 100 · nearest upper third · distance 0.007 · diagnostic only');
+    expect(line).toContain('horizontal line: y 0.34 · confidence 51% · secondary composition signal');
+    expect(line).toContain('line guide score 94 / 100 · nearest upper third · distance 0.007 · secondary composition signal');
     expectNoForbiddenSemanticLabels(line);
   });
 
@@ -124,8 +124,32 @@ describe('native live frame debug formatting', () => {
       10_120
     );
 
-    expect(line).toContain('horizontal line: y 0.50 · confidence 100% · diagnostic only');
-    expect(line).toContain('line guide score 100 / 100 · nearest center · distance 0.000 · diagnostic only');
+    expect(line).toContain('horizontal line: y 0.50 · confidence 100% · secondary composition signal');
+    expect(line).toContain('line guide score 100 / 100 · nearest center · distance 0.000 · secondary composition signal');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('scores horizontal line debug output against the active guide kinds', () => {
+    const line = makeNativeAnalysisDebugLine(
+      makeLiveAnalysis({
+        lineCandidate: {
+          x1: 0,
+          y1: 0.5,
+          x2: 1,
+          y2: 0.5,
+          angleDeg: 0,
+          confidence: 0.8,
+          kind: 'horizontal-line'
+        }
+      }),
+      true,
+      10_120,
+      68,
+      ['third']
+    );
+
+    expect(line).toContain('line guide score 0 / 100 · nearest lower third');
+    expect(line).not.toContain('nearest center');
     expectNoForbiddenSemanticLabels(line);
   });
 

@@ -1,5 +1,6 @@
 import type { CompositionScoreResult, GuideKind, NormalizedPoint } from '../composition/types';
-import type { NativeFrameAnalysisResult } from './nativeHeuristicTypes';
+import type { LineGuideScoreResult } from './lineGuideScore';
+import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
 
 export type { NormalizedPoint };
 
@@ -41,6 +42,7 @@ export type CandidateSelectionResult = {
 export type DetectedCompositionScoreInput = {
   candidate: CompositionCandidate | null;
   activeGuideKinds: GuideKind[];
+  lineCandidate?: NativeLineCandidate | null;
   explanation?: string;
 };
 
@@ -48,6 +50,7 @@ export type DetectedCompositionScore = {
   candidate: CompositionCandidate | null;
   composition: CompositionScoreResult;
   scoreResult: CompositionScoreResult;
+  lineGuideScore: LineGuideScoreResult;
   source: DetectionSource;
   confidence: number;
   explanation: string;

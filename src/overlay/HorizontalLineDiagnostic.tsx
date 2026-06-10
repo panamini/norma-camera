@@ -18,7 +18,7 @@ function HorizontalLineDiagnosticComponent({ width, height, lineCandidate }: Pro
   return (
     <View pointerEvents="none" style={[styles.container, { top: height * y - 1 }]}>
       <View style={styles.line} />
-      <Text style={styles.label}>LINE DIAGNOSTIC</Text>
+      <Text style={styles.label}>LINE SIGNAL</Text>
     </View>
   );
 }
