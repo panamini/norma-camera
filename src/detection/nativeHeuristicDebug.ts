@@ -1,4 +1,4 @@
-import type { NativeFrameAnalysisResult } from './nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
 import { nowMs } from '../shared/time';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
@@ -16,9 +16,13 @@ function analysisAgeMs(analysis: Pick<NativeFrameAnalysisResult, 'createdAtMs'>,
   return Math.max(0, Math.round(currentNowMs - analysis.createdAtMs));
 }
 
+function clamp01(value: number): number {
+  return Math.max(0, Math.min(1, value));
+}
+
 function formatVisualConfidence(analysis: NativeFrameAnalysisResult): string {
   const confidence = analysis.subject?.confidence;
-  return typeof confidence === 'number' && Number.isFinite(confidence) ? `${Math.round(Math.max(0, Math.min(1, confidence)) * 100)}%` : 'n/a';
+  return typeof confidence === 'number' && Number.isFinite(confidence) ? `${Math.round(clamp01(confidence) * 100)}%` : 'n/a';
 }
 
 function formatGuideScore(guideScore: number | null | undefined): string {
@@ -28,6 +32,27 @@ function formatGuideScore(guideScore: number | null | undefined): string {
 function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
   if (typeof analysis.updateCount === 'number') return `updates ${Math.round(analysis.updateCount)}`;
   return `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
+}
+
+function isRenderableHorizontalLineCandidate(lineCandidate: NativeLineCandidate | null | undefined): lineCandidate is NativeLineCandidate {
+  return Boolean(
+    lineCandidate &&
+      lineCandidate.kind === 'horizontal-line' &&
+      typeof lineCandidate.y1 === 'number' &&
+      Number.isFinite(lineCandidate.y1) &&
+      typeof lineCandidate.y2 === 'number' &&
+      Number.isFinite(lineCandidate.y2) &&
+      typeof lineCandidate.confidence === 'number' &&
+      Number.isFinite(lineCandidate.confidence)
+  );
+}
+
+function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | null | undefined): string {
+  if (!isRenderableHorizontalLineCandidate(lineCandidate)) return 'horizontal line: no strong line candidate';
+
+  const normalizedY = clamp01((lineCandidate.y1 + lineCandidate.y2) / 2);
+  const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
+  return `horizontal line: y ${normalizedY.toFixed(2)} · confidence ${confidence}% · diagnostic only`;
 }
 
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {
@@ -52,12 +77,14 @@ function formatNativeReadout(params: {
   visualMassState: NativeVisualMassState;
   visualConfidenceText: string;
   guideScore: number | null | undefined;
+  lineCandidate?: NativeLineCandidate | null;
 }): string {
   return [
     `source ${params.sourceText} · live frame age ${params.ageText} · ${params.updateText}`,
     `meanLuma ${params.meanLumaText} · edgeEnergy ${params.edgeEnergyText}`,
     `native visual mass: ${params.visualMassState} · visual confidence ${params.visualConfidenceText}`,
-    `guide score ${formatGuideScore(params.guideScore)}`
+    `guide score ${formatGuideScore(params.guideScore)}`,
+    formatHorizontalLineDiagnostic(params.lineCandidate)
   ].join('\n');
 }
 
@@ -75,6 +102,7 @@ export function normalizeNativeAnalysisFreshness(
     ...analysis,
     status: 'unavailable',
     subject: null,
+    lineCandidate: null,
     exposure: null,
     sharpness: null,
     analysisSource: 'stale-live-frame',
@@ -100,7 +128,8 @@ export function makeNativeAnalysisDebugLine(
       edgeEnergyText: formatFixedMetric(freshAnalysis.sharpness?.edgeEnergy, 4),
       visualMassState: nativeVisualMassStateForAnalysis(freshAnalysis),
       visualConfidenceText: formatVisualConfidence(freshAnalysis),
-      guideScore
+      guideScore,
+      lineCandidate: freshAnalysis.lineCandidate
     });
   }
 
@@ -114,7 +143,8 @@ export function makeNativeAnalysisDebugLine(
       edgeEnergyText: 'n/a',
       visualMassState: 'stale live frame',
       visualConfidenceText: 'n/a',
-      guideScore: null
+      guideScore: null,
+      lineCandidate: null
     });
   }
 
@@ -128,7 +158,8 @@ export function makeNativeAnalysisDebugLine(
       edgeEnergyText: 'n/a',
       visualMassState: 'unavailable',
       visualConfidenceText: 'n/a',
-      guideScore: null
+      guideScore: null,
+      lineCandidate: null
     });
   }
 
@@ -141,6 +172,7 @@ export function makeNativeAnalysisDebugLine(
     edgeEnergyText: 'n/a',
     visualMassState: 'unavailable',
     visualConfidenceText: 'n/a',
-    guideScore: null
+    guideScore: null,
+    lineCandidate: null
   });
 }
