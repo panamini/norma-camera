@@ -23,7 +23,7 @@ export function retainRecentHorizontalLine(
 ): NativeFrameAnalysisResult {
   if (analysis.analysisSource !== 'live-frame' || analysis.status === 'unavailable' || analysis.status === 'error') return analysis;
   if (analysis.lineCandidate) return analysis;
-  if (!hasRenderableHorizontalLine(previousAnalysisWithLine)) return analysis;
+  if (!previousAnalysisWithLine || !hasRenderableHorizontalLine(previousAnalysisWithLine)) return analysis;
 
   const retainedAgeMs = Math.max(0, analysis.createdAtMs - previousAnalysisWithLine.createdAtMs);
   if (retainedAgeMs > LINE_DIAGNOSTIC_RETENTION_MS) return analysis;
