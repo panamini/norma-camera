@@ -19,7 +19,18 @@ object NormaFrameAnalysisStore {
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
     val rawSubject = VisualMassHeuristic.detect(values, width, height, valueRange)
     val subject = VisualMassCandidateStabilizer.stabilize(rawSubject, metrics, analysisNowMs)
+    val lineCandidate = HorizontalLineHeuristic.detect(
+      grid = values,
+      width = width,
+      height = height,
+      valueRange = valueRange,
+      overallEdgeEnergy = metrics.sharpness.edgeEnergy
+    )
     val explanation = when {
+      lineCandidate != null && analysisSource == "live-frame" ->
+        "Real live Android luminance metrics are available. A horizontal-line diagnostic is available. Visual-mass candidate remains non-semantic."
+      lineCandidate != null ->
+        "Real Android luminance metrics are available. A horizontal-line diagnostic is available. Visual-mass candidate remains non-semantic."
       analysisSource == "live-frame" && subject != null ->
         "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       analysisSource == "live-frame" ->
@@ -33,6 +44,7 @@ object NormaFrameAnalysisStore {
       "status" to "low-confidence",
       "createdAtMs" to createdAtMs,
       "subject" to subject?.toMap(),
+      "lineCandidate" to lineCandidate?.toMap(),
       "exposure" to mapOf(
         "exposureScore" to metrics.exposure.exposureScore,
         "meanLuma" to metrics.exposure.meanLuma,
@@ -61,6 +73,7 @@ object NormaFrameAnalysisStore {
       "status" to "unavailable",
       "createdAtMs" to createdAtMs,
       "subject" to null,
+      "lineCandidate" to null,
       "exposure" to null,
       "sharpness" to null,
       "analysisSource" to "analyzer-unavailable",
