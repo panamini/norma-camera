@@ -5,7 +5,7 @@ import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nat
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
 const POLL_INTERVAL_MS = 250;
-const LINE_DIAGNOSTIC_RETENTION_MS = 900;
+export const LINE_DIAGNOSTIC_RETENTION_MS = 900;
 
 export type NativeHeuristicHookState = {
   analysis: NativeFrameAnalysisResult | null;
@@ -33,7 +33,7 @@ function unavailableState(): NativeHeuristicHookState {
   };
 }
 
-function hasRenderableHorizontalLine(analysis: NativeFrameAnalysisResult | null): boolean {
+export function hasRenderableHorizontalLine(analysis: NativeFrameAnalysisResult | null): boolean {
   const line = analysis?.lineCandidate;
   return Boolean(
     analysis?.analysisSource === 'live-frame' &&
@@ -48,7 +48,7 @@ function hasRenderableHorizontalLine(analysis: NativeFrameAnalysisResult | null)
   );
 }
 
-function retainRecentHorizontalLine(
+export function retainRecentHorizontalLine(
   analysis: NativeFrameAnalysisResult,
   previousAnalysisWithLine: NativeFrameAnalysisResult | null
 ): NativeFrameAnalysisResult {
