@@ -17,6 +17,7 @@ export type CandidateScoreSnapshot = {
   nearestGuideText: string | null;
   scoreReason: string;
   lineContributionText: string | null;
+  compositionBreakdownLines: string[] | null;
   candidateExplanation: string;
 };
 
@@ -113,7 +114,15 @@ function ScoreBadgeComponent({
           {snapshot.hasCandidate && snapshot.boundsText ? <Text style={styles.meta}>bbox {snapshot.boundsText}</Text> : null}
           {snapshot.hasCandidate ? <Text style={styles.meta}>nearest guide {snapshot.nearestGuideText ?? 'none'}</Text> : null}
           <Text style={styles.guideScore}>guide score {guideScoreValue} / 100</Text>
-          {snapshot.hasCandidate && snapshot.lineContributionText ? <Text style={styles.meta}>horizontal line {snapshot.lineContributionText}</Text> : null}
+          {snapshot.hasCandidate && snapshot.compositionBreakdownLines ? (
+            <View style={styles.breakdownBlock}>
+              {snapshot.compositionBreakdownLines.map((line, index) => (
+                <Text key={`${index}-${line}`} style={index === 0 ? styles.breakdownTitle : styles.breakdownText}>
+                  {line}
+                </Text>
+              ))}
+            </View>
+          ) : null}
         </View>
       ) : null}
 
@@ -212,6 +221,24 @@ const styles = StyleSheet.create({
   debugBlock: {
     marginTop: 6,
     gap: 2
+  },
+  breakdownBlock: {
+    marginTop: 6,
+    borderRadius: 8,
+    backgroundColor: 'rgba(255,255,255,0.08)',
+    paddingHorizontal: 9,
+    paddingVertical: 7,
+    gap: 2
+  },
+  breakdownTitle: {
+    color: '#ffffff',
+    fontSize: 11,
+    fontWeight: '900'
+  },
+  breakdownText: {
+    color: 'rgba(255,255,255,0.78)',
+    fontSize: 11,
+    fontWeight: '700'
   },
   meta: {
     color: 'rgba(255,255,255,0.72)',

@@ -8,7 +8,7 @@ import { createAutoCaptureController } from '../autocapture/createAutoCaptureCon
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
 import { guideKindsForOverlayMode } from '../composition/guides';
-import { displayNameForGuide, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
+import { displayNameForGuide, formatCompositionBreakdown, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
@@ -101,6 +101,7 @@ function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): Ca
       nearestGuideText: null,
       scoreReason: makeScoreReason(null, detectedScore.composition),
       lineContributionText: null,
+      compositionBreakdownLines: null,
       candidateExplanation: detectedScore.explanation
     };
   }
@@ -114,6 +115,7 @@ function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): Ca
     nearestGuideText: formatGuideHit(detectedScore.composition.bestHit),
     scoreReason: makeScoreReason(candidate, detectedScore.composition),
     lineContributionText: formatLineContributionText(detectedScore.composition),
+    compositionBreakdownLines: formatCompositionBreakdown(detectedScore.composition),
     candidateExplanation: detectedScore.explanation
   };
 }
@@ -227,6 +229,7 @@ export function CameraScreen() {
     nearestGuideText: null,
     scoreReason: 'No subject candidate. Tap subject or switch Auto.',
     lineContributionText: null,
+    compositionBreakdownLines: null,
     candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.'
   });
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
