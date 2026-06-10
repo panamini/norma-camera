@@ -1,8 +1,7 @@
 import { memo } from 'react';
-import { StyleSheet, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
+import { normalizedHorizontalLineOverlayY } from '../detection/nativeLineDiagnosticOverlay';
 import type { NativeLineCandidate } from '../detection/nativeHeuristicTypes';
-
-const MIN_OVERLAY_CONFIDENCE = 0.34;
 
 type Props = {
   width: number;
@@ -10,40 +9,49 @@ type Props = {
   lineCandidate?: NativeLineCandidate | null;
 };
 
-function clamp01(value: number): number {
-  return Math.max(0, Math.min(1, value));
-}
-
-function normalizedLineY(lineCandidate: NativeLineCandidate): number | null {
-  if (lineCandidate.kind !== 'horizontal-line') return null;
-  if (typeof lineCandidate.y1 !== 'number' || !Number.isFinite(lineCandidate.y1)) return null;
-  if (typeof lineCandidate.y2 !== 'number' || !Number.isFinite(lineCandidate.y2)) return null;
-  if (typeof lineCandidate.confidence !== 'number' || !Number.isFinite(lineCandidate.confidence)) return null;
-  if (lineCandidate.confidence < MIN_OVERLAY_CONFIDENCE) return null;
-
-  return clamp01((lineCandidate.y1 + lineCandidate.y2) / 2);
-}
-
 function HorizontalLineDiagnosticComponent({ width, height, lineCandidate }: Props) {
   if (width <= 0 || height <= 0 || !lineCandidate) return null;
 
-  const y = normalizedLineY(lineCandidate);
+  const y = normalizedHorizontalLineOverlayY(lineCandidate);
   if (y === null) return null;
 
-  return <View pointerEvents="none" style={[styles.line, { top: height * y - 1 }]} />;
+  return (
+    <View pointerEvents="none" style={[styles.container, { top: height * y - 1 }]}>
+      <View style={styles.line} />
+      <Text style={styles.label}>LINE DIAGNOSTIC</Text>
+    </View>
+  );
 }
 
 export const HorizontalLineDiagnostic = memo(HorizontalLineDiagnosticComponent);
 
 const styles = StyleSheet.create({
-  line: {
+  container: {
     position: 'absolute',
     left: 12,
     right: 12,
+    height: 18,
+    justifyContent: 'center'
+  },
+  line: {
     height: 2,
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(132,242,143,0.92)',
-    backgroundColor: 'rgba(132,242,143,0.28)'
+    borderColor: 'rgba(80,210,255,0.94)',
+    backgroundColor: 'rgba(80,210,255,0.24)'
+  },
+  label: {
+    position: 'absolute',
+    right: 0,
+    top: 4,
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 4,
+    overflow: 'hidden',
+    color: 'rgba(220,246,255,0.96)',
+    backgroundColor: 'rgba(0,0,0,0.46)',
+    fontSize: 9,
+    fontWeight: '800',
+    letterSpacing: 0.6
   }
 });
