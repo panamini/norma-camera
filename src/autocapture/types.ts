@@ -41,3 +41,20 @@ export type AutoCaptureDecision =
       reason: string;
       nextStableSinceMs: number | null;
     };
+
+export type CaptureReadinessCalibrationInput = {
+  nowMs: number;
+  armed: boolean;
+  detectionMode: import('../detection/types').DetectionMode;
+  modeLabel?: string | null;
+  hasCandidate: boolean;
+  compositionScore: number;
+  compositionThreshold: number;
+  quality: FrameQuality;
+  sharpnessThreshold: number;
+  exposureThreshold: number;
+  candidateConfidence?: number | null;
+  lineContribution?: number;
+  decision: AutoCaptureDecision;
+  nativeAnalysis?: import('../detection/nativeHeuristicTypes').NativeFrameAnalysisResult | null;
+};

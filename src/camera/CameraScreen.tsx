@@ -3,7 +3,7 @@ import type { GestureResponderEvent, LayoutChangeEvent } from 'react-native';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { withTiming } from 'react-native-reanimated';
 import { Camera, useFrameOutput, usePhotoOutput } from 'react-native-vision-camera';
-import { captureReadinessNoCandidateLine } from '../autocapture/captureReadinessText';
+import { captureReadinessLine } from '../autocapture/captureReadinessText';
 import { createAutoCaptureController } from '../autocapture/createAutoCaptureController';
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
@@ -116,30 +116,6 @@ function makeCandidateScoreSnapshot(detectedScore: DetectedCompositionScore): Ca
     lineContributionText: formatLineContributionText(detectedScore.composition),
     candidateExplanation: detectedScore.explanation
   };
-}
-
-function buildAutoStatusLine(params: { armed: boolean; detectionMode: DetectionMode; hasCandidate: boolean; modeLabel: string; score: number; decision: AutoCaptureDecision }): string {
-  const roundedScore = Math.round(params.score);
-  if (!params.armed) return 'ARM OFF · auto-capture disabled';
-  if (!params.hasCandidate) return captureReadinessNoCandidateLine({ detectionMode: params.detectionMode, modeLabel: params.modeLabel });
-  if (roundedScore < READY_SCORE_THRESHOLD) return `ARMED · adjust composition · score ${roundedScore} / ${READY_SCORE_THRESHOLD}`;
-  if (params.decision.kind === 'candidate') return 'ARMED · hold steady';
-  if (params.decision.kind === 'capture') return 'ARMED · capture triggered';
-
-  switch (params.decision.reason) {
-    case 'sharpness below threshold':
-      return 'ARMED · quality blocked · blurry';
-    case 'exposure below threshold':
-      return 'ARMED · quality blocked · exposure';
-    case 'motion too high':
-      return 'ARMED · quality blocked · motion';
-    case 'cooldown active':
-      return 'ARMED · cooldown active';
-    case 'scene unchanged':
-      return 'ARMED · scene unchanged';
-    default:
-      return 'ARMED · hold steady';
-  }
 }
 
 function buildGateReasonLine(decision: AutoCaptureDecision, hasCandidate: boolean): string {
@@ -378,7 +354,29 @@ export function CameraScreen() {
       setCandidateSource(candidate?.source ?? 'none');
       setCandidateBounds(candidate?.bounds);
       setCandidateSnapshot(params.snapshot);
-      setAutoStatusLine(buildAutoStatusLine({ armed, detectionMode, hasCandidate, modeLabel: params.selection.modeLabel, score: result.score, decision: params.decision }));
+      setAutoStatusLine(
+        captureReadinessLine({
+          nowMs: nowMsValue,
+          armed,
+          detectionMode,
+          hasCandidate,
+          modeLabel: params.selection.modeLabel,
+          compositionScore: result.score,
+          compositionThreshold: READY_SCORE_THRESHOLD,
+          quality: {
+            sharpnessScore: sharedValues.sharpnessScore.value,
+            exposureScore: sharedValues.exposureScore.value,
+            motionScore: sharedValues.motionScore.value,
+            sceneChangedScore: sharedValues.sceneChangedScore.value
+          },
+          sharpnessThreshold: DEFAULT_AUTO_CAPTURE_CONFIG.sharpnessThreshold,
+          exposureThreshold: DEFAULT_AUTO_CAPTURE_CONFIG.exposureThreshold,
+          candidateConfidence: candidate?.confidence ?? null,
+          lineContribution: result.lineContribution,
+          decision: params.decision,
+          nativeAnalysis: nativeHeuristic.analysis
+        })
+      );
       setGateReasonLine(buildGateReasonLine(params.decision, hasCandidate));
       setStabilityLine(buildStabilityLine(params.decision));
       setQualityLine(
