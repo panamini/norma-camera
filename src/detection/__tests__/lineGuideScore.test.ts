@@ -49,18 +49,39 @@ describe('horizontal line guide score diagnostic', () => {
     const result = scoreHorizontalLineAgainstGuides(makeLine({ y1: 0.22, y2: 0.22 }));
 
     expect(result.hasLine).toBe(true);
-    expect(result.score).not.toBeNull();
-    expect(result.score ?? 100).toBeLessThan(15);
+    expect(result.score).toBe(6);
     expect(result.nearestGuideLabel).toBe('upper third');
   });
 
   it('returns n/a for malformed or unsupported line candidates', () => {
-    expect(scoreHorizontalLineAgainstGuides(makeLine({ kind: 'unknown-line' }))).toMatchObject({ hasLine: false, score: null });
-    expect(scoreHorizontalLineAgainstGuides(makeLine({ y1: Infinity }))).toMatchObject({ hasLine: false, score: null });
+    expect(scoreHorizontalLineAgainstGuides(makeLine({ kind: 'unknown-line' }))).toEqual({
+      hasLine: false,
+      score: null,
+      nearestGuideLabel: null,
+      distance: null,
+      lineY: null
+    });
+    expect(scoreHorizontalLineAgainstGuides(makeLine({ y1: Infinity }))).toEqual({
+      hasLine: false,
+      score: null,
+      nearestGuideLabel: null,
+      distance: null,
+      lineY: null
+    });
   });
 
   it('returns n/a for candidates below the render threshold', () => {
     expect(scoreHorizontalLineAgainstGuides(makeLine({ confidence: 0.1 }))).toEqual({
+      hasLine: false,
+      score: null,
+      nearestGuideLabel: null,
+      distance: null,
+      lineY: null
+    });
+  });
+
+  it('returns n/a when no horizontal guides are active', () => {
+    expect(scoreHorizontalLineAgainstGuides(makeLine({ y1: 0.5, y2: 0.5 }), [])).toEqual({
       hasLine: false,
       score: null,
       nearestGuideLabel: null,
