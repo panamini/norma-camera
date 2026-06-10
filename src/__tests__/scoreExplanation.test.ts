@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { explainCompositionScore, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
+import { explainCompositionScore, formatCompositionBreakdown, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { scoreFrameComposition } from '../composition/scoreFrameComposition';
 
 describe('scoreExplanation', () => {
@@ -20,5 +20,27 @@ describe('scoreExplanation', () => {
     expect(result.score).toBe(53);
     expect(formatGuideHit(result.bestHit)).toContain('left third');
     expect(explainCompositionScore(result, point, 82)).toContain('Medium');
+  });
+
+  it('formats a composition breakdown with a positive line contribution', () => {
+    const point = { x: 0.39, y: 0.1 };
+    const result = scoreFrameComposition({ subjectCenter: point, activeGuideKinds: ['third'], lineAlignmentScore: 100 });
+
+    expect(result.score).toBe(61);
+    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53', 'Line signal: +8', 'Total: 61']);
+  });
+
+  it('omits line signal when line contribution is zero', () => {
+    const point = { x: 0.39, y: 0.1 };
+    const result = scoreFrameComposition({ subjectCenter: point, activeGuideKinds: ['third'], lineAlignmentScore: 0 });
+
+    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53', 'Total: 53']);
+  });
+
+  it('omits line signal when no line score is present', () => {
+    const point = { x: 0.39, y: 0.1 };
+    const result = scoreFrameComposition({ subjectCenter: point, activeGuideKinds: ['third'] });
+
+    expect(formatCompositionBreakdown(result)).toEqual(['Composition', 'Base guide score: 53', 'Total: 53']);
   });
 });

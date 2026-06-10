@@ -3,6 +3,17 @@ import type { CompositionGuide, CompositionScoreResult, GuideHit, NormalizedPoin
 
 const MEDIUM_SCORE_THRESHOLD = 45;
 
+export function formatCompositionBreakdown(result: CompositionScoreResult): string[] {
+  const lines = ['Composition', `Base guide score: ${Math.round(result.baseGuideScore)}`];
+
+  if (result.lineContribution > 0) {
+    lines.push(`Line signal: +${Math.round(result.lineContribution)}`);
+  }
+
+  lines.push(`Total: ${Math.round(result.score)}`);
+  return lines;
+}
+
 export function formatNormalizedPoint(point: NormalizedPoint): string {
   return `x=${point.x.toFixed(3)} · y=${point.y.toFixed(3)}`;
 }
