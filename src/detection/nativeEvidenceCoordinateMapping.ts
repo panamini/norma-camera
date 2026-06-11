@@ -135,11 +135,15 @@ export function getPreviewFrameTransform(frame: NativeFrameGeometry, preview: Pr
 }
 
 export function nativeFrameGeometryFromAnalysis(analysis: NativeFrameAnalysisResult | null | undefined): NativeFrameGeometry | null {
-  if (!analysis || !hasPositiveFiniteSize(analysis.frameWidth ?? 0, analysis.frameHeight ?? 0)) return null;
+  const frameWidth = analysis?.frameWidth;
+  const frameHeight = analysis?.frameHeight;
+  if (!analysis || !isFiniteNumber(frameWidth) || !isFiniteNumber(frameHeight) || !hasPositiveFiniteSize(frameWidth, frameHeight)) {
+    return null;
+  }
 
   return {
-    frameWidth: analysis.frameWidth ?? 0,
-    frameHeight: analysis.frameHeight ?? 0,
+    frameWidth,
+    frameHeight,
     gridWidth: isFiniteNumber(analysis.gridWidth) ? analysis.gridWidth : undefined,
     gridHeight: isFiniteNumber(analysis.gridHeight) ? analysis.gridHeight : undefined,
     frameOrientation: isNativeFrameOrientation(analysis.frameOrientation) ? analysis.frameOrientation : null,
@@ -219,6 +223,13 @@ function lineAngleDeg(line: NormalizedLineSegment): number {
   return (Math.atan2(line.y2 - line.y1, line.x2 - line.x1) * 180) / Math.PI;
 }
 
+function mappedLineKind(line: NormalizedLineSegment): NativeLineCandidate['kind'] {
+  const dx = Math.abs(line.x2 - line.x1);
+  const dy = Math.abs(line.y2 - line.y1);
+
+  return dx >= dy ? 'horizontal-line' : 'unknown-line';
+}
+
 export function mapNativeLineCandidateToPreviewLineCandidate(
   lineCandidate: NativeLineCandidate | null | undefined,
   frame: NativeFrameGeometry,
@@ -230,7 +241,8 @@ export function mapNativeLineCandidateToPreviewLineCandidate(
   return {
     ...lineCandidate,
     ...mappedLine,
-    angleDeg: lineAngleDeg(mappedLine)
+    angleDeg: lineAngleDeg(mappedLine),
+    kind: mappedLineKind(mappedLine)
   };
 }
 

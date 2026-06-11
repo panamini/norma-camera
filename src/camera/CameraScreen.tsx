@@ -381,7 +381,7 @@ export function CameraScreen() {
 
       return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: candidate.source };
     },
-    [activeGuideKinds, detectionMode, manualSubject, nativeEvidenceMapping, nativeHeuristic.analysis, sharedValues]
+    [activeGuideKinds, detectionMode, manualSubject, nativeEvidenceMapping, sharedValues]
   );
 
   const publishCandidateUi = useCallback(

@@ -8,6 +8,8 @@ function clamp01(value: number): number {
 }
 
 export function normalizedHorizontalLineOverlayY(lineCandidate: NativeLineCandidate | null | undefined): number | null {
+  if (!lineCandidate || lineCandidate.kind !== 'horizontal-line') return null;
+
   const segment = normalizedLineCandidateOverlaySegment(lineCandidate);
   if (!segment) return null;
 
@@ -16,7 +18,6 @@ export function normalizedHorizontalLineOverlayY(lineCandidate: NativeLineCandid
 
 export function normalizedLineCandidateOverlaySegment(lineCandidate: NativeLineCandidate | null | undefined): NormalizedLineSegment | null {
   if (!lineCandidate) return null;
-  if (lineCandidate.kind !== 'horizontal-line') return null;
   if (typeof lineCandidate.x1 !== 'number' || !Number.isFinite(lineCandidate.x1)) return null;
   if (typeof lineCandidate.x2 !== 'number' || !Number.isFinite(lineCandidate.x2)) return null;
   if (typeof lineCandidate.y1 !== 'number' || !Number.isFinite(lineCandidate.y1)) return null;
