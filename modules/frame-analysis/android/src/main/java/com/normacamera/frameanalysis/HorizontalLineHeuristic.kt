@@ -208,13 +208,14 @@ internal data class LineSegmentCandidate(
 internal object LineSegmentHeuristic {
   private const val MIN_GRID_WIDTH = 6
   private const val MIN_GRID_HEIGHT = 6
-  private const val TOP_SEGMENT_LIMIT = 4
-  private const val MIN_OVERALL_EDGE_ENERGY = 0.014
-  private const val EDGE_THRESHOLD_FLOOR = 0.14
-  private const val EDGE_THRESHOLD_AVERAGE_MULTIPLIER = 1.65
-  private const val MIN_RUN_CELLS = 5
-  private const val MIN_NORMALIZED_LENGTH = 0.18
-  private const val MIN_CONFIDENCE = 0.24
+  private const val TOP_SEGMENT_LIMIT = 3
+  private const val MIN_OVERALL_EDGE_ENERGY = 0.018
+  private const val EDGE_THRESHOLD_FLOOR = 0.16
+  private const val EDGE_THRESHOLD_AVERAGE_MULTIPLIER = 1.85
+  private const val MIN_RUN_CELLS = 6
+  private const val MIN_NORMALIZED_LENGTH = 0.22
+  private const val MIN_CONFIDENCE = 0.32
+  private const val SIMILAR_SEGMENT_CENTER_DISTANCE = 0.08
 
   fun detect(
     grid: DoubleArray,
@@ -386,7 +387,7 @@ internal object LineSegmentHeuristic {
     val ay = (a.y1 + a.y2) / 2.0
     val bx = (b.x1 + b.x2) / 2.0
     val by = (b.y1 + b.y2) / 2.0
-    return sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)) < 0.06
+    return sqrt((ax - bx) * (ax - bx) + (ay - by) * (ay - by)) < SIMILAR_SEGMENT_CENTER_DISTANCE
   }
 
   private fun computeConfidence(length: Double, coverage: Double, contrast: Double): Double {
