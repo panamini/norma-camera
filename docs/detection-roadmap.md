@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.1 Camera Evidence Coordinate Calibration
+## Current target: PR4.2 Visual Mass Debug Heatmap
 
 The feature stack is complete for this release candidate:
 
@@ -14,8 +14,9 @@ The feature stack is complete for this release candidate:
 - line signal stabilization
 - conservative capture-readiness copy
 - explicit native evidence coordinate mapping for overlay/debug
+- compact visual-mass heatmap/debug explanation
 
-PR4.1 is a coordinate calibration pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
+PR4.2 is a visual-mass explainability pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
 
 ## Native implementation status
 
@@ -48,6 +49,7 @@ VisionCamera frame
   -> exposure metrics
   -> sharpness / edge energy
   -> contrast visual-mass candidate
+  -> compact contrast/luminance debug cells and candidate summaries
   -> horizontal-line signal
   -> native frame/grid/orientation/mirroring metadata
   -> compact normalized result to JS
@@ -93,6 +95,24 @@ type NativeSubjectCandidate = {
 
 This is a contrast candidate. It is not object, person, face, scene, or AI detection.
 
+### Visual-mass debug payload
+
+```ts
+type NativeVisualMassDebug = {
+  gridWidth: number;
+  gridHeight: number;
+  heatmapWidth: number;
+  heatmapHeight: number;
+  cells: NativeVisualMassDebugCell[];
+  topCandidates: NativeVisualMassDebugCandidate[];
+  selectedCandidate: NativeVisualMassDebugCandidate | null;
+  stabilizedCandidate: NativeVisualMassDebugCandidate | null;
+  explanation: string;
+};
+```
+
+This payload explains coarse contrast/luminance mass only. It can show where the native analyzer found high visual energy, which raw candidate it selected, and which candidate was stabilized. It does not know what the object is and does not perform object detection.
+
 ### Horizontal-line signal
 
 ```ts
@@ -122,6 +142,8 @@ rawVisualMassBounds
 mappedVisualMassBounds
 rawVisualMassCenter
 mappedVisualMassCenter
+rawVisualMassDebug
+mappedVisualMassDebug
 ```
 
 The tested mapping layer is:
@@ -136,6 +158,8 @@ native frame normalized coordinates
 Installed VisionCamera types define orientation as `'up' | 'right' | 'down' | 'left'`. Installed `PreviewView` types define resize mode as `'cover' | 'contain'` and default to `cover`; norma-camera sets `cover` explicitly.
 
 For PR4.1, overlay/debug uses mapped evidence. Scoring remains on the existing raw native candidate inputs, so the scoring formula and auto-capture behavior are unchanged. If a later PR changes scoring inputs to mapped coordinates, the PR must state: `Scoring formula unchanged, but native candidate input coordinates are corrected from raw-frame space to preview/composition space.`
+
+For PR4.2, non-normal debug quality modes can render a mapped visual-mass heatmap labeled `CONTRAST MASS · NOT OBJECT DETECTION`. Normal UI remains unpolluted. The debug copy must say contrast/luminance evidence, not object detection. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
 
 ## Stability guardrails
 

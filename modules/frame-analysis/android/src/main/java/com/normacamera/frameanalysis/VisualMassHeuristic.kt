@@ -38,9 +38,80 @@ internal data class VisualMassSubjectCandidate(
   )
 }
 
+internal data class VisualMassDebugCell(
+  val x: Double,
+  val y: Double,
+  val width: Double,
+  val height: Double,
+  val energy: Double
+) {
+  fun toMap(): Map<String, Any> = mapOf(
+    "x" to x,
+    "y" to y,
+    "width" to width,
+    "height" to height,
+    "energy" to energy
+  )
+}
+
+internal data class VisualMassDebugCandidate(
+  val center: VisualMassPoint,
+  val bounds: VisualMassBounds,
+  val confidence: Double,
+  val energy: Double,
+  val reason: String
+) {
+  fun toMap(): Map<String, Any> = mapOf(
+    "center" to center.toMap(),
+    "bounds" to bounds.toMap(),
+    "confidence" to confidence,
+    "energy" to energy,
+    "reason" to reason
+  )
+}
+
+internal data class VisualMassDebug(
+  val gridWidth: Int,
+  val gridHeight: Int,
+  val heatmapWidth: Int,
+  val heatmapHeight: Int,
+  val cells: List<VisualMassDebugCell>,
+  val topCandidates: List<VisualMassDebugCandidate>,
+  val selectedCandidate: VisualMassDebugCandidate?
+) {
+  fun toMap(stabilizedCandidate: VisualMassSubjectCandidate?): Map<String, Any?> = mapOf(
+    "gridWidth" to gridWidth.toDouble(),
+    "gridHeight" to gridHeight.toDouble(),
+    "heatmapWidth" to heatmapWidth.toDouble(),
+    "heatmapHeight" to heatmapHeight.toDouble(),
+    "cells" to cells.map { it.toMap() },
+    "topCandidates" to topCandidates.map { it.toMap() },
+    "selectedCandidate" to selectedCandidate?.toMap(),
+    "stabilizedCandidate" to stabilizedCandidate?.let {
+      VisualMassDebugCandidate(
+        center = it.center,
+        bounds = it.bounds,
+        confidence = it.confidence,
+        energy = selectedCandidate?.energy ?: it.confidence,
+        reason = "stabilized visual mass"
+      ).toMap()
+    },
+    "explanation" to "Visual mass is contrast/luminance evidence, not object detection."
+  )
+}
+
+internal data class VisualMassAnalysis(
+  val candidate: VisualMassSubjectCandidate?,
+  val debug: VisualMassDebug?
+)
+
 internal object VisualMassHeuristic {
   private const val MIN_GRID_WIDTH = 4
   private const val MIN_GRID_HEIGHT = 4
+  private const val DEBUG_HEATMAP_WIDTH = 8
+  private const val DEBUG_HEATMAP_HEIGHT = 6
+  private const val DEBUG_CELL_LIMIT = 12
+  private const val DEBUG_TOP_CANDIDATE_LIMIT = 3
   private const val EDGE_FLOOR = 0.045
   private const val LUMA_DELTA_FLOOR = 0.04
   private const val LUMA_DELTA_WEIGHT = 0.55
@@ -57,12 +128,28 @@ internal object VisualMassHeuristic {
     width: Int,
     height: Int,
     valueRange: LumaValueRange = LumaValueRange.AUTO
-  ): VisualMassSubjectCandidate? {
+  ): VisualMassSubjectCandidate? = analyze(grid, width, height, valueRange).candidate
+
+  fun analyze(
+    grid: DoubleArray,
+    width: Int,
+    height: Int,
+    valueRange: LumaValueRange = LumaValueRange.AUTO
+  ): VisualMassAnalysis {
+    return analyzeInternal(grid, width, height, valueRange)
+  }
+
+  private fun analyzeInternal(
+    grid: DoubleArray,
+    width: Int,
+    height: Int,
+    valueRange: LumaValueRange = LumaValueRange.AUTO
+  ): VisualMassAnalysis {
     require(width > 0) { "width must be positive" }
     require(height > 0) { "height must be positive" }
     require(grid.size == width * height) { "grid size does not match width and height" }
 
-    if (width < MIN_GRID_WIDTH || height < MIN_GRID_HEIGHT) return null
+    if (width < MIN_GRID_WIDTH || height < MIN_GRID_HEIGHT) return VisualMassAnalysis(candidate = null, debug = null)
 
     val resolvedRange = resolveValueRange(grid, valueRange)
     val lumaValues = DoubleArray(grid.size)
@@ -111,7 +198,10 @@ internal object VisualMassHeuristic {
     }
 
     if (activeCount == 0 || totalWeight < MIN_TOTAL_WEIGHT || peakWeight < MIN_PEAK_WEIGHT) {
-      return null
+      return VisualMassAnalysis(
+        candidate = null,
+        debug = buildDebug(width, height, weights, peakWeight, null)
+      )
     }
 
     val activeMeanWeight = totalWeight / activeCount
@@ -138,7 +228,12 @@ internal object VisualMassHeuristic {
       }
     }
 
-    if (bboxCellCount == 0) return null
+    if (bboxCellCount == 0) {
+      return VisualMassAnalysis(
+        candidate = null,
+        debug = buildDebug(width, height, weights, peakWeight, null)
+      )
+    }
 
     val padX = if (width >= 8) 1 else 0
     val padY = if (height >= 8) 1 else 0
@@ -154,7 +249,12 @@ internal object VisualMassHeuristic {
       height = (maxY - minY + 1) / height.toDouble()
     )
 
-    if (!isSaneBounds(bounds)) return null
+    if (!isSaneBounds(bounds)) {
+      return VisualMassAnalysis(
+        candidate = null,
+        debug = buildDebug(width, height, weights, peakWeight, null)
+      )
+    }
 
     val center = VisualMassPoint(
       x = clamp(weightedX / totalWeight, 0.0, 1.0),
@@ -170,12 +270,99 @@ internal object VisualMassHeuristic {
       sampleCount = interiorSampleCount
     )
 
-    if (confidence < MIN_CONFIDENCE) return null
+    if (confidence < MIN_CONFIDENCE) {
+      return VisualMassAnalysis(
+        candidate = null,
+        debug = buildDebug(width, height, weights, peakWeight, null)
+      )
+    }
 
-    return VisualMassSubjectCandidate(
+    val candidate = VisualMassSubjectCandidate(
       center = center,
       bounds = bounds,
       confidence = confidence
+    )
+    return VisualMassAnalysis(
+      candidate = candidate,
+      debug = buildDebug(width, height, weights, peakWeight, candidate)
+    )
+  }
+
+  private fun buildDebug(
+    width: Int,
+    height: Int,
+    weights: DoubleArray,
+    peakWeight: Double,
+    selectedCandidate: VisualMassSubjectCandidate?
+  ): VisualMassDebug? {
+    if (peakWeight <= 0.0 || weights.size != width * height) return null
+
+    val heatmapWidth = min(DEBUG_HEATMAP_WIDTH, width)
+    val heatmapHeight = min(DEBUG_HEATMAP_HEIGHT, height)
+    if (heatmapWidth <= 0 || heatmapHeight <= 0) return null
+
+    val cells = mutableListOf<VisualMassDebugCell>()
+    for (cellY in 0 until heatmapHeight) {
+      val startY = cellY * height / heatmapHeight
+      val endY = max(startY + 1, (cellY + 1) * height / heatmapHeight)
+      for (cellX in 0 until heatmapWidth) {
+        val startX = cellX * width / heatmapWidth
+        val endX = max(startX + 1, (cellX + 1) * width / heatmapWidth)
+        var cellPeak = 0.0
+
+        for (y in startY until min(endY, height)) {
+          for (x in startX until min(endX, width)) {
+            cellPeak = max(cellPeak, weights[y * width + x])
+          }
+        }
+
+        if (cellPeak <= 0.0) continue
+
+        cells += VisualMassDebugCell(
+          x = cellX / heatmapWidth.toDouble(),
+          y = cellY / heatmapHeight.toDouble(),
+          width = 1.0 / heatmapWidth.toDouble(),
+          height = 1.0 / heatmapHeight.toDouble(),
+          energy = clamp(cellPeak / peakWeight, 0.0, 1.0)
+        )
+      }
+    }
+
+    val rankedCells = cells.sortedByDescending { it.energy }.take(DEBUG_CELL_LIMIT)
+    val topCandidates = rankedCells.take(DEBUG_TOP_CANDIDATE_LIMIT).map {
+      VisualMassDebugCandidate(
+        center = VisualMassPoint(
+          x = clamp(it.x + it.width / 2.0, 0.0, 1.0),
+          y = clamp(it.y + it.height / 2.0, 0.0, 1.0)
+        ),
+        bounds = VisualMassBounds(
+          x = it.x,
+          y = it.y,
+          width = it.width,
+          height = it.height
+        ),
+        confidence = it.energy,
+        energy = it.energy,
+        reason = "coarse luma/contrast energy"
+      )
+    }
+
+    return VisualMassDebug(
+      gridWidth = width,
+      gridHeight = height,
+      heatmapWidth = heatmapWidth,
+      heatmapHeight = heatmapHeight,
+      cells = rankedCells,
+      topCandidates = topCandidates,
+      selectedCandidate = selectedCandidate?.let {
+        VisualMassDebugCandidate(
+          center = it.center,
+          bounds = it.bounds,
+          confidence = it.confidence,
+          energy = 1.0,
+          reason = "highest coarse luma/contrast energy"
+        )
+      }
     )
   }
 

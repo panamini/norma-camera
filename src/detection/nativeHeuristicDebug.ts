@@ -3,6 +3,7 @@ import { nowMs } from '../shared/time';
 import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
 import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
+import { nativeVisualMassDebugOverlay, type NativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedRect } from './types';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
@@ -92,6 +93,18 @@ function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | und
   ];
 }
 
+function formatVisualMassDebug(debug: NativeVisualMassDebugOverlay | null): string[] {
+  if (!debug) return [];
+
+  const rawSelected = debug.raw.selectedCandidate;
+  const mappedSelected = debug.mapped.selectedCandidate;
+  return [
+    `visual mass debug: contrast/luminance evidence, not object detection · ${debug.raw.explanation}`,
+    `raw heat cells ${debug.raw.cells.length} · top candidates ${debug.raw.topCandidates.length} · selected ${formatPoint(rawSelected?.center)} · stabilized ${formatPoint(debug.raw.stabilizedCandidate?.center)}`,
+    `mapped heat cells ${debug.mapped.cells.length} · selected ${formatPoint(mappedSelected?.center)} · stabilized ${formatPoint(debug.mapped.stabilizedCandidate?.center)}`
+  ];
+}
+
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {
   if (!analysis) return 'unavailable';
   if (analysis.analysisSource === 'stale-live-frame') return 'stale live frame';
@@ -118,6 +131,7 @@ function formatNativeReadout(params: {
   activeGuideKinds?: GuideKind[];
   lineGuideScore?: LineGuideScoreResult;
   nativeEvidenceMapping?: NativeEvidencePreviewMapping;
+  visualMassDebug?: NativeVisualMassDebugOverlay | null;
 }): string {
   const lineGuideScore = params.lineGuideScore ?? scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
   return [
@@ -127,7 +141,8 @@ function formatNativeReadout(params: {
     `guide score ${formatGuideScore(params.guideScore)}`,
     formatHorizontalLineSignal(params.lineCandidate, lineGuideScore),
     formatLineGuideScore(lineGuideScore),
-    ...formatNativeEvidenceMapping(params.nativeEvidenceMapping)
+    ...formatNativeEvidenceMapping(params.nativeEvidenceMapping),
+    ...formatVisualMassDebug(params.visualMassDebug ?? null)
   ].join('\n');
 }
 
@@ -163,6 +178,7 @@ export function makeNativeAnalysisDebugLine(
   nativeEvidenceMapping?: NativeEvidencePreviewMapping
 ): string | null {
   const freshAnalysis = normalizeNativeAnalysisFreshness(analysis, currentNowMs);
+  const visualMassDebug = nativeVisualMassDebugOverlay(freshAnalysis, nativeEvidenceMapping);
 
   if (freshAnalysis?.analysisSource === 'live-frame') {
     const ageMs = analysisAgeMs(freshAnalysis, currentNowMs);
@@ -178,7 +194,8 @@ export function makeNativeAnalysisDebugLine(
       lineCandidate: freshAnalysis.lineCandidate,
       activeGuideKinds,
       lineGuideScore,
-      nativeEvidenceMapping
+      nativeEvidenceMapping,
+      visualMassDebug
     });
   }
 
