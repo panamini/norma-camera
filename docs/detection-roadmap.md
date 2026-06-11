@@ -249,7 +249,7 @@ Calibrated native thresholds:
 - `MIN_RUN_CELLS`: `5` -> `6`
 - `MIN_NORMALIZED_LENGTH`: `0.18` -> `0.22`
 - `MIN_CONFIDENCE`: `0.24` -> `0.32`
-- Similar segment center distance is now explicit at `0.08` for same-orientation deduplication.
+- Similar segment center distance: `0.06` -> `0.08` for same-orientation deduplication.
 
 Unchanged behavior:
 

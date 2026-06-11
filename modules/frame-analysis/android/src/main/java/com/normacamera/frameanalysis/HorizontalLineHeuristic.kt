@@ -216,6 +216,7 @@ internal object LineSegmentHeuristic {
   private const val MIN_NORMALIZED_LENGTH = 0.22
   private const val MIN_CONFIDENCE = 0.32
   private const val SIMILAR_SEGMENT_CENTER_DISTANCE = 0.08
+  private const val CONTRAST_SCORE_RANGE = 0.55
 
   fun detect(
     grid: DoubleArray,
@@ -393,7 +394,7 @@ internal object LineSegmentHeuristic {
   private fun computeConfidence(length: Double, coverage: Double, contrast: Double): Double {
     val lengthScore = clamp((length - MIN_NORMALIZED_LENGTH) / (1.0 - MIN_NORMALIZED_LENGTH), 0.0, 1.0)
     val coverageScore = clamp(coverage, 0.0, 1.0)
-    val contrastScore = clamp((contrast - EDGE_THRESHOLD_FLOOR) / 0.55, 0.0, 1.0)
+    val contrastScore = clamp((contrast - EDGE_THRESHOLD_FLOOR) / CONTRAST_SCORE_RANGE, 0.0, 1.0)
     return clamp(0.12 + lengthScore * 0.38 + coverageScore * 0.34 + contrastScore * 0.16, 0.0, 1.0)
   }
 
