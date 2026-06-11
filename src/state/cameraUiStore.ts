@@ -18,12 +18,14 @@ type CameraUiState = {
   lastCaptureAtMs: number | null;
   capturedPhotos: CapturedPhoto[];
   debugQualityMode: DebugQualityMode;
+  debugPanelsHidden: boolean;
   setOverlayMode: (overlayMode: OverlayMode) => void;
   setDetectionMode: (detectionMode: DetectionMode) => void;
   setArmed: (armed: boolean) => void;
   toggleArmed: () => void;
   addCapturedPhoto: (photo: CapturedPhoto) => void;
   setDebugQualityMode: (mode: DebugQualityMode) => void;
+  toggleDebugPanelsHidden: () => void;
 };
 
 export const useCameraUiStore = create<CameraUiState>((set) => ({
@@ -33,6 +35,7 @@ export const useCameraUiStore = create<CameraUiState>((set) => ({
   lastCaptureAtMs: null,
   capturedPhotos: [],
   debugQualityMode: 'normal',
+  debugPanelsHidden: false,
   setOverlayMode: (overlayMode) => set({ overlayMode }),
   setDetectionMode: (detectionMode) => set({ detectionMode }),
   setArmed: (armed) => set({ armed }),
@@ -42,5 +45,6 @@ export const useCameraUiStore = create<CameraUiState>((set) => ({
       capturedPhotos: [photo, ...state.capturedPhotos],
       lastCaptureAtMs: photo.createdAtMs
     })),
-  setDebugQualityMode: (debugQualityMode) => set({ debugQualityMode })
+  setDebugQualityMode: (debugQualityMode) => set({ debugQualityMode }),
+  toggleDebugPanelsHidden: () => set((state) => ({ debugPanelsHidden: !state.debugPanelsHidden }))
 }));

@@ -411,10 +411,12 @@ internal object LineSegmentHeuristic {
     return if (count == 0) 0.0 else total / count.toDouble()
   }
 
+  // A horizontal segment is found by a vertical luminance gradient across the scan row.
   private fun horizontalEdge(lumaValues: DoubleArray, width: Int, x: Int, y: Int): Double {
     return abs(lumaValues[(y + 1) * width + x] - lumaValues[(y - 1) * width + x])
   }
 
+  // A vertical segment is found by a horizontal luminance gradient across the scan column.
   private fun verticalEdge(lumaValues: DoubleArray, width: Int, x: Int, y: Int): Double {
     return abs(lumaValues[y * width + x + 1] - lumaValues[y * width + x - 1])
   }

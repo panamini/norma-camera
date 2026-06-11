@@ -157,6 +157,8 @@ This spike is debug-only:
 - No OpenCV, ML Kit, cloud, backend, or JS pixel loop is added.
 - The debug overlay can show mapped segments labeled `LINE SEGMENT SPIKE` in native debug modes.
 
+PR4.6 keeps this spike debug-only and calibrates the presentation layer: JS pairs each raw segment with its mapped segment or a mapped-rejection reason, and overlay keys are deterministic from rounded endpoints, source, and orientation rather than UUIDs or index-only keys.
+
 Limitations:
 
 - The grid is intentionally coarse, so endpoints are approximate.
@@ -211,3 +213,7 @@ If that blocks locally, capture the exact blocker:
 Passing JS tests and Expo introspection are necessary but do not prove the native analyzer is present in the installed Android runtime.
 
 For PR4.1, capture raw + mapped debug values for a physical horizontal edge and a physical vertical edge in portrait, landscape-left, and landscape-right.
+
+For PR4.6, validate `LINE SEGMENT SPIKE` in portrait upright, landscape-left, and landscape-right against a horizontal table edge, vertical door edge, rectangular screen, keyboard, visible diagonal, cluttered scene, and nearly empty wall. Check visible-line alignment, rotation behavior, raw/mapped coherence, false-positive volume, diagonal visibility, debug text usefulness, native-mode stability, and obvious FPS regressions.
+
+Manual calibration not performed in this coding pass: `adb devices` returned no attached device/emulator.

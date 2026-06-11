@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { mapNativeEvidenceToPreview } from '../nativeEvidenceCoordinateMapping';
 import { makeNativeAnalysisDebugLine, nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness, STALE_NATIVE_ANALYSIS_MS } from '../nativeHeuristicDebug';
-import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineSegmentCandidate } from '../nativeHeuristicTypes';
 
 function makeLiveAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): NativeFrameAnalysisResult {
   return {
@@ -37,6 +37,21 @@ function makeAnalyzerUnavailableAnalysis(): NativeFrameAnalysisResult {
     sharpness: null,
     explanation: 'Native analyzer unavailable: frame is not a NativeFrame.',
     analysisSource: 'analyzer-unavailable'
+  };
+}
+
+function makeSegment(overrides: Partial<NativeLineSegmentCandidate> = {}): NativeLineSegmentCandidate {
+  return {
+    x1: 0.1,
+    y1: 0.3,
+    x2: 0.9,
+    y2: 0.3,
+    angleDeg: 0,
+    lengthEuclidean: 0.8,
+    confidence: 0.64,
+    orientationKind: 'horizontal',
+    src: 'native-line-segment-spike',
+    ...overrides
   };
 }
 
@@ -150,6 +165,33 @@ describe('native live frame debug formatting', () => {
     expect(line).toContain('line mapped x1=0.300 y1=1.000 x2=0.300 y2=0.000');
     expect(line).toContain('mass raw center x=0.200 y=0.250 · bounds x=0.100 y=0.200 w=0.300 h=0.400');
     expect(line).toContain('mass mapped center x=0.250 y=0.800 · bounds x=0.200 y=0.600 w=0.400 h=0.300');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('keeps line segment spike raw/mapped pairing explicit when mapping rejects a segment', () => {
+    const analysis = makeLiveAnalysis({
+      frameWidth: 400,
+      frameHeight: 300,
+      gridWidth: 32,
+      gridHeight: 24,
+      frameOrientation: 'up',
+      isMirrored: false,
+      lineSegments: [makeSegment()]
+    });
+
+    const line = makeNativeAnalysisDebugLine(
+      analysis,
+      true,
+      10_120,
+      68,
+      undefined,
+      undefined,
+      mapNativeEvidenceToPreview(analysis, { width: 0, height: 400, resizeMode: 'cover' })
+    );
+
+    expect(line).toContain('line segment spike: 1 candidate · debug-only · not scoring');
+    expect(line).toContain('segment 1 raw x1=0.100 y1=0.300 x2=0.900 y2=0.300 · horizontal · confidence 64% · length 0.800');
+    expect(line).toContain('segment 1 mapped rejected · mapped line segment unavailable');
     expectNoForbiddenSemanticLabels(line);
   });
 

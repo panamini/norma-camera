@@ -23,10 +23,12 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
+  const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
   const setOverlayMode = useCameraUiStore((state) => state.setOverlayMode);
   const setDetectionMode = useCameraUiStore((state) => state.setDetectionMode);
   const toggleArmed = useCameraUiStore((state) => state.toggleArmed);
   const setDebugQualityMode = useCameraUiStore((state) => state.setDebugQualityMode);
+  const toggleDebugPanelsHidden = useCameraUiStore((state) => state.toggleDebugPanelsHidden);
 
   return (
     <View style={styles.root}>
@@ -91,6 +93,15 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
       </View>
 
       <View accessibilityLabel="Debug quality gates" style={styles.debugRow}>
+        <Pressable
+          accessibilityRole="switch"
+          accessibilityLabel={debugPanelsHidden ? 'Show debug panels' : 'Hide debug panels'}
+          accessibilityState={{ checked: debugPanelsHidden }}
+          onPress={toggleDebugPanelsHidden}
+          style={[styles.debugButton, debugPanelsHidden ? styles.debugButtonActive : null]}
+        >
+          <Text style={[styles.debugText, debugPanelsHidden ? styles.debugTextActive : null]}>{debugPanelsHidden ? 'show panels' : 'hide panels'}</Text>
+        </Pressable>
         {QUALITY_MODES.map((mode) => {
           const active = mode === debugQualityMode;
 
