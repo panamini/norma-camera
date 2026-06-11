@@ -160,6 +160,29 @@ describe('capture readiness calibration copy', () => {
     ).toBe('ARMED · hold steady');
   });
 
+  it('keeps motion too high as a conservative hold message', () => {
+    expect(
+      captureReadinessLine(
+        makeReadinessInput({
+          quality: { ...goodQuality, motionScore: 80 },
+          decision: { kind: 'idle', reason: 'motion too high', nextStableSinceMs: null }
+        })
+      )
+    ).toBe('ARMED · hold steady · motion high');
+  });
+
+  it('keeps cooldown active distinct from ready copy', () => {
+    expect(captureReadinessLine(makeReadinessInput({ decision: { kind: 'idle', reason: 'cooldown active', nextStableSinceMs: null } }))).toBe(
+      'ARMED · cooldown active'
+    );
+  });
+
+  it('keeps scene unchanged distinct from ready copy', () => {
+    expect(captureReadinessLine(makeReadinessInput({ decision: { kind: 'idle', reason: 'scene unchanged', nextStableSinceMs: null } }))).toBe(
+      'ARMED · hold steady · scene unchanged'
+    );
+  });
+
   it('mentions line signal only as a secondary readiness detail', () => {
     expect(captureReadinessLine(makeReadinessInput({ lineContribution: 8 }))).toBe('ARMED · hold steady · line signal +8');
   });

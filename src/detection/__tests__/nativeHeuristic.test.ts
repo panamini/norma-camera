@@ -34,7 +34,7 @@ function makeNativeAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}):
       sharpnessScore: 74,
       edgeEnergy: 0.31
     },
-    explanation: 'Real luminance analysis. Real contrast candidate. No semantic detection is used.',
+    explanation: 'Real luminance analysis. Real contrast candidate. No recognition is used.',
     ...overrides
   };
 }

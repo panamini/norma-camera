@@ -15,7 +15,6 @@
     },
     "android": {
       "permissions": [
-        "android.permission.CAMERA",
         "android.permission.CAMERA"
       ],
       "package": "com.anonymous.normacamera"

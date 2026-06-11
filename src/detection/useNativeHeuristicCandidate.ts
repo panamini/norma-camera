@@ -29,7 +29,7 @@ function unavailableState(): NativeHeuristicHookState {
     analysis: null,
     available: false,
     status: 'unavailable',
-    explanation: 'Native visual-mass analyzer unavailable. No Android frame-analysis plugin is wired yet.'
+    explanation: 'Native visual-mass analyzer unavailable in this runtime. Manual fallback active. No recognition is used.'
   };
 }
 

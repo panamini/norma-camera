@@ -28,13 +28,13 @@ object NormaFrameAnalysisStore {
     )
     val explanation = when {
       analysisSource == "live-frame" && subject != null && lineCandidate != null ->
-        "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line diagnostic is available. No recognition is used."
+        "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. No recognition is used."
       analysisSource == "live-frame" && lineCandidate != null ->
-        "Real live Android luminance metrics are available. A horizontal-line diagnostic is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
+        "Real live Android luminance metrics are available. A horizontal-line signal is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       subject != null && lineCandidate != null ->
-        "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line diagnostic is available. No recognition is used."
+        "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. No recognition is used."
       lineCandidate != null ->
-        "Real Android luminance metrics are available. A horizontal-line diagnostic is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
+        "Real Android luminance metrics are available. A horizontal-line signal is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       analysisSource == "live-frame" && subject != null ->
         "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       analysisSource == "live-frame" ->

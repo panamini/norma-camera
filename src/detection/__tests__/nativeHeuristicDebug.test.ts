@@ -84,7 +84,7 @@ describe('native live frame debug formatting', () => {
     expectNoForbiddenSemanticLabels(line);
   });
 
-  it('formats horizontal line diagnostic and line guide score without semantic wording', () => {
+  it('formats horizontal line signal and line guide score without semantic wording', () => {
     const line = makeNativeAnalysisDebugLine(
       makeLiveAnalysis({
         lineCandidate: {
@@ -211,7 +211,7 @@ describe('native live frame debug formatting', () => {
     expect(makeNativeAnalysisDebugLine(analysis, true, 10_120, 61)).toContain('native visual mass: held briefly');
   });
 
-  it('marks stale live analysis unavailable and hides stale metrics and line diagnostic', () => {
+  it('marks stale live analysis unavailable and hides stale metrics and line signal', () => {
     const stale = normalizeNativeAnalysisFreshness(
       makeLiveAnalysis({
         lineCandidate: {

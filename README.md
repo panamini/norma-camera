@@ -6,9 +6,24 @@ Ce guide documente le workflow de lancement propre en développement, comme celu
 ## Prérequis
 
 - Node.js + npm
-- Android SDK / adb dispo dans le PATH (`which adb`)
+- Android SDK configuré (`ANDROID_HOME` ou `android/local.properties`)
+- `adb` dispo dans le PATH (`which adb`)
 - Un appareil Android déjà connecté en USB avec débogage USB activé
-- Un build dev-client déjà installé sur le téléphone (`com.anonymous.normacamera`)
+- Un build dev-client récent installé sur le téléphone (`com.anonymous.normacamera`)
+
+## Module natif Android
+
+Le repo contient maintenant le module local Android `modules/frame-analysis`.
+
+Il fournit l’analyse live Y-plane/luminance, sharpness, visual mass et line signal. Si l’app installée n’a pas été rebuild avec ce module, le mode Native reste volontairement en fallback :
+
+```txt
+NATIVE VISUAL MASS · unavailable
+Manual fallback active.
+No recognition is used.
+```
+
+Dans ce cas, lancer `npm run android` pour reconstruire le dev-client Android.
 
 ## Commandes de vérification rapides
 
@@ -20,11 +35,12 @@ cat app.json
 cat babel.config.js
 npm ls babel-preset-expo
 npm test
-npx tsc --noEmit
-npx expo config --type public
+npm run typecheck
+npx expo config --type introspect
+npm run android
 ```
 
-Objectif : confirmer que la config Expo est valide, le preset Babel présent, et que l'app compile.
+Objectif : confirmer que la config Expo est valide, le preset Babel présent, les tests passent, TypeScript compile, l’introspection Expo passe, et le build Android local embarque le module natif.
 
 ## Lancement propre Android (USB + Metro local)
 
@@ -113,7 +129,8 @@ cat /tmp/norma-camera-connect.log
 
 - Si caméra pas accessible : vérifier les permissions iOS/Android dans `app.json`
 - Si erreur babel/preset : `babel.config.js` doit utiliser `babel-preset-expo` (sans autre preset incompatible)
-- Si `gradlew`/build Android n’est pas requis pour ce flux : le build debug doit être déjà installé localement
+- Si Native mode reste `unavailable` après un pull : rebuild le dev-client avec `npm run android`
+- Si `npm run android` bloque : vérifier `ANDROID_HOME`, `android/local.properties`, `adb devices`, puis le premier message Gradle/NDK bloquant
 - Si l’appareil reste bloqué en connexion, inspecter uniquement le blocage final dans `/tmp/norma-camera-connect.log`
 
 ## Raccourcis ultra-courts (niveau novice)
@@ -145,7 +162,7 @@ Tu es sur macOS. Le projet est dans `/Volumes/video/git/norma-camera`.
 Je veux un workflow stable pour démarrer le build dev-client Android (Pixel/USB).
 
 Fais exactement :
-1) Vérifier l’état du repo et la base (`package.json`, `app.json`, `babel.config.js`, `npx expo config --type public`, `npm test`, `npx tsc --noEmit`)  
+1) Vérifier l’état du repo et la base (`package.json`, `app.json`, `babel.config.js`, `npx expo config --type introspect`, `npm test`, `npm run typecheck`)  
 2) Vérifier et tuer tout process sur le port `8081`  
 3) Vérifier adb (`which adb`, `adb version`, `adb devices`)  
 4) Exécuter `adb reverse --remove-all`, `adb reverse tcp:8081 tcp:8081`, confirmer avec `adb reverse --list`  

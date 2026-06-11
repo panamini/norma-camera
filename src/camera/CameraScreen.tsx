@@ -15,6 +15,7 @@ import { useCompositionSharedValues } from '../composition/useCompositionSharedV
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
+import { nativeVisualMassOverlayCandidate } from '../detection/nativeVisualMassOverlay';
 import { getNormaFrameAnalyzer } from '../detection/normaFrameAnalyzer';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
@@ -35,6 +36,7 @@ type AppliedComposition = {
   selection: CandidateSelectionResult;
   detectedScore: DetectedCompositionScore;
   snapshot: CandidateScoreSnapshot;
+  overlaySource: DetectionSource;
 };
 
 type CameraPreviewProps = {
@@ -294,12 +296,26 @@ export function CameraScreen() {
       compositionLabelRef.current = titleForCandidate(candidate, result);
 
       if (!candidate) {
-        sharedValues.hasSubject.value = 0;
-        sharedValues.hasCandidateBounds.value = 0;
         sharedValues.bestGuideX.value = -1;
         sharedValues.bestGuideY.value = -1;
         sharedValues.highlightIntensity.value = withTiming(0, { duration: 120 });
-        return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore) };
+
+        const visualMassOverlay = nativeVisualMassOverlayCandidate(nativeHeuristic.analysis);
+        if (visualMassOverlay) {
+          sharedValues.subjectX.value = visualMassOverlay.center.x;
+          sharedValues.subjectY.value = visualMassOverlay.center.y;
+          sharedValues.hasSubject.value = 1;
+          sharedValues.candidateBoundsX.value = visualMassOverlay.bounds.x;
+          sharedValues.candidateBoundsY.value = visualMassOverlay.bounds.y;
+          sharedValues.candidateBoundsWidth.value = visualMassOverlay.bounds.width;
+          sharedValues.candidateBoundsHeight.value = visualMassOverlay.bounds.height;
+          sharedValues.hasCandidateBounds.value = 1;
+          return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'native-heuristic' };
+        }
+
+        sharedValues.hasSubject.value = 0;
+        sharedValues.hasCandidateBounds.value = 0;
+        return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'none' };
       }
 
       sharedValues.subjectX.value = candidate.center.x;
@@ -323,13 +339,19 @@ export function CameraScreen() {
       sharedValues.bestGuideY.value = bestYHit?.guide.value ?? -1;
       sharedValues.highlightIntensity.value = withTiming(result.score >= HIGHLIGHT_SCORE_THRESHOLD ? 1 : 0, { duration: 120 });
 
-      return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore) };
+      return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: candidate.source };
     },
     [activeGuideKinds, detectionMode, manualSubject, nativeHeuristic.analysis, sharedValues]
   );
 
   const publishCandidateUi = useCallback(
-    (params: { selection: CandidateSelectionResult; detectedScore: DetectedCompositionScore; snapshot: CandidateScoreSnapshot; decision: AutoCaptureDecision }) => {
+    (params: {
+      selection: CandidateSelectionResult;
+      detectedScore: DetectedCompositionScore;
+      snapshot: CandidateScoreSnapshot;
+      overlaySource: DetectionSource;
+      decision: AutoCaptureDecision;
+    }) => {
       const candidate = params.detectedScore.candidate;
       const hasCandidate = Boolean(candidate);
       const result = params.detectedScore.composition;
@@ -354,7 +376,7 @@ export function CameraScreen() {
       setDisplayTitle(hasCandidate && params.decision.kind === 'candidate' ? 'COMPOSITION READY' : titleForCandidate(candidate, result));
       setDisplayInstruction(instructionForDetectionMode(detectionMode, hasCandidate));
       setDisplayScore(result.score);
-      setCandidateSource(candidate?.source ?? 'none');
+      setCandidateSource(candidate?.source ?? params.overlaySource);
       setCandidateBounds(candidate?.bounds);
       setCandidateSnapshot(params.snapshot);
       setAutoStatusLine(

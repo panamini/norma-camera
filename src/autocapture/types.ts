@@ -1,3 +1,6 @@
+import type { DetectionMode } from '../detection/types';
+import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
+
 export type FrameQuality = {
   sharpnessScore: number;
   exposureScore: number;
@@ -45,7 +48,7 @@ export type AutoCaptureDecision =
 export type CaptureReadinessCalibrationInput = {
   nowMs: number;
   armed: boolean;
-  detectionMode: import('../detection/types').DetectionMode;
+  detectionMode: DetectionMode;
   modeLabel?: string | null;
   hasCandidate: boolean;
   compositionScore: number;
@@ -56,5 +59,5 @@ export type CaptureReadinessCalibrationInput = {
   candidateConfidence?: number | null;
   lineContribution?: number;
   decision: AutoCaptureDecision;
-  nativeAnalysis?: import('../detection/nativeHeuristicTypes').NativeFrameAnalysisResult | null;
+  nativeAnalysis?: NativeFrameAnalysisResult | null;
 };

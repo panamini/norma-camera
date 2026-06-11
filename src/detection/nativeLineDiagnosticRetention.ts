@@ -1,5 +1,5 @@
 import type { NativeFrameAnalysisResult } from './nativeHeuristicTypes';
-export const LINE_DIAGNOSTIC_RETENTION_MS = 900;
+export const LINE_SIGNAL_RETENTION_MS = 900;
 export const LINE_STABILITY_OBSERVATION_WINDOW_MS = 700;
 export const LINE_STABILITY_MAX_Y_DELTA = 0.06;
 
@@ -27,7 +27,7 @@ export function retainRecentHorizontalLine(
   if (!previousAnalysisWithLine || !hasRenderableHorizontalLine(previousAnalysisWithLine)) return analysis;
 
   const retainedAgeMs = Math.max(0, analysis.createdAtMs - previousAnalysisWithLine.createdAtMs);
-  if (retainedAgeMs > LINE_DIAGNOSTIC_RETENTION_MS) return analysis;
+  if (retainedAgeMs > LINE_SIGNAL_RETENTION_MS) return analysis;
 
   return {
     ...analysis,

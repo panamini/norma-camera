@@ -1,92 +1,58 @@
 # V0.3B-0 Frame-output readiness
 
-Status: **readiness plumbing only**.
+Status: **historical note, superseded by the current Android frame-analysis module**.
 
-This step prepares Norma Camera for future native Android luminance analysis without implementing luminance metrics yet.
+This document records the earlier readiness-only step. It is not the current runtime state.
 
-## Scope in this PR
+## What was true for V0.3B-0
 
-- Adds the VisionCamera worklets dependency required by `useFrameOutput`.
-- Wires a no-op frame output path for `native-heuristic` mode.
-- Keeps `photoOutput` active so photo capture remains unchanged.
-- Disposes each frame immediately.
-- Keeps all existing candidate modes intact:
+- The app prepared the VisionCamera frame-output path.
+- The native analyzer was not implemented yet.
+- Native mode was expected to report unavailable/fallback.
+- Existing candidate modes stayed intact:
   - manual
   - auto-placeholder
   - simulated-detector
   - native-heuristic unavailable/fallback
-- Preserves the existing quality fallback:
-  - native sharpness/exposure only override stub values when both numbers exist
-  - otherwise `useFrameQualityStub.ts` remains the quality source
 
-## Non-goals
+## Current state after later PRs
 
-This PR intentionally does **not** add:
+The repository now contains `modules/frame-analysis`, a local Android-only Expo module with:
 
-- luminance metrics
-- sharpness / edge-energy computation
-- exposure computation
+- live Y-plane luminance analysis
+- exposure metrics
+- sharpness / edge-energy metrics
+- native visual-mass candidate
+- horizontal-line signal
+- compact result polling through `NormaFrameAnalysis.getLatestAnalysis()`
+- a worklet-safe Nitro analyzer object used by the VisionCamera frame path
+
+Native mode may still report unavailable when the installed Android dev-client was not rebuilt with this module, when the runtime is not Android, or when the frame analyzer cannot access a supported frame object.
+
+## Non-goals that still apply
+
+The current implementation still intentionally avoids:
+
 - object detection
 - face/person detection
-- horizon detection
+- semantic labels
+- horizon detection claims
 - ML Kit
 - OpenCV
 - cloud AI
-- backend
-- semantic labels
+- backend inference
 - JavaScript pixel loops
-- image buffers crossing the JS bridge
+- image buffers crossing the JS bridge during live analysis
 
-## Runtime behavior
+## Validation now required
 
-When `detectionMode !== 'native-heuristic'`, the camera uses the existing photo output only.
-
-When `detectionMode === 'native-heuristic'`, the camera attaches the no-op frame output alongside `photoOutput`. The frame callback is a worklet, reads no pixels, performs no analysis, and disposes the frame immediately.
-
-The existing `NativeModules.NormaFrameAnalysis?.getLatestAnalysis()` polling path is unchanged. Because no native analyzer exists yet, native mode should continue to report unavailable/fallback unless a future native module supplies compact analysis results.
-
-## Native-code tracking strategy
-
-The repository currently ignores generated native folders:
-
-```txt
-android/
-ios/
-```
-
-For V0.3B-1, prefer one of these tracked strategies instead of committing generated folders wholesale:
-
-1. A tracked local Expo module / native package outside ignored `android/` and `ios/`.
-2. A tracked Expo config plugin that injects only the required Android module registration/build changes.
-3. If unavoidable, explicitly force-add only the specific native Android files needed for `NormaFrameAnalysis` and document why.
-
-Do **not** commit the entire generated `android/` or `ios/` folder.
-
-## V0.3B-1 next implementation boundary
-
-The next step should implement Android-only native luminance metrics:
-
-```text
-VisionCamera frame
-  -> native Android analyzer/plugin
-  -> read Y plane only
-  -> downsample luminance
-  -> exposure metrics
-  -> sharpness / edge-energy metrics
-  -> compact NativeFrameAnalysisResult
-  -> existing JS polling + quality gates
-```
-
-V0.3B-1 should still avoid semantic detection. A contrast visual-mass candidate can come after exposure and sharpness are proven stable.
-
-## Local validation required
-
-After pulling this PR branch locally, run:
+Use the current release-candidate validation chain:
 
 ```bash
 npm test
 npm run typecheck
 npx expo config --type introspect
+npm run android
 ```
 
-Because `react-native-vision-camera-worklets` is a native dependency, rebuild and launch the Android dev client before claiming runtime success.
+Because the frame analyzer is native Android code, `npm run android` or an equivalent rebuilt dev-client is required before claiming native runtime success.
