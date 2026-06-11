@@ -121,6 +121,12 @@ VisionCamera `PreviewView` documents `resizeMode: 'cover' | 'contain'` and defau
 
 PR4.1 uses mapped evidence for overlay/debug. Composition scoring and auto-capture behavior remain on the existing raw candidate inputs; the scoring formula is unchanged.
 
+## Camera evidence model
+
+PR4.3 adds a TypeScript camera evidence model on the JS side. It adapts the existing native output into explicit raw-frame and preview-mapped evidence for manual points, native visual mass, native line signals, and visual-mass heatmap summaries.
+
+This model is a contract layer only. It does not change the native analyzer, the coordinate mapping math, composition scoring, auto-capture behavior, or the visual-mass/line heuristics. Visual mass remains contrast/luminance evidence, not object detection.
+
 ## PR4.2 visual mass debug heatmap
 
 PR4.2 makes native visual mass auditable without changing detection, scoring, or capture behavior.

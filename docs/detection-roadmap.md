@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.2 Visual Mass Debug Heatmap
+## Current target: PR4.3 General Camera Evidence Model
 
 The feature stack is complete for this release candidate:
 
@@ -15,8 +15,9 @@ The feature stack is complete for this release candidate:
 - conservative capture-readiness copy
 - explicit native evidence coordinate mapping for overlay/debug
 - compact visual-mass heatmap/debug explanation
+- general camera evidence model for raw-frame, preview-mapped, scoring, and debug-only evidence
 
-PR4.2 is a visual-mass explainability pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
+PR4.3 is a camera-side evidence-model pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
 
 ## Native implementation status
 
@@ -160,6 +161,21 @@ Installed VisionCamera types define orientation as `'up' | 'right' | 'down' | 'l
 For PR4.1, overlay/debug uses mapped evidence. Scoring remains on the existing raw native candidate inputs, so the scoring formula and auto-capture behavior are unchanged. If a later PR changes scoring inputs to mapped coordinates, the PR must state: `Scoring formula unchanged, but native candidate input coordinates are corrected from raw-frame space to preview/composition space.`
 
 For PR4.2, non-normal debug quality modes can render a mapped visual-mass heatmap labeled `CONTRAST MASS · NOT OBJECT DETECTION`. Normal UI remains unpolluted. The debug copy must say contrast/luminance evidence, not object detection. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
+
+## Camera Evidence Model
+
+Camera evidence is the observed camera-side input that later scoring layers may evaluate. It is not composition scoring, object recognition, or semantic detection.
+
+The PR4.3 TypeScript model keeps evidence explicit by source, shape, coordinate space, and purpose:
+
+- `source`: manual, native visual mass, native line signal, simulated, or placeholder.
+- `kind`: point, rect, line segment, or heatmap.
+- `space`: raw frame or preview mapped.
+- `purpose`: scoring or debug-only.
+
+Manual subject points, native visual-mass centers, native visual-mass bounds, native line signals, and visual-mass heatmap summaries are all evidence. They do not mean that an object, person, face, or scene has been detected. Visual mass remains contrast/luminance evidence. Line signal remains geometric evidence. The evidence snapshot can expose raw and mapped evidence side by side without changing the existing scoring formula or auto-capture gates.
+
+PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 
 ## Stability guardrails
 
