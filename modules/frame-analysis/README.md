@@ -125,7 +125,9 @@ PR4.1 uses mapped evidence for overlay/debug. Composition scoring and auto-captu
 
 PR4.3 adds a TypeScript camera evidence model on the JS side. It adapts the existing native output into explicit raw-frame and preview-mapped evidence for manual points, native visual mass, native line signals, and visual-mass heatmap summaries.
 
-This model is a contract layer only. It does not change the native analyzer, the coordinate mapping math, composition scoring, auto-capture behavior, or the visual-mass/line heuristics. Visual mass remains contrast/luminance evidence, not object detection.
+PR4.4 keeps the native analyzer unchanged and generalizes line evidence as endpoint-based `CameraLineSegmentEvidence`. The evidence layer derives `angleDeg`, `lengthNormalized`, and visual `orientationKind` from `x1/y1/x2/y2` in whichever coordinate space the evidence occupies, so a raw horizontal signal can become vertical or diagonal after preview mapping.
+
+This model is a contract layer only. It does not add OpenCV, Hough lines, a new native detector, coordinate mapping math changes, composition scoring changes, auto-capture changes, or visual-mass/line heuristic changes. Visual mass remains contrast/luminance evidence, not object detection. Line segment evidence remains geometric evidence.
 
 ## PR4.2 visual mass debug heatmap
 
