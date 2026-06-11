@@ -159,6 +159,8 @@ This spike is debug-only:
 
 PR4.6 keeps this spike debug-only and calibrates the presentation layer: JS pairs each raw segment with its mapped segment or a mapped-rejection reason, and overlay keys are deterministic from rounded endpoints, source, and orientation rather than UUIDs or index-only keys.
 
+PR4.7 keeps the spike debug-only and calibrates native candidate thresholds only. The detector now keeps at most 3 segments, requires stronger overall edge energy, a higher adaptive edge threshold, 6-cell runs, normalized length at least 0.22, confidence at least 0.32, and same-orientation deduplication within a 0.08 normalized center distance.
+
 Limitations:
 
 - The grid is intentionally coarse, so endpoints are approximate.

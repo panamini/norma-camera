@@ -236,6 +236,28 @@ Calibration result for this change set:
 - manual calibration not performed
 - reason: `adb devices` returned no attached device/emulator in this coding pass
 
+## PR4.7 native line segment threshold calibration
+
+PR4.7 keeps the line segment spike debug-only and changes only native candidate filtering thresholds. The goal is to reduce weak, short, clutter-driven segment noise before it reaches the existing JS mapping/debug presentation layer.
+
+Calibrated native thresholds:
+
+- `TOP_SEGMENT_LIMIT`: `4` -> `3`
+- `MIN_OVERALL_EDGE_ENERGY`: `0.014` -> `0.018`
+- `EDGE_THRESHOLD_FLOOR`: `0.14` -> `0.16`
+- `EDGE_THRESHOLD_AVERAGE_MULTIPLIER`: `1.65` -> `1.85`
+- `MIN_RUN_CELLS`: `5` -> `6`
+- `MIN_NORMALIZED_LENGTH`: `0.18` -> `0.22`
+- `MIN_CONFIDENCE`: `0.24` -> `0.32`
+- Similar segment center distance is now explicit at `0.08` for same-orientation deduplication.
+
+Unchanged behavior:
+
+- `lineSegments` remains `source: 'native-line-segment-spike'`.
+- `lineSegments` remains `purpose: 'debug-only'`.
+- Composition scoring, readiness text, capture triggers, and auto-capture are unchanged.
+- No OpenCV, Hough transform, ML Kit, backend, cloud, or JS pixel loop is added.
+
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 
 ## Stability guardrails
