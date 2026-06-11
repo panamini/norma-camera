@@ -13,6 +13,13 @@ import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composit
 import type { CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
+import {
+  mapNativeEvidenceToPreview,
+  mapNormalizedFramePointToPreviewPoint,
+  mapNormalizedFrameRectToPreviewRect,
+  type NativeEvidencePreviewMapping,
+  type PreviewGeometry
+} from '../detection/nativeEvidenceCoordinateMapping';
 import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
 import { nativeVisualMassOverlayCandidate } from '../detection/nativeVisualMassOverlay';
@@ -62,6 +69,26 @@ function uriForFilePath(filePath: string): string {
 function formatBounds(bounds: NormalizedRect | undefined): string | null {
   if (!bounds) return null;
   return `x=${bounds.x.toFixed(3)} · y=${bounds.y.toFixed(3)} · w=${bounds.width.toFixed(3)} · h=${bounds.height.toFixed(3)}`;
+}
+
+function mapNativeCandidateForOverlay(candidate: CompositionCandidate, evidenceMapping: NativeEvidencePreviewMapping): CompositionCandidate {
+  if (candidate.source !== 'native-heuristic' || !evidenceMapping.frameGeometry) return candidate;
+
+  const mappedCenter = mapNormalizedFramePointToPreviewPoint(candidate.center, evidenceMapping.frameGeometry, evidenceMapping.previewGeometry);
+  if (!mappedCenter) return candidate;
+
+  let mappedBounds: NormalizedRect | undefined;
+  if (candidate.bounds) {
+    const nextMappedBounds = mapNormalizedFrameRectToPreviewRect(candidate.bounds, evidenceMapping.frameGeometry, evidenceMapping.previewGeometry);
+    if (!nextMappedBounds) return candidate;
+    mappedBounds = nextMappedBounds;
+  }
+
+  return {
+    ...candidate,
+    center: mappedCenter,
+    bounds: mappedBounds
+  };
 }
 
 function lineContributionSuffix(result: CompositionScoreResult): string {
@@ -144,6 +171,7 @@ function buildQualityLine(params: {
   guideScore: number | null;
   activeGuideKinds: GuideKind[];
   lineGuideScore: DetectedCompositionScore['lineGuideScore'];
+  nativeEvidenceMapping?: NativeEvidencePreviewMapping;
 }): string {
   const source = params.nativeQualityIsReal ? 'real luminance' : 'stub';
   const quality = `sharpness ${Math.round(params.sharpnessScore)} · exposure ${Math.round(params.exposureScore)} (${source}) · motion ${Math.round(params.motionScore)} stub`;
@@ -153,7 +181,8 @@ function buildQualityLine(params: {
     nowMs(),
     params.guideScore,
     params.activeGuideKinds,
-    params.lineGuideScore
+    params.lineGuideScore,
+    params.nativeEvidenceMapping
   );
   return nativeDebug ? `${quality}\n${nativeDebug}` : quality;
 }
@@ -164,7 +193,7 @@ function titleForCandidate(candidate: CompositionCandidate | null, result: Compo
 }
 
 function PhotoOnlyCameraPreview({ device, photoOutput }: CameraPreviewProps) {
-  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} />;
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={[photoOutput]} resizeMode="cover" />;
 }
 
 function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProps) {
@@ -183,7 +212,7 @@ function NativeHeuristicCameraPreview({ device, photoOutput }: CameraPreviewProp
   });
   const cameraOutputs = useMemo(() => [photoOutput, nativeReadinessFrameOutput], [nativeReadinessFrameOutput, photoOutput]);
 
-  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} />;
+  return <Camera style={StyleSheet.absoluteFill} device={device} isActive outputs={cameraOutputs} resizeMode="cover" />;
 }
 
 export function CameraScreen() {
@@ -239,6 +268,14 @@ export function CameraScreen() {
   const [retainedGuideScore, setRetainedGuideScore] = useState<number | null>(null);
 
   const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
+  const previewGeometry = useMemo<PreviewGeometry>(
+    () => ({ width: layout.width, height: layout.height, resizeMode: 'cover' }),
+    [layout.height, layout.width]
+  );
+  const nativeEvidenceMapping = useMemo(
+    () => mapNativeEvidenceToPreview(nativeHeuristic.analysis, previewGeometry),
+    [nativeHeuristic.analysis, previewGeometry]
+  );
 
   useEffect(() => {
     sharedValues.sharpnessScore.value =
@@ -302,13 +339,15 @@ export function CameraScreen() {
 
         const visualMassOverlay = nativeVisualMassOverlayCandidate(nativeHeuristic.analysis);
         if (visualMassOverlay) {
-          sharedValues.subjectX.value = visualMassOverlay.center.x;
-          sharedValues.subjectY.value = visualMassOverlay.center.y;
+          const overlayCenter = nativeEvidenceMapping.mappedVisualMassCenter ?? visualMassOverlay.center;
+          const overlayBounds = nativeEvidenceMapping.mappedVisualMassBounds ?? visualMassOverlay.bounds;
+          sharedValues.subjectX.value = overlayCenter.x;
+          sharedValues.subjectY.value = overlayCenter.y;
           sharedValues.hasSubject.value = 1;
-          sharedValues.candidateBoundsX.value = visualMassOverlay.bounds.x;
-          sharedValues.candidateBoundsY.value = visualMassOverlay.bounds.y;
-          sharedValues.candidateBoundsWidth.value = visualMassOverlay.bounds.width;
-          sharedValues.candidateBoundsHeight.value = visualMassOverlay.bounds.height;
+          sharedValues.candidateBoundsX.value = overlayBounds.x;
+          sharedValues.candidateBoundsY.value = overlayBounds.y;
+          sharedValues.candidateBoundsWidth.value = overlayBounds.width;
+          sharedValues.candidateBoundsHeight.value = overlayBounds.height;
           sharedValues.hasCandidateBounds.value = 1;
           return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'native-heuristic' };
         }
@@ -318,15 +357,16 @@ export function CameraScreen() {
         return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'none' };
       }
 
-      sharedValues.subjectX.value = candidate.center.x;
-      sharedValues.subjectY.value = candidate.center.y;
+      const overlayCandidate = mapNativeCandidateForOverlay(candidate, nativeEvidenceMapping);
+      sharedValues.subjectX.value = overlayCandidate.center.x;
+      sharedValues.subjectY.value = overlayCandidate.center.y;
       sharedValues.hasSubject.value = 1;
 
-      if (candidate.bounds) {
-        sharedValues.candidateBoundsX.value = candidate.bounds.x;
-        sharedValues.candidateBoundsY.value = candidate.bounds.y;
-        sharedValues.candidateBoundsWidth.value = candidate.bounds.width;
-        sharedValues.candidateBoundsHeight.value = candidate.bounds.height;
+      if (overlayCandidate.bounds) {
+        sharedValues.candidateBoundsX.value = overlayCandidate.bounds.x;
+        sharedValues.candidateBoundsY.value = overlayCandidate.bounds.y;
+        sharedValues.candidateBoundsWidth.value = overlayCandidate.bounds.width;
+        sharedValues.candidateBoundsHeight.value = overlayCandidate.bounds.height;
         sharedValues.hasCandidateBounds.value = 1;
       } else {
         sharedValues.hasCandidateBounds.value = 0;
@@ -341,7 +381,7 @@ export function CameraScreen() {
 
       return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: candidate.source };
     },
-    [activeGuideKinds, detectionMode, manualSubject, nativeHeuristic.analysis, sharedValues]
+    [activeGuideKinds, detectionMode, manualSubject, nativeEvidenceMapping, sharedValues]
   );
 
   const publishCandidateUi = useCallback(
@@ -414,11 +454,12 @@ export function CameraScreen() {
           showNativeDebug: detectionMode === 'native-heuristic',
           guideScore: hasCandidate ? result.score : null,
           activeGuideKinds,
-          lineGuideScore: params.detectedScore.lineGuideScore
+          lineGuideScore: params.detectedScore.lineGuideScore,
+          nativeEvidenceMapping
         })
       );
     },
-    [activeGuideKinds, armed, detectionMode, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
+    [activeGuideKinds, armed, detectionMode, nativeEvidenceMapping, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -549,6 +590,7 @@ export function CameraScreen() {
           candidateSource={candidateSource}
           candidateBounds={candidateBounds}
           lineCandidate={nativeHeuristic.analysis?.lineCandidate}
+          mappedLineCandidate={nativeEvidenceMapping.mappedLineCandidate}
         />
       </Pressable>
       <ScoreBadge

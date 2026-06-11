@@ -18,9 +18,10 @@ type Props = {
   candidateSource: DetectionSource;
   candidateBounds?: NormalizedRect;
   lineCandidate?: NativeLineCandidate | null;
+  mappedLineCandidate?: NativeLineCandidate | null;
 };
 
-function CompositionOverlayComponent({ width, height, overlayMode, sharedValues, candidateSource, lineCandidate }: Props) {
+function CompositionOverlayComponent({ width, height, overlayMode, sharedValues, candidateSource, lineCandidate, mappedLineCandidate }: Props) {
   if (width <= 0 || height <= 0) {
     return null;
   }
@@ -30,7 +31,7 @@ function CompositionOverlayComponent({ width, height, overlayMode, sharedValues,
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <GuideLines width={width} height={height} activeGuideKinds={activeGuideKinds} sharedValues={sharedValues} />
-      <HorizontalLineDiagnostic width={width} height={height} lineCandidate={lineCandidate} />
+      <HorizontalLineDiagnostic width={width} height={height} lineCandidate={lineCandidate} mappedLineCandidate={mappedLineCandidate} />
       <CandidateBounds width={width} height={height} source={candidateSource} sharedValues={sharedValues} />
       <SubjectMarker width={width} height={height} sharedValues={sharedValues} source={candidateSource} />
     </View>

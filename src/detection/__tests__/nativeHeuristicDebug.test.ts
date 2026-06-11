@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { mapNativeEvidenceToPreview } from '../nativeEvidenceCoordinateMapping';
 import { makeNativeAnalysisDebugLine, nativeVisualMassStateForAnalysis, normalizeNativeAnalysisFreshness, STALE_NATIVE_ANALYSIS_MS } from '../nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 
@@ -104,6 +105,51 @@ describe('native live frame debug formatting', () => {
 
     expect(line).toContain('horizontal line: y 0.34 · confidence 51% · secondary composition signal');
     expect(line).toContain('line guide score 94 / 100 · nearest upper third · distance 0.007 · secondary composition signal');
+    expectNoForbiddenSemanticLabels(line);
+  });
+
+  it('formats native evidence geometry and raw plus mapped debug values', () => {
+    const analysis = makeLiveAnalysis({
+      frameWidth: 400,
+      frameHeight: 300,
+      gridWidth: 32,
+      gridHeight: 24,
+      frameOrientation: 'right',
+      isMirrored: false,
+      subject: {
+        source: 'native-heuristic',
+        center: { x: 0.2, y: 0.25 },
+        bounds: { x: 0.1, y: 0.2, width: 0.3, height: 0.4 },
+        confidence: 0.7
+      },
+      lineCandidate: {
+        x1: 0,
+        y1: 0.3,
+        x2: 1,
+        y2: 0.3,
+        angleDeg: 0,
+        confidence: 0.7,
+        kind: 'horizontal-line'
+      }
+    });
+
+    const line = makeNativeAnalysisDebugLine(
+      analysis,
+      true,
+      10_120,
+      68,
+      undefined,
+      undefined,
+      mapNativeEvidenceToPreview(analysis, { width: 300, height: 400, resizeMode: 'cover' })
+    );
+
+    expect(line).toContain('frame 400x300 · grid 32x24 · preview 300x400');
+    expect(line).toContain('orientation right · mirror false · resize cover');
+    expect(line).toContain('presented 300x400 · scale 1.000 · crop x 0.0 y 0.0');
+    expect(line).toContain('line raw x1=0.000 y1=0.300 x2=1.000 y2=0.300');
+    expect(line).toContain('line mapped x1=0.300 y1=1.000 x2=0.300 y2=0.000');
+    expect(line).toContain('mass raw center x=0.200 y=0.250 · bounds x=0.100 y=0.200 w=0.300 h=0.400');
+    expect(line).toContain('mass mapped center x=0.250 y=0.800 · bounds x=0.200 y=0.600 w=0.400 h=0.300');
     expectNoForbiddenSemanticLabels(line);
   });
 
