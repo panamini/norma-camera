@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { hasRenderableHorizontalLine, LINE_DIAGNOSTIC_RETENTION_MS, retainRecentHorizontalLine } from '../nativeLineDiagnosticRetention';
+import {
+  hasRenderableHorizontalLine,
+  LINE_DIAGNOSTIC_RETENTION_MS,
+  LINE_STABILITY_OBSERVATION_WINDOW_MS,
+  retainRecentHorizontalLine,
+  shouldRefreshStableHorizontalLineAnchor,
+  stabilizeRecentHorizontalLine
+} from '../nativeLineDiagnosticRetention';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 
 function makeAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): NativeFrameAnalysisResult {
@@ -66,5 +73,66 @@ describe('native horizontal-line diagnostic retention', () => {
 
     expect(retainRecentHorizontalLine(unavailable, previous).lineCandidate).toBeNull();
     expect(retainRecentHorizontalLine(debugGrid, previous).lineCandidate).toBeNull();
+  });
+
+  it('requires two recent coherent observations before exposing a line as stable', () => {
+    const first = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const second = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, y1: 0.35, y2: 0.35 } });
+
+    expect(stabilizeRecentHorizontalLine(first, null, null).lineCandidate).toBeNull();
+    expect(stabilizeRecentHorizontalLine(second, first, null).lineCandidate).toEqual(second.lineCandidate);
+  });
+
+  it('rejects abrupt y jumps until the new line is observed consistently', () => {
+    const stable = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const jumped = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, y1: 0.62, y2: 0.62 } });
+    const repeatedJump = makeAnalysis({ createdAtMs: 10_500, lineCandidate: { ...horizontalLine, y1: 0.63, y2: 0.63 } });
+
+    expect(stabilizeRecentHorizontalLine(jumped, stable, stable).lineCandidate).toBeNull();
+    expect(stabilizeRecentHorizontalLine(repeatedJump, jumped, stable).lineCandidate).toEqual(repeatedJump.lineCandidate);
+  });
+
+  it('does not stabilize observations that are too far apart in time', () => {
+    const first = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const late = makeAnalysis({
+      createdAtMs: 10_000 + LINE_STABILITY_OBSERVATION_WINDOW_MS + 1,
+      lineCandidate: { ...horizontalLine, y1: 0.35, y2: 0.35 }
+    });
+
+    expect(stabilizeRecentHorizontalLine(late, first, null).lineCandidate).toBeNull();
+  });
+
+  it('retains only a previously stable line during a short disappearance', () => {
+    const observedOnly = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const stable = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const missing = makeAnalysis({ createdAtMs: 10_100, lineCandidate: null });
+
+    expect(stabilizeRecentHorizontalLine(missing, observedOnly, null).lineCandidate).toBeNull();
+    expect(stabilizeRecentHorizontalLine(missing, observedOnly, stable).lineCandidate).toEqual(stable.lineCandidate);
+  });
+
+  it('does not renew the retention window from a retained line', () => {
+    const observed = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const stable = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, y1: 0.35, y2: 0.35 } });
+    const stabilized = stabilizeRecentHorizontalLine(stable, observed, null);
+    expect(shouldRefreshStableHorizontalLineAnchor(stable, stabilized)).toBe(true);
+
+    let stableAnchor: NativeFrameAnalysisResult | null = stable;
+    const shortLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS, lineCandidate: null });
+    const retained = stabilizeRecentHorizontalLine(shortLoss, stable, stableAnchor);
+
+    expect(retained.lineCandidate).toEqual(stable.lineCandidate);
+    expect(shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)).toBe(false);
+    if (shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)) stableAnchor = retained;
+
+    const longLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS + 1, lineCandidate: null });
+    expect(stabilizeRecentHorizontalLine(longLoss, stable, stableAnchor).lineCandidate).toBeNull();
+  });
+
+  it('checks y coherence independently from the overlay confidence threshold', () => {
+    const weakFirst = makeAnalysis({ createdAtMs: 10_000, lineCandidate: { ...horizontalLine, confidence: 0.2 } });
+    const weakSecond = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, confidence: 0.2, y1: 0.35, y2: 0.35 } });
+
+    expect(stabilizeRecentHorizontalLine(weakSecond, weakFirst, null).lineCandidate).toEqual(weakSecond.lineCandidate);
   });
 });
