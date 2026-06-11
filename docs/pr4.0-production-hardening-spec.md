@@ -1,9 +1,9 @@
 # PR4.0 — Production Hardening Spec
 
-Status: implementation reference  
+Status: planned  
 Repository: `panamini/norma-camera`  
 Created: 2026-06-11  
-Purpose: scope, guardrails, and validation checklist for the PR4.0 hardening pass after the PR3 feature stack.
+Purpose: implementation plan for the next hardening pass after the PR3 feature stack.
 
 ---
 
