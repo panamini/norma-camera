@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { decideAutoCapture } from '../../autocapture/decideAutoCapture';
-import type { NativeLineSegmentCandidate } from '../nativeHeuristicTypes';
-import { stabilizeRecentLineSegments, type StabilizedLineSegment } from '../nativeLineSegmentRetention';
+import type { NativeFrameAnalysisResult, NativeLineSegmentCandidate } from '../nativeHeuristicTypes';
+import {
+  stabilizeLineSegmentsInAnalysis,
+  stabilizeRecentLineSegments,
+  type StabilizedLineSegment,
+  type StabilizedLineSegmentCandidate
+} from '../nativeLineSegmentRetention';
 import { scoreDetectedComposition } from '../scoreDetectedComposition';
 import { selectCompositionCandidate } from '../selectCompositionCandidate';
 
@@ -30,6 +35,21 @@ function stabilize(
     latestSegments,
     nowMs
   });
+}
+
+function makeAnalysis(overrides: Partial<NativeFrameAnalysisResult> = {}): NativeFrameAnalysisResult {
+  return {
+    status: 'low-confidence',
+    createdAtMs: 1_000,
+    subject: null,
+    lineCandidate: null,
+    lineSegments: [],
+    exposure: null,
+    sharpness: null,
+    analysisSource: 'live-frame',
+    explanation: 'Debug-only line segment spike candidates are available.',
+    ...overrides
+  };
 }
 
 describe('stabilizeRecentLineSegments', () => {
@@ -118,6 +138,49 @@ describe('stabilizeRecentLineSegments', () => {
 });
 
 describe('line segment retention guardrails', () => {
+  it('leaves non-live analysis unchanged and returns no stabilized segments', () => {
+    const analysis = makeAnalysis({
+      analysisSource: 'debug-grid',
+      lineSegments: [makeSegment()]
+    });
+    const result = stabilizeLineSegmentsInAnalysis(analysis, []);
+
+    expect(result.analysis).toBe(analysis);
+    expect(result.analysis.lineSegments).toHaveLength(1);
+    expect(result.stabilizedSegments).toEqual([]);
+  });
+
+  it.each(['unavailable', 'error'] as const)('leaves %s analysis unchanged and returns no stabilized segments', (status) => {
+    const analysis = makeAnalysis({ status, lineSegments: [makeSegment()] });
+    const result = stabilizeLineSegmentsInAnalysis(analysis, []);
+
+    expect(result.analysis).toBe(analysis);
+    expect(result.analysis.lineSegments).toHaveLength(1);
+    expect(result.stabilizedSegments).toEqual([]);
+  });
+
+  it('enriches live analysis line segments with stability state on the happy path', () => {
+    const previousStableSegments = stabilizeRecentLineSegments({
+      previousStableSegments: [],
+      latestSegments: [makeSegment()],
+      nowMs: 1_000
+    });
+    const analysis = makeAnalysis({
+      createdAtMs: 1_250,
+      lineSegments: [makeSegment({ y1: 0.315, y2: 0.315 })]
+    });
+
+    const result = stabilizeLineSegmentsInAnalysis(analysis, previousStableSegments);
+    const stabilizedLineSegments = result.analysis.lineSegments as StabilizedLineSegmentCandidate[];
+
+    expect(result.analysis).not.toBe(analysis);
+    expect(stabilizedLineSegments).toHaveLength(1);
+    expect(stabilizedLineSegments[0].stabilityState).toBe('stable');
+    expect(stabilizedLineSegments[0].observations).toBe(2);
+    expect(result.stabilizedSegments).toHaveLength(1);
+    expect(result.stabilizedSegments[0].stabilityState).toBe('stable');
+  });
+
   it('does not create a scoring candidate or auto-capture path from line segments alone', () => {
     const selection = selectCompositionCandidate({
       nowMs: 1_000,

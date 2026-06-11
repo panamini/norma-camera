@@ -115,7 +115,7 @@ function matchCost(previous: NativeLineSegmentCandidate, latest: NativeLineSegme
   const lengthDelta = lengthDeltaRatio(previous.lengthEuclidean, latest.lengthEuclidean);
   if (lengthDelta > options.maxLengthDeltaRatio) return null;
 
-  return distance + angleDelta / 180 + lengthDelta;
+  return distance / options.maxCenterDistance + angleDelta / options.maxAngleDeltaDeg + lengthDelta / options.maxLengthDeltaRatio;
 }
 
 function sortBySignalStrength(segments: NativeLineSegmentCandidate[]): NativeLineSegmentCandidate[] {
