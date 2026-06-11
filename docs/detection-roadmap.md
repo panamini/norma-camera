@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.8 Line Segment Temporal Stabilization
+## Current target: PR4.9 Debug Overlay Preset Tuning
 
 The feature stack is complete for this release candidate:
 
@@ -18,8 +18,9 @@ The feature stack is complete for this release candidate:
 - general camera evidence model for raw-frame, preview-mapped, scoring, and debug-only evidence
 - debug-only native line segment spike candidates
 - debug-only line segment temporal stabilization
+- separated debug overlay presets for visual mass and line segment calibration
 
-PR4.8 stabilizes native line segment spike candidates in JS for debug learning only. It must not change scoring, readiness text, capture triggers, auto-capture behavior, the frame pipeline, or the native bridge.
+PR4.9 tunes debug overlay visibility and preset behavior. It does not change detection, scoring, auto-capture, readiness text, native algorithms, native thresholds, the frame pipeline, or the native bridge.
 
 ## Native implementation status
 
@@ -186,7 +187,7 @@ Installed VisionCamera types define orientation as `'up' | 'right' | 'down' | 'l
 
 For PR4.1, overlay/debug uses mapped evidence. Scoring remains on the existing raw native candidate inputs, so the scoring formula and auto-capture behavior are unchanged. If a later PR changes scoring inputs to mapped coordinates, the PR must state: `Scoring formula unchanged, but native candidate input coordinates are corrected from raw-frame space to preview/composition space.`
 
-For PR4.2, non-normal debug quality modes can render a mapped visual-mass heatmap labeled `CONTRAST MASS · NOT OBJECT DETECTION`. Normal UI remains unpolluted. The debug copy must say contrast/luminance evidence, not object detection. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
+For PR4.2, non-normal debug quality modes introduced a mapped visual-mass heatmap. PR4.9 separates that heatmap into the `mass` debug overlay preset so line segment calibration can run without the heatmap covering the camera image. The debug copy must say contrast/luminance evidence, not object detection. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
 
 ## Camera Evidence Model
 
@@ -206,6 +207,15 @@ PR4.4 generalizes line evidence as a line segment contract without changing the 
 PR4.5 feeds the same evidence model with `source: 'native-line-segment-spike'` and `purpose: 'debug-only'`. Raw and mapped segment evidence are exposed side by side. The debug overlay can show these segments in native debug modes, labeled `LINE SEGMENT SPIKE`.
 
 PR4.8 keeps those segments debug-only and adds JS-side temporal stabilization for presentation. Repeated coherent observations become `stable`, previously stable missing segments can be shown briefly as `retained`, and invalid or drifting segments are rejected rather than refreshed.
+
+PR4.9 keeps all native evidence unchanged and only tunes debug overlay visibility:
+
+- `normal`: clean camera overlay; visual mass heatmap, legacy line signal, line segment spike, and heavy native debug text are hidden.
+- `mass`: shows mapped visual mass heatmap and native debug text; line signal and line segment spike are hidden so visual mass can be inspected alone.
+- `lines`: shows legacy `LINE SIGNAL`, mapped `LINE SEGMENT SPIKE`, and native debug text; visual mass heatmap is hidden so lines can be calibrated alone.
+- `mixed`: shows visual mass, line signal, line segment spike, and native debug text for explicit combined inspection.
+
+The `hide panels` control hides the heavy native debug text but does not change overlay preset visibility. Labels are intentionally short and less opaque; `LINE SEGMENT SPIKE` remains a single label even when multiple spike segments are rendered.
 
 ## PR4.5 dependency decision and limits
 
@@ -288,6 +298,39 @@ Unchanged behavior:
 - `lineSegments` does not feed composition scoring.
 - `lineSegments` does not feed readiness text, capture triggers, or auto-capture.
 - No OpenCV, Hough transform, ML Kit, backend, cloud, JS pixel loop, or native dependency is added.
+
+## PR4.9 debug overlay preset checklist
+
+PR4.9 is presentation-only. Device calibration should verify that the debug overlays are readable separately without changing detection behavior.
+
+Orientations:
+
+- portrait
+- landscape-left
+- landscape-right
+
+Scenes:
+
+- keyboard
+- screen
+- window
+- table
+- empty wall
+- cluttered scene
+- visible diagonal
+
+Checks:
+
+- normal mode remains clean
+- `mass` shows visual mass without line segment spike
+- `lines` shows line signal and line segment spike without visual mass heatmap
+- `mixed` is explicit and still readable enough for combined inspection
+- labels do not cover important edges or capture controls
+- grid remains visible
+- no crash
+- no obvious FPS drop
+- scoring unchanged
+- auto-capture unchanged
 
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 

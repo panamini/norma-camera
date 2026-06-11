@@ -21,6 +21,7 @@ type Props = {
   lineCandidate?: NativeLineCandidate | null;
   mappedLineCandidate?: NativeLineCandidate | null;
   lineSegments?: NativeLineSegmentCandidate[] | null;
+  showLineSignal?: boolean;
   showLineSegmentSpike?: boolean;
   visualMassDebug?: NativeVisualMassDebug | null;
   showVisualMassDebug?: boolean;
@@ -35,6 +36,7 @@ function CompositionOverlayComponent({
   lineCandidate,
   mappedLineCandidate,
   lineSegments,
+  showLineSignal = false,
   showLineSegmentSpike = false,
   visualMassDebug,
   showVisualMassDebug = false
@@ -54,6 +56,7 @@ function CompositionOverlayComponent({
         lineCandidate={lineCandidate}
         mappedLineCandidate={mappedLineCandidate}
         lineSegments={lineSegments}
+        showLineSignal={showLineSignal}
         showLineSegmentSpike={showLineSegmentSpike}
       />
       {showVisualMassDebug ? <VisualMassHeatmap width={width} height={height} debug={visualMassDebug ?? null} /> : null}

@@ -10,6 +10,7 @@ type Props = {
   lineCandidate?: NativeLineCandidate | null;
   mappedLineCandidate?: NativeLineCandidate | null;
   lineSegments?: NativeLineSegmentCandidate[] | null;
+  showLineSignal?: boolean;
   showLineSegmentSpike?: boolean;
 };
 
@@ -49,10 +50,18 @@ function spikeLineStyleForState(stabilityState: LineSegmentStabilityState) {
   return styles.spikeLine;
 }
 
-function HorizontalLineDiagnosticComponent({ width, height, lineCandidate, mappedLineCandidate, lineSegments, showLineSegmentSpike = false }: Props) {
+function HorizontalLineDiagnosticComponent({
+  width,
+  height,
+  lineCandidate,
+  mappedLineCandidate,
+  lineSegments,
+  showLineSignal = false,
+  showLineSegmentSpike = false
+}: Props) {
   if (width <= 0 || height <= 0) return null;
 
-  const segment = normalizedLineCandidateOverlaySegment(mappedLineCandidate ?? lineCandidate);
+  const segment = showLineSignal ? normalizedLineCandidateOverlaySegment(mappedLineCandidate ?? lineCandidate) : null;
   const spikeSegments = showLineSegmentSpike ? normalizedLineSegmentSpikeOverlaySegments(lineSegments) : [];
   if (segment === null && spikeSegments.length === 0) return null;
 
@@ -79,8 +88,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     borderRadius: 999,
     borderWidth: 1,
-    borderColor: 'rgba(80,210,255,0.94)',
-    backgroundColor: 'rgba(80,210,255,0.24)'
+    borderColor: 'rgba(80,210,255,0.68)',
+    backgroundColor: 'rgba(80,210,255,0.14)'
   },
   spikeLine: {
     position: 'absolute',
@@ -109,11 +118,11 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 4,
     overflow: 'hidden',
-    color: 'rgba(220,246,255,0.96)',
-    backgroundColor: 'rgba(0,0,0,0.46)',
-    fontSize: 9,
+    color: 'rgba(220,246,255,0.82)',
+    backgroundColor: 'rgba(0,0,0,0.34)',
+    fontSize: 8,
     fontWeight: '800',
-    letterSpacing: 0.6
+    letterSpacing: 0.4
   },
   spikeLabel: {
     position: 'absolute',
@@ -121,10 +130,10 @@ const styles = StyleSheet.create({
     paddingVertical: 1,
     borderRadius: 4,
     overflow: 'hidden',
-    color: 'rgba(255,246,214,0.96)',
-    backgroundColor: 'rgba(0,0,0,0.52)',
-    fontSize: 9,
+    color: 'rgba(255,246,214,0.88)',
+    backgroundColor: 'rgba(0,0,0,0.38)',
+    fontSize: 8,
     fontWeight: '800',
-    letterSpacing: 0.6
+    letterSpacing: 0.4
   }
 });

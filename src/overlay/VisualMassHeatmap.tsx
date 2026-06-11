@@ -9,7 +9,7 @@ type Props = {
 };
 
 function alphaForEnergy(energy: number): number {
-  return Math.max(0.12, Math.min(0.42, 0.1 + energy * 0.32));
+  return Math.max(0.08, Math.min(0.28, 0.06 + energy * 0.22));
 }
 
 function VisualMassHeatmapComponent({ width, height, debug }: Props) {
@@ -59,7 +59,7 @@ function VisualMassHeatmapComponent({ width, height, debug }: Props) {
         />
       ) : null}
       <View style={styles.label}>
-        <Text style={styles.labelText}>CONTRAST MASS · NOT OBJECT DETECTION</Text>
+        <Text style={styles.labelText}>CONTRAST MASS</Text>
       </View>
     </View>
   );
@@ -86,16 +86,16 @@ const styles = StyleSheet.create({
   },
   label: {
     position: 'absolute',
-    left: 12,
-    top: 12,
-    borderRadius: 6,
-    backgroundColor: 'rgba(0,0,0,0.62)',
-    paddingHorizontal: 8,
-    paddingVertical: 5
+    right: 10,
+    top: 10,
+    borderRadius: 4,
+    backgroundColor: 'rgba(0,0,0,0.42)',
+    paddingHorizontal: 6,
+    paddingVertical: 3
   },
   labelText: {
-    color: '#ffffff',
-    fontSize: 10,
+    color: 'rgba(255,255,255,0.82)',
+    fontSize: 9,
     fontWeight: '800'
   }
 });

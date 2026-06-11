@@ -164,6 +164,17 @@ PR4.7 keeps the spike debug-only and calibrates native candidate thresholds only
 
 PR4.8 keeps the native detector unchanged and stabilizes `lineSegments` in JS for debug presentation only. Same-orientation segments with coherent center, angle, and length become `stable` after repeated observations; previously stable missing segments can be shown briefly as `retained`. This does not create a subject candidate, feed scoring, affect readiness text, trigger capture, or change auto-capture.
 
+PR4.9 tunes debug overlay visibility and preset behavior. It does not change detection, scoring, auto-capture, readiness text, native algorithms, native thresholds, the frame pipeline, or the native bridge.
+
+Debug overlay presets:
+
+- `normal`: clean camera overlay; visual mass heatmap, legacy line signal, line segment spike, and heavy native debug text are hidden.
+- `mass`: mapped visual mass heatmap and native debug text, without line segment spike.
+- `lines`: legacy `LINE SIGNAL`, mapped `LINE SEGMENT SPIKE`, and native debug text, without visual mass heatmap.
+- `mixed`: visual mass, line signal, line segment spike, and native debug text for explicit combined inspection.
+
+The `hide panels` control hides the heavy native debug text but does not change overlay preset visibility.
+
 Limitations:
 
 - The grid is intentionally coarse, so endpoints are approximate.
@@ -174,7 +185,7 @@ Limitations:
 
 PR4.2 makes native visual mass auditable without changing detection, scoring, or capture behavior.
 
-In native mode, non-normal debug quality modes can show a mapped heatmap overlay labeled `CONTRAST MASS · NOT OBJECT DETECTION`. The debug readout keeps raw and mapped visual-mass values side by side so device tests can explain why the box appears in a region.
+In native mode, the `mass` debug overlay preset shows a mapped heatmap overlay labeled `CONTRAST MASS`. The debug readout keeps raw and mapped visual-mass values side by side so device tests can explain why the box appears in a region.
 
 Visual mass remains contrast/luminance evidence:
 
@@ -222,5 +233,7 @@ For PR4.1, capture raw + mapped debug values for a physical horizontal edge and 
 For PR4.6, validate `LINE SEGMENT SPIKE` in portrait upright, landscape-left, and landscape-right against a horizontal table edge, vertical door edge, rectangular screen, keyboard, visible diagonal, cluttered scene, and nearly empty wall. Check visible-line alignment, rotation behavior, raw/mapped coherence, false-positive volume, diagonal visibility, debug text usefulness, native-mode stability, and obvious FPS regressions.
 
 For PR4.8, repeat the PR4.6 scenes and confirm the debug readout distinguishes `fresh`, `stable`, and `retained`; stable visible edges should flicker less, retained segments should disappear quickly, and no ghost segment should persist after the scene changes.
+
+For PR4.9, validate `normal`, `mass`, `lines`, and `mixed` in portrait, landscape-left, and landscape-right against keyboard, screen, window, table, empty wall, cluttered scene, and visible diagonal scenes. Confirm normal mode is clean, visual mass and line segment spike can be inspected separately, labels do not cover important edges or capture controls, the grid remains visible, and scoring plus auto-capture remain unchanged.
 
 Manual calibration not performed in this coding pass: `adb devices` returned no attached device/emulator.

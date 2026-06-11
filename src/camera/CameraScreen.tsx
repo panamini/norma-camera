@@ -33,6 +33,7 @@ import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../
 import { clamp } from '../shared/clamp';
 import { nowMs } from '../shared/time';
 import { useCameraUiStore } from '../state/cameraUiStore';
+import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { CameraControls } from './CameraControls';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
 import { useFrameQualityStub } from './useFrameQualityStub';
@@ -281,6 +282,16 @@ export function CameraScreen() {
     () => nativeVisualMassDebugOverlay(nativeHeuristic.analysis, nativeEvidenceMapping),
     [nativeEvidenceMapping, nativeHeuristic.analysis]
   );
+  const debugOverlayVisibility = useMemo(
+    () =>
+      getDebugOverlayVisibility({
+        detectionMode,
+        debugQualityMode,
+        showPanels: !debugPanelsHidden,
+        hasNativeAnalysis: nativeHeuristic.analysis !== null
+      }),
+    [debugPanelsHidden, debugQualityMode, detectionMode, nativeHeuristic.analysis]
+  );
 
   useEffect(() => {
     sharedValues.sharpnessScore.value =
@@ -456,7 +467,7 @@ export function CameraScreen() {
           motionScore: sharedValues.motionScore.value,
           nativeQualityIsReal,
           nativeAnalysis: nativeHeuristic.analysis,
-          showNativeDebug: detectionMode === 'native-heuristic',
+          showNativeDebug: debugOverlayVisibility.showNativeDebugText,
           guideScore: hasCandidate ? result.score : null,
           activeGuideKinds,
           lineGuideScore: params.detectedScore.lineGuideScore,
@@ -464,7 +475,7 @@ export function CameraScreen() {
         })
       );
     },
-    [activeGuideKinds, armed, detectionMode, nativeEvidenceMapping, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
+    [activeGuideKinds, armed, debugOverlayVisibility.showNativeDebugText, detectionMode, nativeEvidenceMapping, nativeHeuristic.analysis, nativeQualityIsReal, sharedValues]
   );
 
   useEffect(() => {
@@ -597,9 +608,10 @@ export function CameraScreen() {
           lineCandidate={nativeHeuristic.analysis?.lineCandidate}
           mappedLineCandidate={nativeEvidenceMapping.mappedLineCandidate}
           lineSegments={nativeEvidenceMapping.mappedLineSegments}
-          showLineSegmentSpike={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
+          showLineSignal={debugOverlayVisibility.showLineSignal}
+          showLineSegmentSpike={debugOverlayVisibility.showLineSegmentSpike}
           visualMassDebug={visualMassDebugOverlay?.mapped ?? null}
-          showVisualMassDebug={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
+          showVisualMassDebug={debugOverlayVisibility.showVisualMassDebug}
         />
       </Pressable>
       {debugPanelsHidden ? null : (
