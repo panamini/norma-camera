@@ -1,4 +1,4 @@
-import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
+import { lineSegmentMappingId, type NativeEvidencePreviewMapping, type NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate, NativeVisualMassDebug } from './nativeHeuristicTypes';
 import { nativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedPoint, NormalizedRect } from './types';
@@ -114,10 +114,6 @@ function isFiniteMappedNumber(value: number | null | undefined): value is number
 
 function evidenceId(prefix: string, space: CameraEvidenceSpace, createdAtMs: number | null): string {
   return `${prefix}-${space}-${createdAtMs ?? 'unknown'}`;
-}
-
-function indexedEvidenceId(prefix: string, index: number, space: CameraEvidenceSpace, createdAtMs: number | null): string {
-  return `${prefix}-${index}-${space}-${createdAtMs ?? 'unknown'}`;
 }
 
 function isFinitePoint(point: NormalizedPoint | null | undefined): point is NormalizedPoint {
@@ -288,7 +284,6 @@ function makeLineEvidence(params: {
 
 function makeLineSegmentSpikeEvidence(params: {
   segment: NativeLineSegmentCandidate;
-  index: number;
   space: CameraEvidenceSpace;
   confidence: number | null;
   createdAtMs: number | null;
@@ -303,7 +298,7 @@ function makeLineSegmentSpikeEvidence(params: {
   const angleDeg = lineAngleDeg(line, lengthEuclidean);
 
   return {
-    id: indexedEvidenceId('native-line-segment-spike', params.index, params.space, params.createdAtMs),
+    id: `${lineSegmentMappingId(params.segment)}-${params.space}-${params.createdAtMs ?? 'unknown'}`,
     source: 'native-line-segment-spike',
     kind: 'line-segment',
     space: params.space,
@@ -422,12 +417,11 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
   }
 
   if (Array.isArray(analysis.lineSegments)) {
-    analysis.lineSegments.forEach((segment, index) => {
+    analysis.lineSegments.forEach((segment) => {
       if (!isFiniteUnitLineSegment(segment) || !hasMinimumSpikeLength(segment)) return;
       raw.push(
         makeLineSegmentSpikeEvidence({
           segment,
-          index,
           space: 'raw-frame',
           confidence: finiteConfidence(segment.confidence),
           createdAtMs
@@ -471,12 +465,11 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
   }
 
   if (Array.isArray(mapping?.mappedLineSegments)) {
-    mapping.mappedLineSegments.forEach((segment, index) => {
+    mapping.mappedLineSegments.forEach((segment) => {
       if (!isFiniteMappedLineSegment(segment) || !hasMinimumSpikeLength(segment)) return;
       mapped.push(
         makeLineSegmentSpikeEvidence({
           segment,
-          index,
           space: 'preview',
           confidence: finiteConfidence(segment.confidence),
           createdAtMs

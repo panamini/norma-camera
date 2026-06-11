@@ -231,6 +231,7 @@ export function CameraScreen() {
   const armed = useCameraUiStore((state) => state.armed);
   const lastCaptureAtMs = useCameraUiStore((state) => state.lastCaptureAtMs);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
+  const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
   const addCapturedPhoto = useCameraUiStore((state) => state.addCapturedPhoto);
   const nativeHeuristic = useNativeHeuristicCandidate(detectionMode === 'native-heuristic');
   const nativeSharpnessScore = nativeHeuristic.analysis?.sharpness?.sharpnessScore;
@@ -601,20 +602,22 @@ export function CameraScreen() {
           showVisualMassDebug={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
         />
       </Pressable>
-      <ScoreBadge
-        modeLabel={displayModeLabel}
-        title={displayTitle}
-        instruction={displayInstruction}
-        score={displayScore}
-        retainedGuideScore={retainedGuideScore}
-        statusLine={autoStatusLine}
-        gateReasonLine={gateReasonLine}
-        stabilityLine={stabilityLine}
-        qualityLine={qualityLine}
-        snapshot={candidateSnapshot}
-        captureBanner={captureBanner}
-        debugQualityMode={debugQualityMode}
-      />
+      {debugPanelsHidden ? null : (
+        <ScoreBadge
+          modeLabel={displayModeLabel}
+          title={displayTitle}
+          instruction={displayInstruction}
+          score={displayScore}
+          retainedGuideScore={retainedGuideScore}
+          statusLine={autoStatusLine}
+          gateReasonLine={gateReasonLine}
+          stabilityLine={stabilityLine}
+          qualityLine={qualityLine}
+          snapshot={candidateSnapshot}
+          captureBanner={captureBanner}
+          debugQualityMode={debugQualityMode}
+        />
+      )}
       <CameraControls onManualCapture={() => void capturePhoto('manual')} isCapturing={isCapturing} />
     </View>
   );

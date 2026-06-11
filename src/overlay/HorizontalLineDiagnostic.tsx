@@ -57,8 +57,8 @@ function HorizontalLineDiagnosticComponent({ width, height, lineCandidate, mappe
           <Text style={[styles.label, labelStyleForSegment(segment, width, height, 84)]}>LINE SIGNAL</Text>
         </>
       ) : null}
-      {spikeSegments.map((spikeSegment, index) => (
-        <View key={`${index}-${spikeSegment.orientationKind}`} style={[styles.spikeLine, lineStyleForSegment(spikeSegment, width, height, 2)]} />
+      {spikeSegments.map((spikeSegment) => (
+        <View key={spikeSegment.key} style={[styles.spikeLine, lineStyleForSegment(spikeSegment, width, height, 2)]} />
       ))}
       {spikeSegments[0] ? <Text style={[styles.spikeLabel, labelStyleForSegment(spikeSegments[0], width, height, 118)]}>LINE SEGMENT SPIKE</Text> : null}
     </View>

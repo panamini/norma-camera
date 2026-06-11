@@ -1,13 +1,16 @@
 import type { NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
-import type { NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
+import { lineSegmentMappingId, type NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 
 export const MIN_HORIZONTAL_LINE_OVERLAY_CONFIDENCE = 0.34;
 export const MIN_LINE_SEGMENT_SPIKE_OVERLAY_CONFIDENCE = 0.24;
 export const MIN_LINE_SEGMENT_SPIKE_OVERLAY_LENGTH = 0.08;
+export const MAX_LINE_SEGMENT_SPIKE_OVERLAY_SEGMENTS = 4;
 
 export type NormalizedLineSegmentSpikeOverlaySegment = NormalizedLineSegment & {
+  key: string;
   orientationKind: NativeLineSegmentCandidate['orientationKind'];
   confidence: number;
+  lengthEuclidean: number;
 };
 
 function clamp01(value: number): number {
@@ -57,13 +60,15 @@ export function normalizedLineSegmentSpikeOverlaySegments(
 
     return [
       {
+        key: lineSegmentMappingId(segment),
         x1: segment.x1,
         y1: segment.y1,
         x2: segment.x2,
         y2: segment.y2,
         orientationKind: segment.orientationKind,
-        confidence: segment.confidence
+        confidence: segment.confidence,
+        lengthEuclidean: segment.lengthEuclidean
       }
     ];
-  });
+  }).slice(0, MAX_LINE_SEGMENT_SPIKE_OVERLAY_SEGMENTS);
 }

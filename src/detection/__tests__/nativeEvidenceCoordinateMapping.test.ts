@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  lineSegmentMappingId,
   mapNativeEvidenceToPreview,
   mapNormalizedFrameLineToPreviewLine,
   mapNormalizedFramePointToPreviewPoint,
@@ -8,7 +9,7 @@ import {
   type PreviewGeometry
 } from '../nativeEvidenceCoordinateMapping';
 import type { NativeLineCandidate } from '../nativeHeuristicTypes';
-import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineSegmentCandidate } from '../nativeHeuristicTypes';
 import type { NormalizedRect } from '../types';
 import { normalizedHorizontalLineOverlayY, normalizedLineCandidateOverlaySegment } from '../nativeLineDiagnosticOverlay';
 
@@ -59,6 +60,21 @@ function makeLine(overrides: Partial<NativeLineCandidate> = {}): NativeLineCandi
     angleDeg: 0,
     confidence: 0.7,
     kind: 'horizontal-line',
+    ...overrides
+  };
+}
+
+function makeSegment(overrides: Partial<NativeLineSegmentCandidate> = {}): NativeLineSegmentCandidate {
+  return {
+    x1: 0.1,
+    y1: 0.3,
+    x2: 0.9,
+    y2: 0.3,
+    angleDeg: 0,
+    lengthEuclidean: 0.8,
+    confidence: 0.64,
+    orientationKind: 'horizontal',
+    src: 'native-line-segment-spike',
     ...overrides
   };
 }
@@ -224,5 +240,47 @@ describe('native evidence coordinate mapping', () => {
     expectRectClose(evidence.mappedVisualMassBounds, { x: 0.2, y: 0.6, width: 0.4, height: 0.3 });
     expect(evidence.rawLineCandidate).toEqual(makeLine());
     expectLineClose(evidence.mappedLineCandidate, { x1: 0.3, y1: 0.9, x2: 0.3, y2: 0.1 });
+  });
+
+  it('keeps raw and mapped line segment pairing explicit when a mapped segment is rejected', () => {
+    const analysis: NativeFrameAnalysisResult = {
+      status: 'ready',
+      createdAtMs: 1_000,
+      frameWidth: 400,
+      frameHeight: 300,
+      gridWidth: 32,
+      gridHeight: 24,
+      frameOrientation: 'up',
+      isMirrored: false,
+      subject: null,
+      lineCandidate: null,
+      lineSegments: [makeSegment()],
+      exposure: null,
+      sharpness: null,
+      explanation: 'test',
+      analysisSource: 'live-frame'
+    };
+
+    const evidence = mapNativeEvidenceToPreview(analysis, { width: 0, height: 400, resizeMode: 'cover' });
+
+    expect(evidence.rawLineSegments).toHaveLength(1);
+    expect(evidence.mappedLineSegments).toHaveLength(0);
+    expect(evidence.lineSegmentMappingPairs).toEqual([
+      {
+        id: lineSegmentMappingId(makeSegment()),
+        raw: makeSegment(),
+        mapped: null,
+        rejectedReason: 'mapped line segment unavailable'
+      }
+    ]);
+  });
+
+  it('generates deterministic line segment mapping ids from rounded geometry, source, and orientation', () => {
+    const segment = makeSegment({ x1: 0.1004, y1: 0.3004, x2: 0.8996, y2: 0.2996 });
+
+    expect(lineSegmentMappingId(segment)).toBe(lineSegmentMappingId({ ...segment }));
+    expect(lineSegmentMappingId(segment)).toContain('native-line-segment-spike');
+    expect(lineSegmentMappingId(segment)).toContain('horizontal');
+    expect(lineSegmentMappingId(segment)).not.toMatch(/^0-|^1-/);
   });
 });

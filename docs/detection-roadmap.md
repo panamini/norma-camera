@@ -221,6 +221,21 @@ Known limits:
 - The spike scans horizontal, vertical, and simple diagonals only; it is not semantic scene understanding.
 - Kotlin unit test infrastructure is not currently present in `modules/frame-analysis`; PR4.5 covers TS mapping/evidence/debug guardrails and validates native compilation through Android build.
 
+## PR4.6 line segment overlay calibration checklist
+
+PR4.6 keeps the PR4.5 detector unchanged and calibrates only the debug presentation. Raw/mapped line segment pairing is explicit in JS, mapped rejections must be visible in debug readout, and overlay keys must be deterministic from segment geometry instead of array index.
+
+Manual device calibration:
+
+- Orientations: portrait upright, landscape-left, landscape-right.
+- Scenes: horizontal table edge, vertical door edge, rectangular screen, keyboard, visible diagonal, cluttered scene, nearly empty wall.
+- Observe whether segments follow visible lines, move correctly when the phone rotates, preserve raw/mapped coherence, avoid overwhelming false positives, show diagonals at least sometimes, keep debug text useful, avoid native-mode crashes, and avoid obvious FPS drops.
+
+Calibration result for this change set:
+
+- manual calibration not performed
+- reason: `adb devices` returned no attached device/emulator in this coding pass
+
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 
 ## Stability guardrails

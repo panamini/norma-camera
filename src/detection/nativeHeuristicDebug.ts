@@ -1,7 +1,7 @@
 import type { GuideKind, NormalizedPoint } from '../composition/types';
 import { nowMs } from '../shared/time';
 import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
-import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
+import type { LineSegmentMappingPair, NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
 import { nativeVisualMassDebugOverlay, type NativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedRect } from './types';
@@ -62,7 +62,14 @@ function formatLineSegment(line: NormalizedLineSegment | null | undefined): stri
 function formatSegmentSpikeLine(index: number, label: 'raw' | 'mapped', segment: NativeLineSegmentCandidate | null | undefined): string | null {
   if (!segment) return null;
   const confidence = Math.round(clamp01(segment.confidence) * 100);
-  return `segment ${index + 1} ${label} ${formatLineSegment(segment)} · ${segment.orientationKind} · confidence ${confidence}%`;
+  return `segment ${index + 1} ${label} ${formatLineSegment(segment)} · ${segment.orientationKind} · confidence ${confidence}% · length ${formatFixedMetric(segment.lengthEuclidean, 3)}`;
+}
+
+function formatSegmentSpikePair(pair: LineSegmentMappingPair, index: number): string[] {
+  return [
+    formatSegmentSpikeLine(index, 'raw', pair.raw),
+    pair.mapped ? formatSegmentSpikeLine(index, 'mapped', pair.mapped) : `segment ${index + 1} mapped rejected · ${pair.rejectedReason ?? 'mapped line segment unavailable'}`
+  ].filter((line): line is string => line !== null);
 }
 
 function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
@@ -91,10 +98,9 @@ function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | und
     mapping.rawLineSegments.length > 0
       ? [
           `line segment spike: ${mapping.rawLineSegments.length} candidate${mapping.rawLineSegments.length === 1 ? '' : 's'} · debug-only · not scoring`,
-          ...mapping.rawLineSegments
+          ...mapping.lineSegmentMappingPairs
             .slice(0, 3)
-            .flatMap((segment, index) => [formatSegmentSpikeLine(index, 'raw', segment), formatSegmentSpikeLine(index, 'mapped', mapping.mappedLineSegments[index])])
-            .filter((line): line is string => line !== null)
+            .flatMap((pair, index) => formatSegmentSpikePair(pair, index))
         ]
       : [];
   return [

@@ -28,6 +28,13 @@ export type NormalizedLineSegment = {
   y2: number;
 };
 
+export type LineSegmentMappingPair = {
+  id: string;
+  raw: NativeLineSegmentCandidate;
+  mapped: NativeLineSegmentCandidate | null;
+  rejectedReason: string | null;
+};
+
 export type PreviewFrameTransform = {
   presentedFrameWidth: number;
   presentedFrameHeight: number;
@@ -47,6 +54,7 @@ export type NativeEvidencePreviewMapping = {
   mappedLineCandidate: NativeLineCandidate | null;
   rawLineSegments: NativeLineSegmentCandidate[];
   mappedLineSegments: NativeLineSegmentCandidate[];
+  lineSegmentMappingPairs: LineSegmentMappingPair[];
   rawVisualMassCenter: NormalizedPoint | null;
   mappedVisualMassCenter: NormalizedPoint | null;
   rawVisualMassBounds: NormalizedRect | null;
@@ -259,6 +267,21 @@ function mappedLineKind(line: NormalizedLineSegment): NativeLineCandidate['kind'
   return dx >= dy ? 'horizontal-line' : 'unknown-line';
 }
 
+function formatSegmentIdNumber(value: number): string {
+  return value.toFixed(3);
+}
+
+export function lineSegmentMappingId(segment: NativeLineSegmentCandidate): string {
+  return [
+    segment.src,
+    segment.orientationKind,
+    `x1-${formatSegmentIdNumber(segment.x1)}`,
+    `y1-${formatSegmentIdNumber(segment.y1)}`,
+    `x2-${formatSegmentIdNumber(segment.x2)}`,
+    `y2-${formatSegmentIdNumber(segment.y2)}`
+  ].join('-');
+}
+
 export function mapNativeLineCandidateToPreviewLineCandidate(
   lineCandidate: NativeLineCandidate | null | undefined,
   frame: NativeFrameGeometry,
@@ -299,6 +322,23 @@ function nativeLineSegmentsFromAnalysis(analysis: NativeFrameAnalysisResult | nu
   return analysis.lineSegments.filter(isFiniteNativeLineSegmentCandidate);
 }
 
+function mapNativeLineSegmentPairs(
+  rawLineSegments: NativeLineSegmentCandidate[],
+  frame: NativeFrameGeometry | null,
+  preview: PreviewGeometry
+): LineSegmentMappingPair[] {
+  return rawLineSegments.map((raw) => {
+    const mapped = frame ? mapNativeLineSegmentCandidateToPreviewLineSegmentCandidate(raw, frame, preview) : null;
+
+    return {
+      id: lineSegmentMappingId(raw),
+      raw,
+      mapped,
+      rejectedReason: mapped ? null : 'mapped line segment unavailable'
+    };
+  });
+}
+
 export function mapNativeEvidenceToPreview(
   analysis: NativeFrameAnalysisResult | null | undefined,
   previewGeometry: PreviewGeometry
@@ -307,6 +347,7 @@ export function mapNativeEvidenceToPreview(
   const transform = frameGeometry ? getPreviewFrameTransform(frameGeometry, previewGeometry) : null;
   const rawLineCandidate = analysis?.lineCandidate ?? null;
   const rawLineSegments = nativeLineSegmentsFromAnalysis(analysis);
+  const lineSegmentMappingPairs = mapNativeLineSegmentPairs(rawLineSegments, frameGeometry, previewGeometry);
   const rawVisualMassCenter = analysis?.subject?.center ?? null;
   const rawVisualMassBounds = analysis?.subject?.bounds ?? null;
 
@@ -317,11 +358,8 @@ export function mapNativeEvidenceToPreview(
     rawLineCandidate,
     mappedLineCandidate: frameGeometry ? mapNativeLineCandidateToPreviewLineCandidate(rawLineCandidate, frameGeometry, previewGeometry) : null,
     rawLineSegments,
-    mappedLineSegments: frameGeometry
-      ? rawLineSegments
-          .map((segment) => mapNativeLineSegmentCandidateToPreviewLineSegmentCandidate(segment, frameGeometry, previewGeometry))
-          .filter((segment): segment is NativeLineSegmentCandidate => segment !== null)
-      : [],
+    mappedLineSegments: lineSegmentMappingPairs.flatMap((pair) => (pair.mapped ? [pair.mapped] : [])),
+    lineSegmentMappingPairs,
     rawVisualMassCenter,
     mappedVisualMassCenter:
       frameGeometry && rawVisualMassCenter ? mapNormalizedFramePointToPreviewPoint(rawVisualMassCenter, frameGeometry, previewGeometry) : null,

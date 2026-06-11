@@ -9,7 +9,7 @@ import {
 } from '../cameraEvidence';
 import { mapNativeEvidenceToPreview } from '../nativeEvidenceCoordinateMapping';
 import type { NativeEvidencePreviewMapping } from '../nativeEvidenceCoordinateMapping';
-import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeVisualMassDebug } from '../nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate, NativeVisualMassDebug } from '../nativeHeuristicTypes';
 import { scoreDetectedComposition } from '../scoreDetectedComposition';
 import type { CompositionCandidate } from '../types';
 
@@ -22,6 +22,21 @@ function makeLine(overrides: Partial<NativeLineCandidate> = {}): NativeLineCandi
     angleDeg: 0,
     confidence: 0.72,
     kind: 'horizontal-line',
+    ...overrides
+  };
+}
+
+function makeSegment(overrides: Partial<NativeLineSegmentCandidate> = {}): NativeLineSegmentCandidate {
+  return {
+    x1: 0.1,
+    y1: 0.3,
+    x2: 0.9,
+    y2: 0.3,
+    angleDeg: 0,
+    lengthEuclidean: 0.8,
+    confidence: 0.64,
+    orientationKind: 'horizontal',
+    src: 'native-line-segment-spike',
     ...overrides
   };
 }
@@ -211,6 +226,26 @@ describe('camera evidence model', () => {
     expect(zeroLengthLine.lengthEuclidean).toBe(0);
   });
 
+  it('uses deterministic native line segment spike ids that do not depend only on array index', () => {
+    const horizontal = makeSegment();
+    const vertical = makeSegment({ x1: 0.4, y1: 0.1, x2: 0.4, y2: 0.9, angleDeg: 90, orientationKind: 'vertical' });
+    const firstSnapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({ lineCandidate: null, lineSegments: [horizontal, vertical], visualMassDebug: null })
+    });
+    const reorderedSnapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({ lineCandidate: null, lineSegments: [vertical, horizontal], visualMassDebug: null })
+    });
+
+    const firstVertical = firstSnapshot.raw.find((item) => item.source === 'native-line-segment-spike' && item.kind === 'line-segment' && item.id.includes('vertical'));
+    const reorderedVertical = reorderedSnapshot.raw.find(
+      (item) => item.source === 'native-line-segment-spike' && item.kind === 'line-segment' && item.id.includes('vertical')
+    );
+
+    expect(firstVertical?.id).toBe(reorderedVertical?.id);
+    expect(firstVertical?.id).toContain('native-line-segment-spike');
+    expect(firstVertical?.id).not.toMatch(/native-line-segment-spike-[01]-/);
+  });
+
   it('converts manual subject into preview scoring point evidence', () => {
     const snapshot = cameraEvidenceFromManualSubject({
       manualSubject: { x: 0.4, y: 0.6 },
@@ -296,6 +331,9 @@ describe('camera evidence model', () => {
         confidence: 0.72,
         kind: 'horizontal-line'
       },
+      rawLineSegments: [],
+      mappedLineSegments: [],
+      lineSegmentMappingPairs: [],
       rawVisualMassCenter: null,
       mappedVisualMassCenter: { x: 99, y: -99 },
       rawVisualMassBounds: null,
