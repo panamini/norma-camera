@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
 import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
-import { hasRenderableHorizontalLine, stabilizeRecentHorizontalLine } from './nativeLineDiagnosticRetention';
+import { hasRenderableHorizontalLine, shouldRefreshStableHorizontalLineAnchor, stabilizeRecentHorizontalLine } from './nativeLineDiagnosticRetention';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
 const POLL_INTERVAL_MS = 250;
@@ -73,8 +73,8 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         if (hasRenderableHorizontalLine(rawLatest)) {
           lastObservedAnalysisWithLineRef.current = rawLatest;
         }
-        if (hasRenderableHorizontalLine(latest)) {
-          lastStableAnalysisWithLineRef.current = latest;
+        if (shouldRefreshStableHorizontalLineAnchor(rawLatest, latest)) {
+          lastStableAnalysisWithLineRef.current = rawLatest;
         } else if (rawLatest.analysisSource !== 'live-frame') {
           lastObservedAnalysisWithLineRef.current = null;
           lastStableAnalysisWithLineRef.current = null;

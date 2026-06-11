@@ -1,6 +1,4 @@
 import type { NativeFrameAnalysisResult } from './nativeHeuristicTypes';
-import { normalizedHorizontalLineOverlayY } from './nativeLineDiagnosticOverlay';
-
 export const LINE_DIAGNOSTIC_RETENTION_MS = 900;
 export const LINE_STABILITY_OBSERVATION_WINDOW_MS = 700;
 export const LINE_STABILITY_MAX_Y_DELTA = 0.06;
@@ -45,11 +43,18 @@ function hasCoherentRecentLine(analysis: NativeFrameAnalysisResult, previousAnal
   if (!previousAnalysisWithLine || !hasRenderableHorizontalLine(previousAnalysisWithLine)) return false;
   if (recentLineAgeMs(analysis, previousAnalysisWithLine) > LINE_STABILITY_OBSERVATION_WINDOW_MS) return false;
 
-  const currentY = normalizedHorizontalLineOverlayY(analysis.lineCandidate);
-  const previousY = normalizedHorizontalLineOverlayY(previousAnalysisWithLine.lineCandidate);
+  const currentY = normalizedHorizontalLineY(analysis.lineCandidate);
+  const previousY = normalizedHorizontalLineY(previousAnalysisWithLine.lineCandidate);
   if (currentY === null || previousY === null) return false;
 
   return Math.abs(currentY - previousY) <= LINE_STABILITY_MAX_Y_DELTA;
+}
+
+function normalizedHorizontalLineY(line: NativeFrameAnalysisResult['lineCandidate']): number | null {
+  if (!line || line.kind !== 'horizontal-line') return null;
+  if (typeof line.y1 !== 'number' || !Number.isFinite(line.y1)) return null;
+  if (typeof line.y2 !== 'number' || !Number.isFinite(line.y2)) return null;
+  return Math.max(0, Math.min(1, (line.y1 + line.y2) / 2));
 }
 
 export function stabilizeRecentHorizontalLine(
@@ -71,4 +76,8 @@ export function stabilizeRecentHorizontalLine(
   }
 
   return retainRecentHorizontalLine(analysis, previousStableAnalysisWithLine);
+}
+
+export function shouldRefreshStableHorizontalLineAnchor(rawAnalysis: NativeFrameAnalysisResult, stabilizedAnalysis: NativeFrameAnalysisResult): boolean {
+  return hasRenderableHorizontalLine(rawAnalysis) && hasRenderableHorizontalLine(stabilizedAnalysis);
 }

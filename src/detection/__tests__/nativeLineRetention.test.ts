@@ -4,6 +4,7 @@ import {
   LINE_DIAGNOSTIC_RETENTION_MS,
   LINE_STABILITY_OBSERVATION_WINDOW_MS,
   retainRecentHorizontalLine,
+  shouldRefreshStableHorizontalLineAnchor,
   stabilizeRecentHorizontalLine
 } from '../nativeLineDiagnosticRetention';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
@@ -108,5 +109,30 @@ describe('native horizontal-line diagnostic retention', () => {
 
     expect(stabilizeRecentHorizontalLine(missing, observedOnly, null).lineCandidate).toBeNull();
     expect(stabilizeRecentHorizontalLine(missing, observedOnly, stable).lineCandidate).toEqual(stable.lineCandidate);
+  });
+
+  it('does not renew the retention window from a retained line', () => {
+    const observed = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
+    const stable = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, y1: 0.35, y2: 0.35 } });
+    const stabilized = stabilizeRecentHorizontalLine(stable, observed, null);
+    expect(shouldRefreshStableHorizontalLineAnchor(stable, stabilized)).toBe(true);
+
+    let stableAnchor: NativeFrameAnalysisResult | null = stable;
+    const shortLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS, lineCandidate: null });
+    const retained = stabilizeRecentHorizontalLine(shortLoss, stable, stableAnchor);
+
+    expect(retained.lineCandidate).toEqual(stable.lineCandidate);
+    expect(shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)).toBe(false);
+    if (shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)) stableAnchor = retained;
+
+    const longLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS + 1, lineCandidate: null });
+    expect(stabilizeRecentHorizontalLine(longLoss, stable, stableAnchor).lineCandidate).toBeNull();
+  });
+
+  it('checks y coherence independently from the overlay confidence threshold', () => {
+    const weakFirst = makeAnalysis({ createdAtMs: 10_000, lineCandidate: { ...horizontalLine, confidence: 0.2 } });
+    const weakSecond = makeAnalysis({ createdAtMs: 10_250, lineCandidate: { ...horizontalLine, confidence: 0.2, y1: 0.35, y2: 0.35 } });
+
+    expect(stabilizeRecentHorizontalLine(weakSecond, weakFirst, null).lineCandidate).toEqual(weakSecond.lineCandidate);
   });
 });
