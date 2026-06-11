@@ -15,7 +15,7 @@ function makeLine(overrides: Partial<NativeLineCandidate> = {}): NativeLineCandi
   };
 }
 
-describe('horizontal line guide score diagnostic', () => {
+describe('horizontal line guide score signal', () => {
   it('returns n/a when no line is available', () => {
     expect(scoreHorizontalLineAgainstGuides(null)).toEqual({
       hasLine: false,

@@ -36,7 +36,7 @@ function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
   return `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
 }
 
-function formatHorizontalLineDiagnostic(lineCandidate: NativeLineCandidate | null | undefined, lineGuideScore: LineGuideScoreResult): string {
+function formatHorizontalLineSignal(lineCandidate: NativeLineCandidate | null | undefined, lineGuideScore: LineGuideScoreResult): string {
   if (!lineCandidate || !lineGuideScore.hasLine || lineGuideScore.lineY === null) return 'horizontal line: no strong line candidate';
 
   const confidence = Math.round(clamp01(lineCandidate.confidence) * 100);
@@ -80,7 +80,7 @@ function formatNativeReadout(params: {
     `meanLuma ${params.meanLumaText} · edgeEnergy ${params.edgeEnergyText}`,
     `native visual mass: ${params.visualMassState} · visual confidence ${params.visualConfidenceText}`,
     `guide score ${formatGuideScore(params.guideScore)}`,
-    formatHorizontalLineDiagnostic(params.lineCandidate, lineGuideScore),
+    formatHorizontalLineSignal(params.lineCandidate, lineGuideScore),
     formatLineGuideScore(lineGuideScore)
   ].join('\n');
 }

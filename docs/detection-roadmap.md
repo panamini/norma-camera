@@ -1,63 +1,63 @@
 # norma-camera detection roadmap
 
-## Current target: V0.3B Native Visual-Mass Subject Candidate
+## Current target: PR4.0 Production Hardening
 
-V0.3B keeps the app honest while preparing the first real Android image signal.
+The feature stack is complete for this release candidate:
 
-This branch wires the TypeScript adapter, candidate selection, UI copy, tests, and documentation for **Native Visual Mass**:
+- live luminance metrics
+- live sharpness / edge-energy metrics
+- native visual-mass candidate
+- native confidence readout
+- guide score
+- horizontal-line signal as a secondary composition contribution
+- composition breakdown
+- line signal stabilization
+- conservative capture-readiness copy
 
-```text
-NATIVE VISUAL MASS
-Real luminance analysis.
-No semantic object detection yet.
-```
+PR4.0 is a hardening pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
 
-Important honesty:
+## Native implementation status
 
-- V0.3B is **not** semantic object detection.
-- It must never claim object, person, face, or AI detection.
-- It does not use ML Kit, Google Play Services, OpenCV, Apple Vision, cloud AI, or a backend.
-- Manual, Auto Placeholder, and Simulated Detector modes remain available.
-- Manual tap remains the fallback and can override a native candidate.
+The repository now contains a local Android-only Expo module in `modules/frame-analysis`.
 
-## Native implementation status in this package
-
-The runtime JS now expects a compact native module contract:
+Runtime entry points:
 
 ```ts
-NativeModules.NormaFrameAnalysis?.getLatestAnalysis()
+requireNativeModule('NormaFrameAnalysis').getLatestAnalysis()
+NitroModules.createHybridObject('NormaFrameAnalyzer').analyze(frame)
 ```
 
-If that module is unavailable, the app shows:
+If the app is running outside Android, or if the installed dev-client was built without this local module, Native mode remains honest:
 
-```text
+```txt
 NATIVE VISUAL MASS · unavailable
 Manual fallback active.
-No semantic object detection yet.
+No recognition is used.
 ```
 
-The native Android frame processor itself is **not added in this package** because it must be built against the exact installed VisionCamera 5.0.8 native APIs and validated with an Android dev build. If those APIs are ambiguous locally, do not invent a plugin implementation. Keep this unavailable state and add the native code in the next validated pass.
+That unavailable state is a runtime/build condition, not proof that the source module is missing.
 
-## Intended native V0.3B pipeline
+## Current native pipeline
 
-```text
+```txt
 VisionCamera frame
-  -> native Android frame-analysis plugin
-  -> read Y plane / luminance only
-  -> downsample to 96x72, or 128x96 after performance validation
-  -> exposure statistics
+  -> worklet-safe Nitro analyzer
+  -> Android Y plane read
+  -> native downsample to 32x24
+  -> exposure metrics
   -> sharpness / edge energy
   -> contrast visual-mass candidate
+  -> horizontal-line signal
   -> compact normalized result to JS
   -> existing composition scoring
   -> existing auto-capture gates
 ```
 
-## Signals
+No raw pixels or luminance grids cross into JS during live analysis.
 
-### Real exposure
+## Signal contract
 
-Return:
+### Exposure
 
 ```ts
 type NativeExposureMetrics = {
@@ -68,17 +68,7 @@ type NativeExposureMetrics = {
 };
 ```
 
-Suggested formula:
-
-```text
-base = 100 - abs(meanLuma - 0.52) * 180
-penalty = clippedHighlightsRatio * 80 + crushedShadowsRatio * 70
-exposureScore = clamp(base - penalty, 0, 100)
-```
-
-### Real sharpness / edge energy
-
-Return:
+### Sharpness / edge energy
 
 ```ts
 type NativeSharpnessMetrics = {
@@ -87,17 +77,7 @@ type NativeSharpnessMetrics = {
 };
 ```
 
-Start with a simple gradient energy on downsampled luminance:
-
-```text
-gx = abs(luma[x+1,y] - luma[x-1,y])
-gy = abs(luma[x,y+1] - luma[x,y-1])
-energy = gx + gy
-```
-
 ### Visual-mass subject candidate
-
-Return:
 
 ```ts
 type NativeSubjectCandidate = {
@@ -108,22 +88,9 @@ type NativeSubjectCandidate = {
 };
 ```
 
-Heuristic:
+This is a contrast candidate. It is not object, person, face, scene, or AI detection.
 
-1. Ignore the outer 8–12% border.
-2. Compute local gradient/contrast energy per downsampled cell.
-3. Suppress clipped cells where luma `< 0.05` or `> 0.95`.
-4. Use adaptive threshold `meanEnergy + 0.75 * stdEnergy`.
-5. Compute weighted centroid from active high-energy cells.
-6. Compute bounds from active cells.
-7. Reject tiny, huge, border-heavy, weak-energy, or poorly exposed candidates.
-8. Use confidence threshold `0.35`.
-
-This is only a **contrast candidate**. It is not an object label.
-
-### Horizon / line diagnostic deferred
-
-V0.3B should not fold horizon/line candidates into the score. V0.3C can add a separate diagnostic:
+### Horizontal-line signal
 
 ```ts
 type NativeLineCandidate = {
@@ -137,6 +104,22 @@ type NativeLineCandidate = {
 };
 ```
 
+The line signal is secondary. It can add a small tested contribution to composition scoring only when a subject candidate exists. It must not make a no-subject frame ready.
+
+## Stability guardrails
+
+- Android first only.
+- Latest-frame-only native analysis.
+- Analyze at about 4 fps (`MIN_ANALYSIS_INTERVAL_MS = 250`).
+- Drop/return latest result while busy; never queue frames.
+- Mark live analysis stale after 1500 ms.
+- Hold visual mass briefly for transient weak frames, but active candidates still require active confidence.
+- Expose line signal only after coherent recent observations.
+- Retain a stable line briefly, without renewing retention from the retained value.
+- Avoid logs every frame.
+- Keep manual fallback.
+- Keep Manual, Auto Placeholder, and Simulated Detector modes available.
+
 ## GrapheneOS strategy
 
 GrapheneOS-first means:
@@ -145,57 +128,65 @@ GrapheneOS-first means:
 - no cloud model delivery
 - no backend
 - no hard dependency on ML Kit
+- no OpenCV dependency
+- no JavaScript pixel loops
 - manual fallback always available
-- latest-frame-only native analysis
-- no JS pixel loops
 
-Sandboxed Google Play may exist on GrapheneOS, but norma-camera should not require it for the default detection path.
-
-## Native implementation requirements
-
-- Android first only.
-- Read luminance/Y plane natively.
-- Downsample before analysis.
-- Analyze 4–8 fps, not every preview frame.
-- Drop frames while busy.
-- No queue/backlog.
-- Return compact JS objects only.
-- Avoid logs every frame.
-- Keep manual fallback.
+Sandboxed Google Play may exist on GrapheneOS, but norma-camera must not require it for the default detection path.
 
 ## Validation checklist
 
-- Native mode visible.
-- Native unavailable/low-confidence/ready states are displayed honestly.
-- Manual mode still works.
-- Auto Placeholder still works.
-- Simulated Detector still works.
-- If native candidate is ready, bbox/center/confidence/score are visible.
-- ARM ON uses native candidate only when confidence and score pass.
-- Sharpness/exposure are labeled real only if native values exist.
-- Motion and scene change remain stubbed.
+Run before release candidate handoff:
 
-## V0.3C recommended next step
-
-After V0.3B is validated, add a separate native horizon / strong-line diagnostic:
-
-```text
-downsampled luminance
-  -> edge map
-  -> horizontal/near-horizontal accumulator
-  -> diagnostic line candidate
+```bash
+npm test
+npm run typecheck
+npx expo config --type introspect
+npm run android
 ```
 
-Keep it diagnostic until the final scoring formula is explicit and tested.
+If `npm run android` blocks locally, document the concrete blocker:
 
-## ML Kit branch, not default
+- `ANDROID_HOME` missing
+- `android/local.properties` missing
+- no Android device/emulator available
+- device unauthorized or offline
+- ADB daemon/socket failure
+- Gradle/native build failure
 
-A bundled ML Kit object detector can be explored separately, but not as the GrapheneOS-first default path.
+Manual Android checks:
 
-Reasons:
+- app opens
+- camera preview opens
+- manual mode works
+- auto-placeholder works
+- simulated detector works
+- native-heuristic works or reports unavailable honestly
+- visual mass box appears when native candidate is active
+- score visible
+- composition breakdown visible
+- line signal stable enough
+- readiness text conservative
+- ARM behavior unchanged
+- capture works
+- no obvious FPS collapse
+- no stale line/candidate stuck forever
+- background/foreground does not crash
+- camera reopen does not crash
 
-- it adds model/dependency complexity
-- it introduces semantic-ish detection
-- unbundled/model-delivery options are not ideal for GrapheneOS-first
+## Explicit non-goals
 
-If tested later, keep it as an optional Android experiment and label it clearly in the UI.
+Do not add:
+
+- new detector
+- new composition heuristic
+- new scoring formula
+- OpenCV
+- ML Kit
+- AI model
+- object/person/face detection
+- new Nitro bridge
+- new frame pipeline
+- JS pixel processing
+- backend/cloud inference
+- auto-capture behavior change

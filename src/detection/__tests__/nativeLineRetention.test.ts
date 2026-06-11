@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
   hasRenderableHorizontalLine,
-  LINE_DIAGNOSTIC_RETENTION_MS,
+  LINE_SIGNAL_RETENTION_MS,
   LINE_STABILITY_OBSERVATION_WINDOW_MS,
   retainRecentHorizontalLine,
   shouldRefreshStableHorizontalLineAnchor,
@@ -41,8 +41,8 @@ const horizontalLine = {
   kind: 'horizontal-line' as const
 };
 
-describe('native horizontal-line diagnostic retention', () => {
-  it('recognizes renderable horizontal-line diagnostics', () => {
+describe('native horizontal-line signal retention', () => {
+  it('recognizes renderable horizontal-line signals', () => {
     expect(hasRenderableHorizontalLine(makeAnalysis({ lineCandidate: horizontalLine }))).toBe(true);
     expect(hasRenderableHorizontalLine(makeAnalysis())).toBe(false);
     expect(hasRenderableHorizontalLine(makeAnalysis({ lineCandidate: { ...horizontalLine, kind: 'unknown-line' } }))).toBe(false);
@@ -50,23 +50,23 @@ describe('native horizontal-line diagnostic retention', () => {
 
   it('briefly retains the last renderable line when the next live frame has no line', () => {
     const previous = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
-    const next = makeAnalysis({ createdAtMs: 10_000 + LINE_DIAGNOSTIC_RETENTION_MS, lineCandidate: null });
+    const next = makeAnalysis({ createdAtMs: 10_000 + LINE_SIGNAL_RETENTION_MS, lineCandidate: null });
 
     const retained = retainRecentHorizontalLine(next, previous);
 
     expect(retained.lineCandidate).toEqual(horizontalLine);
   });
 
-  it('does not retain line diagnostics after the retention window', () => {
+  it('does not retain line signals after the retention window', () => {
     const previous = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
-    const next = makeAnalysis({ createdAtMs: 10_000 + LINE_DIAGNOSTIC_RETENTION_MS + 1, lineCandidate: null });
+    const next = makeAnalysis({ createdAtMs: 10_000 + LINE_SIGNAL_RETENTION_MS + 1, lineCandidate: null });
 
     const retained = retainRecentHorizontalLine(next, previous);
 
     expect(retained.lineCandidate).toBeNull();
   });
 
-  it('does not retain line diagnostics for unavailable or non-live frames', () => {
+  it('does not retain line signals for unavailable or non-live frames', () => {
     const previous = makeAnalysis({ createdAtMs: 10_000, lineCandidate: horizontalLine });
     const unavailable = makeAnalysis({ status: 'unavailable', createdAtMs: 10_100, lineCandidate: null });
     const debugGrid = makeAnalysis({ createdAtMs: 10_100, analysisSource: 'debug-grid', lineCandidate: null });
@@ -118,14 +118,14 @@ describe('native horizontal-line diagnostic retention', () => {
     expect(shouldRefreshStableHorizontalLineAnchor(stable, stabilized)).toBe(true);
 
     let stableAnchor: NativeFrameAnalysisResult | null = stable;
-    const shortLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS, lineCandidate: null });
+    const shortLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_SIGNAL_RETENTION_MS, lineCandidate: null });
     const retained = stabilizeRecentHorizontalLine(shortLoss, stable, stableAnchor);
 
     expect(retained.lineCandidate).toEqual(stable.lineCandidate);
     expect(shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)).toBe(false);
     if (shouldRefreshStableHorizontalLineAnchor(shortLoss, retained)) stableAnchor = retained;
 
-    const longLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_DIAGNOSTIC_RETENTION_MS + 1, lineCandidate: null });
+    const longLoss = makeAnalysis({ createdAtMs: 10_250 + LINE_SIGNAL_RETENTION_MS + 1, lineCandidate: null });
     expect(stabilizeRecentHorizontalLine(longLoss, stable, stableAnchor).lineCandidate).toBeNull();
   });
 
