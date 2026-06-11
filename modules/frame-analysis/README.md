@@ -53,6 +53,7 @@ type NativeFrameAnalysisResult = {
   lineCandidate?: NativeLineCandidate | null;
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
+  visualMassDebug?: NativeVisualMassDebug | null;
   explanation: string;
   analysisSource?: 'live-frame' | 'debug-grid' | string;
   updateCount?: number;
@@ -75,9 +76,22 @@ type NativeLineCandidate = {
   confidence: number;
   kind: 'horizontal-line' | 'unknown-line';
 };
+
+type NativeVisualMassDebug = {
+  gridWidth: number;
+  gridHeight: number;
+  heatmapWidth: number;
+  heatmapHeight: number;
+  cells: NativeVisualMassDebugCell[];
+  topCandidates: NativeVisualMassDebugCandidate[];
+  selectedCandidate: NativeVisualMassDebugCandidate | null;
+  stabilizedCandidate: NativeVisualMassDebugCandidate | null;
+  explanation: string;
+};
 ```
 
 The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. Neither is semantic recognition.
+The visual-mass debug payload is compact contrast/luminance evidence only: coarse heat cells, top coarse candidate summaries, raw selected candidate, and stabilized candidate. It does not expose raw pixels, a full luminance grid, semantic labels, or object identity.
 
 ## Coordinate calibration
 
@@ -106,6 +120,20 @@ native frame normalized coordinates
 VisionCamera `PreviewView` documents `resizeMode: 'cover' | 'contain'` and defaults to `cover`; the app sets `cover` explicitly. Device validation still needs to verify that the native preview transform and overlay transform match on the target Android device.
 
 PR4.1 uses mapped evidence for overlay/debug. Composition scoring and auto-capture behavior remain on the existing raw candidate inputs; the scoring formula is unchanged.
+
+## PR4.2 visual mass debug heatmap
+
+PR4.2 makes native visual mass auditable without changing detection, scoring, or capture behavior.
+
+In native mode, non-normal debug quality modes can show a mapped heatmap overlay labeled `CONTRAST MASS · NOT OBJECT DETECTION`. The debug readout keeps raw and mapped visual-mass values side by side so device tests can explain why the box appears in a region.
+
+Visual mass remains contrast/luminance evidence:
+
+- It is not object detection.
+- It does not know what the object is.
+- It can prefer black/white high-contrast regions over subtle objects.
+- It can be wrong in cluttered scenes.
+- It is only one evidence source.
 
 ## Safety constraints
 

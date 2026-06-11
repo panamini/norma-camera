@@ -21,8 +21,8 @@ object NormaFrameAnalysisStore {
   ): Map<String, Any?> {
     val analysisNowMs = System.currentTimeMillis()
     val metrics = LumaMetrics.compute(values, width, height, valueRange)
-    val rawSubject = VisualMassHeuristic.detect(values, width, height, valueRange)
-    val subject = VisualMassCandidateStabilizer.stabilize(rawSubject, metrics, analysisNowMs)
+    val visualMassAnalysis = VisualMassHeuristic.analyze(values, width, height, valueRange)
+    val subject = VisualMassCandidateStabilizer.stabilize(visualMassAnalysis.candidate, metrics, analysisNowMs)
     val lineCandidate = HorizontalLineHeuristic.detect(
       grid = values,
       width = width,
@@ -63,6 +63,7 @@ object NormaFrameAnalysisStore {
         "sharpnessScore" to metrics.sharpness.sharpnessScore,
         "edgeEnergy" to metrics.sharpness.edgeEnergy
       ),
+      "visualMassDebug" to visualMassAnalysis.debug?.toMap(subject),
       "explanation" to explanation
     )
 

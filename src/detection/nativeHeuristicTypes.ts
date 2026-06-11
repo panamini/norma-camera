@@ -21,6 +21,34 @@ export type NativeLineCandidate = {
   kind: 'horizontal-line' | 'unknown-line';
 };
 
+export type NativeVisualMassDebugCell = {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  energy: number;
+};
+
+export type NativeVisualMassDebugCandidate = {
+  center: NormalizedPoint;
+  bounds: NormalizedRect;
+  confidence: number;
+  energy?: number;
+  reason?: string;
+};
+
+export type NativeVisualMassDebug = {
+  gridWidth: number;
+  gridHeight: number;
+  heatmapWidth: number;
+  heatmapHeight: number;
+  cells: NativeVisualMassDebugCell[];
+  topCandidates: NativeVisualMassDebugCandidate[];
+  selectedCandidate: NativeVisualMassDebugCandidate | null;
+  stabilizedCandidate: NativeVisualMassDebugCandidate | null;
+  explanation: string;
+};
+
 export type NativeExposureMetrics = {
   exposureScore: number;
   meanLuma: number;
@@ -46,6 +74,7 @@ export type NativeFrameAnalysisResult = {
   lineCandidate?: NativeLineCandidate | null;
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
+  visualMassDebug?: NativeVisualMassDebug | null;
   explanation: string;
   analysisSource?: 'live-frame' | 'debug-grid' | string;
   updateCount?: number;

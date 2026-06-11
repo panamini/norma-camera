@@ -22,7 +22,7 @@ import {
 } from '../detection/nativeEvidenceCoordinateMapping';
 import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
-import { nativeVisualMassOverlayCandidate } from '../detection/nativeVisualMassOverlay';
+import { nativeVisualMassDebugOverlay, nativeVisualMassOverlayCandidate } from '../detection/nativeVisualMassOverlay';
 import { getNormaFrameAnalyzer } from '../detection/normaFrameAnalyzer';
 import { scoreDetectedComposition } from '../detection/scoreDetectedComposition';
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
@@ -275,6 +275,10 @@ export function CameraScreen() {
   const nativeEvidenceMapping = useMemo(
     () => mapNativeEvidenceToPreview(nativeHeuristic.analysis, previewGeometry),
     [nativeHeuristic.analysis, previewGeometry]
+  );
+  const visualMassDebugOverlay = useMemo(
+    () => nativeVisualMassDebugOverlay(nativeHeuristic.analysis, nativeEvidenceMapping),
+    [nativeEvidenceMapping, nativeHeuristic.analysis]
   );
 
   useEffect(() => {
@@ -591,6 +595,8 @@ export function CameraScreen() {
           candidateBounds={candidateBounds}
           lineCandidate={nativeHeuristic.analysis?.lineCandidate}
           mappedLineCandidate={nativeEvidenceMapping.mappedLineCandidate}
+          visualMassDebug={visualMassDebugOverlay?.mapped ?? null}
+          showVisualMassDebug={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
         />
       </Pressable>
       <ScoreBadge
