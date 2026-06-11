@@ -2,7 +2,8 @@ import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { OverlayMode } from '../composition/types';
 import type { DetectionMode } from '../detection/types';
-import { useCameraUiStore, type DebugQualityMode } from '../state/cameraUiStore';
+import { useCameraUiStore } from '../state/cameraUiStore';
+import { DEBUG_OVERLAY_PRESET_OPTIONS } from '../state/debugOverlayVisibility';
 
 type Props = {
   onManualCapture: () => void;
@@ -16,8 +17,6 @@ const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilit
   { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' },
   { value: 'native-heuristic', label: 'Native heuristic', accessibilityLabel: 'Use native heuristic visual mass mode' }
 ];
-const QUALITY_MODES: DebugQualityMode[] = ['normal', 'blurry', 'badExposure', 'motion'];
-
 function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
   const overlayMode = useCameraUiStore((state) => state.overlayMode);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
@@ -92,7 +91,7 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
         </Pressable>
       </View>
 
-      <View accessibilityLabel="Debug quality gates" style={styles.debugRow}>
+      <View accessibilityLabel="Debug overlay presets" style={styles.debugRow}>
         <Pressable
           accessibilityRole="switch"
           accessibilityLabel={debugPanelsHidden ? 'Show debug panels' : 'Hide debug panels'}
@@ -102,19 +101,19 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
         >
           <Text style={[styles.debugText, debugPanelsHidden ? styles.debugTextActive : null]}>{debugPanelsHidden ? 'show panels' : 'hide panels'}</Text>
         </Pressable>
-        {QUALITY_MODES.map((mode) => {
-          const active = mode === debugQualityMode;
+        {DEBUG_OVERLAY_PRESET_OPTIONS.map((mode) => {
+          const active = mode.value === debugQualityMode;
 
           return (
             <Pressable
-              key={mode}
+              key={mode.value}
               accessibilityRole="button"
-              accessibilityLabel={`Set debug quality mode ${mode}`}
+              accessibilityLabel={mode.accessibilityLabel}
               accessibilityState={{ selected: active }}
-              onPress={() => setDebugQualityMode(mode)}
+              onPress={() => setDebugQualityMode(mode.value)}
               style={[styles.debugButton, active ? styles.debugButtonActive : null]}
             >
-              <Text style={[styles.debugText, active ? styles.debugTextActive : null]}>{mode}</Text>
+              <Text style={[styles.debugText, active ? styles.debugTextActive : null]}>{mode.label}</Text>
             </Pressable>
           );
         })}

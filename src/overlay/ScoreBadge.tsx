@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import type { DebugQualityMode } from '../state/cameraUiStore';
+import { debugOverlayPresetLabel } from '../state/debugOverlayVisibility';
 
 export type CaptureBanner = {
   score: number;
@@ -130,7 +131,7 @@ function ScoreBadgeComponent({
 
       <Text style={styles.reason}>{snapshot.scoreReason}</Text>
       <Text style={styles.explanation}>{snapshot.candidateExplanation}</Text>
-      {debugQualityMode !== 'normal' ? <Text style={styles.warning}>DEBUG QUALITY: {debugQualityMode}</Text> : null}
+      {debugQualityMode !== 'normal' ? <Text style={styles.warning}>DEBUG OVERLAY: {debugOverlayPresetLabel(debugQualityMode)}</Text> : null}
     </View>
   );
 }
