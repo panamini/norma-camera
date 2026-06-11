@@ -3,6 +3,7 @@ import { nowMs } from '../shared/time';
 import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
 import type { LineSegmentMappingPair, NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
+import type { LineSegmentStabilityState, StabilizedLineSegmentCandidate } from './nativeLineSegmentRetention';
 import { nativeVisualMassDebugOverlay, type NativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedRect } from './types';
 
@@ -59,10 +60,27 @@ function formatLineSegment(line: NormalizedLineSegment | null | undefined): stri
   return `x1=${formatFixedMetric(line.x1, 3)} y1=${formatFixedMetric(line.y1, 3)} x2=${formatFixedMetric(line.x2, 3)} y2=${formatFixedMetric(line.y2, 3)}`;
 }
 
+function lineSegmentStabilityState(segment: NativeLineSegmentCandidate | null | undefined): LineSegmentStabilityState | null {
+  const state = (segment as Partial<StabilizedLineSegmentCandidate> | null | undefined)?.stabilityState;
+  return state === 'fresh' || state === 'stable' || state === 'retained' ? state : null;
+}
+
+function lineSegmentObservations(segment: NativeLineSegmentCandidate | null | undefined): number | null {
+  const observations = (segment as Partial<StabilizedLineSegmentCandidate> | null | undefined)?.observations;
+  return typeof observations === 'number' && Number.isFinite(observations) ? observations : null;
+}
+
+function formatSegmentSpikeStability(segment: NativeLineSegmentCandidate | null | undefined): string {
+  const state = lineSegmentStabilityState(segment);
+  const observations = lineSegmentObservations(segment);
+  if (!state) return 'fresh';
+  return observations !== null ? `${state} · observations ${Math.round(observations)}` : state;
+}
+
 function formatSegmentSpikeLine(index: number, label: 'raw' | 'mapped', segment: NativeLineSegmentCandidate | null | undefined): string | null {
   if (!segment) return null;
   const confidence = Math.round(clamp01(segment.confidence) * 100);
-  return `segment ${index + 1} ${label} ${formatLineSegment(segment)} · ${segment.orientationKind} · confidence ${confidence}% · length ${formatFixedMetric(segment.lengthEuclidean, 3)}`;
+  return `segment ${index + 1} ${label} ${formatLineSegment(segment)} · ${segment.orientationKind} · ${formatSegmentSpikeStability(segment)} · confidence ${confidence}% · length ${formatFixedMetric(segment.lengthEuclidean, 3)}`;
 }
 
 function formatSegmentSpikePair(pair: LineSegmentMappingPair, index: number): string[] {
@@ -94,10 +112,12 @@ function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | und
 
   const frame = mapping.frameGeometry;
   const transform = mapping.transform;
+  const stableCount = mapping.rawLineSegments.filter((segment) => lineSegmentStabilityState(segment) === 'stable').length;
+  const retainedCount = mapping.rawLineSegments.filter((segment) => lineSegmentStabilityState(segment) === 'retained').length;
   const lineSegmentSpikeLines =
     mapping.rawLineSegments.length > 0
       ? [
-          `line segment spike: ${mapping.rawLineSegments.length} candidate${mapping.rawLineSegments.length === 1 ? '' : 's'} · debug-only · not scoring`,
+          `line segment spike: ${mapping.rawLineSegments.length} candidate${mapping.rawLineSegments.length === 1 ? '' : 's'} · stable ${stableCount} · retained ${retainedCount} · debug-only · not scoring`,
           ...mapping.lineSegmentMappingPairs
             .slice(0, 3)
             .flatMap((pair, index) => formatSegmentSpikePair(pair, index))

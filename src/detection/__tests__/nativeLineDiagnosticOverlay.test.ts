@@ -62,6 +62,7 @@ describe('native horizontal-line signal overlay guard', () => {
     const reversed = normalizedLineSegmentSpikeOverlaySegments([vertical, horizontal]);
 
     expect(first).toHaveLength(2);
+    expect(first[0].stabilityState).toBe('fresh');
     expect(first[1].key).toBe(reversed[0].key);
     expect(first[1].key).toContain('vertical');
     expect(first[1].key).not.toMatch(/^1-vertical$/);
