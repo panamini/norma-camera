@@ -7,6 +7,7 @@ export type CameraEvidenceSource = 'manual' | 'native-visual-mass' | 'native-lin
 export type CameraEvidenceSpace = 'raw-frame' | 'preview';
 export type CameraEvidenceKind = 'point' | 'rect' | 'line-segment' | 'heatmap';
 export type CameraEvidencePurpose = 'scoring' | 'debug-only';
+export type LineSegmentOrientationKind = 'horizontal' | 'vertical' | 'diagonal' | 'unknown';
 
 export type CameraEvidenceBase = {
   id: string;
@@ -33,6 +34,8 @@ export type CameraLineSegmentEvidence = CameraEvidenceBase & {
   kind: 'line-segment';
   line: NormalizedLineSegment;
   angleDeg: number | null;
+  lengthEuclidean: number;
+  orientationKind: LineSegmentOrientationKind;
   lineKind: NativeLineCandidate['kind'];
 };
 
@@ -168,6 +171,28 @@ function isFiniteUnitLineSegment(line: NormalizedLineSegment | null | undefined)
   return Boolean(line) && isFiniteUnitNumber(line?.x1) && isFiniteUnitNumber(line?.y1) && isFiniteUnitNumber(line?.x2) && isFiniteUnitNumber(line?.y2);
 }
 
+function lineLengthEuclidean(line: NormalizedLineSegment): number {
+  return Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
+}
+
+function lineAngleDeg(line: NormalizedLineSegment, length: number): number | null {
+  if (!isFiniteNumber(length) || length === 0) return null;
+
+  return (Math.atan2(line.y2 - line.y1, line.x2 - line.x1) * 180) / Math.PI;
+}
+
+function lineOrientationKind(angle: number | null): LineSegmentOrientationKind {
+  if (angle === null) return 'unknown';
+
+  const absoluteAngle = Math.abs(angle);
+  const horizontalDistance = Math.min(absoluteAngle, Math.abs(180 - absoluteAngle));
+  const verticalDistance = Math.abs(90 - absoluteAngle);
+  if (horizontalDistance <= 15) return 'horizontal';
+  if (verticalDistance <= 15) return 'vertical';
+
+  return 'diagonal';
+}
+
 function snapshotFromEvidence(createdAtMs: number | null, raw: CameraEvidence[], mapped: CameraEvidence[]): CameraEvidenceSnapshot {
   const all = [...raw, ...mapped];
 
@@ -224,6 +249,15 @@ function makeLineEvidence(params: {
   confidence: number | null;
   createdAtMs: number | null;
 }): CameraLineSegmentEvidence {
+  const line = {
+    x1: params.line.x1,
+    y1: params.line.y1,
+    x2: params.line.x2,
+    y2: params.line.y2
+  };
+  const lengthEuclidean = lineLengthEuclidean(line);
+  const angleDeg = lineAngleDeg(line, lengthEuclidean);
+
   return {
     id: evidenceId('native-line-signal', params.space, params.createdAtMs),
     source: 'native-line-signal',
@@ -233,13 +267,10 @@ function makeLineEvidence(params: {
     confidence: params.confidence,
     createdAtMs: params.createdAtMs,
     explanation: NATIVE_LINE_SIGNAL_EXPLANATION,
-    line: {
-      x1: params.line.x1,
-      y1: params.line.y1,
-      x2: params.line.x2,
-      y2: params.line.y2
-    },
-    angleDeg: isFiniteNumber(params.line.angleDeg) ? params.line.angleDeg : null,
+    line,
+    angleDeg,
+    lengthEuclidean,
+    orientationKind: lineOrientationKind(angleDeg),
     lineKind: params.line.kind
   };
 }

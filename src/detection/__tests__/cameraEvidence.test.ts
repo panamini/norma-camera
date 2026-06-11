@@ -4,6 +4,7 @@ import {
   cameraEvidenceFromManualSubject,
   cameraEvidenceFromNativeAnalysis,
   type CameraEvidence,
+  type CameraLineSegmentEvidence,
   type CameraPointEvidence
 } from '../cameraEvidence';
 import { mapNativeEvidenceToPreview } from '../nativeEvidenceCoordinateMapping';
@@ -139,8 +140,10 @@ describe('camera evidence model', () => {
   });
 
   it('converts native line candidate into line-segment evidence', () => {
-    const snapshot = cameraEvidenceFromNativeAnalysis({ analysis: makeAnalysis({ visualMassDebug: null }) });
-    const line = findEvidence(snapshot.raw, 'line-segment', 'native-line-signal');
+    const snapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({ lineCandidate: makeLine({ angleDeg: 42 }), visualMassDebug: null })
+    });
+    const line = findEvidence(snapshot.raw, 'line-segment', 'native-line-signal') as CameraLineSegmentEvidence;
 
     expect(line).toMatchObject({
       source: 'native-line-signal',
@@ -150,8 +153,62 @@ describe('camera evidence model', () => {
       confidence: 0.72,
       lineKind: 'horizontal-line',
       angleDeg: 0,
+      lengthEuclidean: 0.8,
+      orientationKind: 'horizontal',
       line: { x1: 0.1, y1: 0.3, x2: 0.9, y2: 0.3 }
     });
+  });
+
+  it('keeps mapped preview line segment orientation separate from raw native kind', () => {
+    const analysis = makeAnalysis({ visualMassDebug: null });
+    const snapshot = cameraEvidenceFromNativeAnalysis({
+      analysis,
+      nativeEvidenceMapping: mapNativeEvidenceToPreview(analysis, { width: 300, height: 400, resizeMode: 'cover' })
+    });
+
+    const rawLine = findEvidence(snapshot.raw, 'line-segment', 'native-line-signal') as CameraLineSegmentEvidence;
+    const mappedLine = findEvidence(snapshot.mapped, 'line-segment', 'native-line-signal') as CameraLineSegmentEvidence;
+
+    expect(rawLine).toMatchObject({
+      space: 'raw-frame',
+      lineKind: 'horizontal-line',
+      orientationKind: 'horizontal',
+      angleDeg: 0,
+      lengthEuclidean: 0.8
+    });
+    expect(mappedLine).toMatchObject({
+      space: 'preview',
+      lineKind: 'unknown-line',
+      orientationKind: 'vertical'
+    });
+    expect(mappedLine.angleDeg).toBeCloseTo(-90, 6);
+    expect(mappedLine.lengthEuclidean).toBeCloseTo(0.8, 6);
+    expect(mappedLine.line).toEqual({ x1: 0.3, y1: 0.9, x2: 0.3, y2: 0.09999999999999998 });
+  });
+
+  it('derives diagonal and unknown orientation from line segment endpoints', () => {
+    const diagonalSnapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({
+        lineCandidate: makeLine({ x1: 0.2, y1: 0.2, x2: 0.6, y2: 0.6, angleDeg: 0 }),
+        visualMassDebug: null
+      })
+    });
+    const zeroLengthSnapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({
+        lineCandidate: makeLine({ x1: 0.4, y1: 0.4, x2: 0.4, y2: 0.4, angleDeg: 90 }),
+        visualMassDebug: null
+      })
+    });
+
+    const diagonalLine = findEvidence(diagonalSnapshot.raw, 'line-segment', 'native-line-signal') as CameraLineSegmentEvidence;
+    const zeroLengthLine = findEvidence(zeroLengthSnapshot.raw, 'line-segment', 'native-line-signal') as CameraLineSegmentEvidence;
+
+    expect(diagonalLine.orientationKind).toBe('diagonal');
+    expect(diagonalLine.angleDeg).toBeCloseTo(45, 6);
+    expect(diagonalLine.lengthEuclidean).toBeCloseTo(Math.hypot(0.4, 0.4), 6);
+    expect(zeroLengthLine.orientationKind).toBe('unknown');
+    expect(zeroLengthLine.angleDeg).toBeNull();
+    expect(zeroLengthLine.lengthEuclidean).toBe(0);
   });
 
   it('converts manual subject into preview scoring point evidence', () => {
