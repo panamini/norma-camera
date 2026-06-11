@@ -10,6 +10,7 @@ import {
 import type { NativeLineCandidate } from '../nativeHeuristicTypes';
 import type { NativeFrameAnalysisResult } from '../nativeHeuristicTypes';
 import type { NormalizedRect } from '../types';
+import { normalizedHorizontalLineOverlayY, normalizedLineCandidateOverlaySegment } from '../nativeLineDiagnosticOverlay';
 
 const matchedFrame: NativeFrameGeometry = {
   frameWidth: 400,
@@ -99,6 +100,25 @@ describe('native evidence coordinate mapping', () => {
   it('rotates rects and line endpoints consistently with point mapping', () => {
     const preview: PreviewGeometry = { width: 300, height: 400, resizeMode: 'cover' };
     const frame = { ...matchedFrame, frameOrientation: 'right' as const };
+    const rotatedLineCandidate = mapNativeEvidenceToPreview(
+      {
+        status: 'ready',
+        createdAtMs: 1_000,
+        frameWidth: 400,
+        frameHeight: 300,
+        gridWidth: 32,
+        gridHeight: 24,
+        frameOrientation: 'right',
+        isMirrored: false,
+        subject: null,
+        lineCandidate: makeLine(),
+        exposure: null,
+        sharpness: null,
+        explanation: 'test',
+        analysisSource: 'live-frame'
+      },
+      preview
+    ).mappedLineCandidate;
 
     expectRectClose(mapNormalizedFrameRectToPreviewRect({ x: 0.1, y: 0.2, width: 0.3, height: 0.4 }, frame, preview), {
       x: 0.2,
@@ -112,6 +132,14 @@ describe('native evidence coordinate mapping', () => {
       x2: 0.3,
       y2: 0.1
     });
+    expect(rotatedLineCandidate?.kind).toBe('unknown-line');
+    expectLineClose(normalizedLineCandidateOverlaySegment(rotatedLineCandidate), {
+      x1: 0.3,
+      y1: 0.9,
+      x2: 0.3,
+      y2: 0.1
+    });
+    expect(normalizedHorizontalLineOverlayY(rotatedLineCandidate)).toBeNull();
   });
 
   it('handles mirrored evidence without mutating raw input', () => {
