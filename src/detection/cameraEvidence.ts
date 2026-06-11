@@ -65,6 +65,7 @@ export type CameraEvidenceSnapshot = {
 export type CameraEvidenceFromNativeAnalysisInput = {
   analysis: NativeFrameAnalysisResult | null | undefined;
   nativeEvidenceMapping?: NativeEvidencePreviewMapping | null;
+  createdAtMs?: number | null;
 };
 
 export type CameraEvidenceFromManualSubjectInput = {
@@ -83,6 +84,7 @@ const NATIVE_VISUAL_MASS_EXPLANATION = 'Native visual mass signal from contrast/
 const NATIVE_LINE_SIGNAL_EXPLANATION = 'Native line signal is geometric evidence, not object recognition.';
 const MANUAL_SUBJECT_EXPLANATION = 'Manual subject point selected by the user.';
 const VISUAL_MASS_HEATMAP_EXPLANATION = 'Visual mass heatmap summarizes contrast/luminance evidence; not object detection.';
+const MAPPED_EVIDENCE_COORDINATE_LIMIT = 16;
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -100,6 +102,10 @@ function finiteConfidence(value: number | null | undefined): number | null {
   return isFiniteUnitNumber(value) ? value : null;
 }
 
+function isFiniteMappedNumber(value: number | null | undefined): value is number {
+  return isFiniteNumber(value) && Math.abs(value) <= MAPPED_EVIDENCE_COORDINATE_LIMIT;
+}
+
 function evidenceId(prefix: string, space: CameraEvidenceSpace, createdAtMs: number | null): string {
   return `${prefix}-${space}-${createdAtMs ?? 'unknown'}`;
 }
@@ -108,12 +114,26 @@ function isFinitePoint(point: NormalizedPoint | null | undefined): point is Norm
   return Boolean(point) && isFiniteNumber(point?.x) && isFiniteNumber(point?.y);
 }
 
+function isFiniteMappedPoint(point: NormalizedPoint | null | undefined): point is NormalizedPoint {
+  return Boolean(point) && isFiniteMappedNumber(point?.x) && isFiniteMappedNumber(point?.y);
+}
+
 function isFiniteUnitPoint(point: NormalizedPoint | null | undefined): point is NormalizedPoint {
   return Boolean(point) && isFiniteUnitNumber(point?.x) && isFiniteUnitNumber(point?.y);
 }
 
 function isFiniteRect(rect: NormalizedRect | null | undefined): rect is NormalizedRect {
   return Boolean(rect) && isFiniteNumber(rect?.x) && isFiniteNumber(rect?.y) && isFiniteNumber(rect?.width) && isFiniteNumber(rect?.height);
+}
+
+function isFiniteMappedRect(rect: NormalizedRect | null | undefined): rect is NormalizedRect {
+  return (
+    Boolean(rect) &&
+    isFiniteMappedNumber(rect?.x) &&
+    isFiniteMappedNumber(rect?.y) &&
+    isFiniteMappedNumber(rect?.width) &&
+    isFiniteMappedNumber(rect?.height)
+  );
 }
 
 function isFiniteUnitRect(rect: NormalizedRect | null | undefined): rect is NormalizedRect {
@@ -132,6 +152,16 @@ function isFiniteUnitRect(rect: NormalizedRect | null | undefined): rect is Norm
 
 function isFiniteLineSegment(line: NormalizedLineSegment | null | undefined): line is NormalizedLineSegment {
   return Boolean(line) && isFiniteNumber(line?.x1) && isFiniteNumber(line?.y1) && isFiniteNumber(line?.x2) && isFiniteNumber(line?.y2);
+}
+
+function isFiniteMappedLineSegment(line: NormalizedLineSegment | null | undefined): line is NormalizedLineSegment {
+  return (
+    Boolean(line) &&
+    isFiniteMappedNumber(line?.x1) &&
+    isFiniteMappedNumber(line?.y1) &&
+    isFiniteMappedNumber(line?.x2) &&
+    isFiniteMappedNumber(line?.y2)
+  );
 }
 
 function isFiniteUnitLineSegment(line: NormalizedLineSegment | null | undefined): line is NormalizedLineSegment {
@@ -274,7 +304,7 @@ export function cameraEvidenceFromManualSubject(input: CameraEvidenceFromManualS
 
 export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNativeAnalysisInput): CameraEvidenceSnapshot {
   const analysis = input.analysis ?? null;
-  const createdAtMs = finiteCreatedAtMs(analysis?.createdAtMs);
+  const createdAtMs = finiteCreatedAtMs(input.createdAtMs ?? analysis?.createdAtMs);
   if (!analysis || analysis.analysisSource !== 'live-frame') {
     return snapshotFromEvidence(createdAtMs, [], []);
   }
@@ -317,7 +347,7 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
   }
 
   const mapping = input.nativeEvidenceMapping ?? null;
-  if (isFinitePoint(mapping?.mappedVisualMassCenter)) {
+  if (isFiniteMappedPoint(mapping?.mappedVisualMassCenter)) {
     mapped.push(
       makeVisualMassPointEvidence({
         point: mapping.mappedVisualMassCenter,
@@ -328,7 +358,7 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
     );
   }
 
-  if (isFiniteRect(mapping?.mappedVisualMassBounds)) {
+  if (isFiniteMappedRect(mapping?.mappedVisualMassBounds)) {
     mapped.push(
       makeVisualMassRectEvidence({
         rect: mapping.mappedVisualMassBounds,
@@ -339,7 +369,7 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
     );
   }
 
-  if (mapping?.mappedLineCandidate && isFiniteLineSegment(mapping.mappedLineCandidate)) {
+  if (mapping?.mappedLineCandidate && isFiniteMappedLineSegment(mapping.mappedLineCandidate)) {
     mapped.push(
       makeLineEvidence({
         line: mapping.mappedLineCandidate,
@@ -365,7 +395,8 @@ export function buildCameraEvidenceSnapshot(input: BuildCameraEvidenceSnapshotIn
   const createdAtMs = finiteCreatedAtMs(input.createdAtMs ?? input.nativeAnalysis?.createdAtMs ?? null);
   const nativeSnapshot = cameraEvidenceFromNativeAnalysis({
     analysis: input.nativeAnalysis,
-    nativeEvidenceMapping: input.nativeEvidenceMapping
+    nativeEvidenceMapping: input.nativeEvidenceMapping,
+    createdAtMs
   });
   const manualSnapshot = cameraEvidenceFromManualSubject({
     manualSubject: input.manualSubject,

@@ -7,6 +7,7 @@ import {
   type CameraPointEvidence
 } from '../cameraEvidence';
 import { mapNativeEvidenceToPreview } from '../nativeEvidenceCoordinateMapping';
+import type { NativeEvidencePreviewMapping } from '../nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeVisualMassDebug } from '../nativeHeuristicTypes';
 import { scoreDetectedComposition } from '../scoreDetectedComposition';
 import type { CompositionCandidate } from '../types';
@@ -223,6 +224,37 @@ describe('camera evidence model', () => {
     expect(snapshot.debugOnly).toHaveLength(0);
   });
 
+  it('rejects pathological mapped native values safely', () => {
+    const pathologicalMapping: NativeEvidencePreviewMapping = {
+      frameGeometry: null,
+      previewGeometry: { width: 300, height: 400 },
+      transform: null,
+      rawLineCandidate: null,
+      mappedLineCandidate: {
+        x1: 99,
+        y1: -99,
+        x2: 128,
+        y2: -128,
+        angleDeg: 0,
+        confidence: 0.72,
+        kind: 'horizontal-line'
+      },
+      rawVisualMassCenter: null,
+      mappedVisualMassCenter: { x: 99, y: -99 },
+      rawVisualMassBounds: null,
+      mappedVisualMassBounds: { x: 99, y: -99, width: 100, height: 120 }
+    };
+
+    const snapshot = cameraEvidenceFromNativeAnalysis({
+      analysis: makeAnalysis({ visualMassDebug: null }),
+      nativeEvidenceMapping: pathologicalMapping
+    });
+
+    expect(snapshot.raw).toHaveLength(3);
+    expect(snapshot.mapped).toHaveLength(0);
+    expect(snapshot.debugOnly).toHaveLength(1);
+  });
+
   it('preserves evidence source and confidence in combined snapshots', () => {
     const snapshot = buildCameraEvidenceSnapshot({
       nativeAnalysis: makeAnalysis({ visualMassDebug: null }),
@@ -235,6 +267,7 @@ describe('camera evidence model', () => {
       ['native-visual-mass', 0.38],
       ['native-line-signal', 0.72]
     ]);
+    expect(snapshot.raw.map((item) => item.createdAtMs)).toEqual([11_000, 11_000, 11_000]);
     expect(snapshot.mapped[0]).toMatchObject({ source: 'manual', confidence: 1, createdAtMs: 11_000 });
   });
 
