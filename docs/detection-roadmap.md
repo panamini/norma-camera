@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.9 Debug Overlay Preset Tuning
+## Current target: PR4.10 Camera Debug Calibration Notes
 
 The feature stack is complete for this release candidate:
 
@@ -21,6 +21,8 @@ The feature stack is complete for this release candidate:
 - separated debug overlay presets for visual mass and line segment calibration
 
 PR4.9 tunes debug overlay visibility and preset behavior. It does not change detection, scoring, auto-capture, readiness text, native algorithms, native thresholds, the frame pipeline, or the native bridge.
+
+PR4.10 records real-device calibration observations in [`camera-debug-calibration-notes.md`](camera-debug-calibration-notes.md). It is documentation-only and does not change debug overlay behavior or camera algorithms.
 
 ## Native implementation status
 
