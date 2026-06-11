@@ -5,6 +5,7 @@ import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nat
 import { hasRenderableHorizontalLine, shouldRefreshStableHorizontalLineAnchor, stabilizeRecentHorizontalLine } from './nativeLineDiagnosticRetention';
 import { stabilizeLineSegmentsInAnalysis, type StabilizedLineSegment } from './nativeLineSegmentRetention';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
+import { nowMs } from '../shared/time';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -75,7 +76,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         }
 
         const horizontalLineStable = stabilizeRecentHorizontalLine(rawLatest, lastObservedAnalysisWithLineRef.current, lastStableAnalysisWithLineRef.current);
-        const segmentStable = stabilizeLineSegmentsInAnalysis(horizontalLineStable, stableLineSegmentsRef.current);
+        const segmentStable = stabilizeLineSegmentsInAnalysis(horizontalLineStable, stableLineSegmentsRef.current, nowMs());
         const latest = segmentStable.analysis;
         stableLineSegmentsRef.current = segmentStable.stabilizedSegments;
         if (hasRenderableHorizontalLine(rawLatest)) {

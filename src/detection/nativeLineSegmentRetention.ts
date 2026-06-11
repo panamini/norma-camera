@@ -1,4 +1,5 @@
 import type { NativeFrameAnalysisResult, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
+import { nowMs } from '../shared/time';
 
 export type LineSegmentStabilityState = 'fresh' | 'stable' | 'retained';
 
@@ -130,6 +131,12 @@ function segmentWithState(entry: StabilizedLineSegment): StabilizedLineSegmentCa
   };
 }
 
+function stabilityRank(state: LineSegmentStabilityState): number {
+  if (state === 'stable') return 2;
+  if (state === 'retained') return 1;
+  return 0;
+}
+
 export function stabilizedLineSegmentCandidates(entries: StabilizedLineSegment[]): StabilizedLineSegmentCandidate[] {
   return entries.map(segmentWithState);
 }
@@ -191,13 +198,21 @@ export function stabilizeRecentLineSegments(input: StabilizeRecentLineSegmentsIn
   });
 
   return next
-    .sort((a, b) => b.segment.confidence - a.segment.confidence || b.observations - a.observations || b.segment.lengthEuclidean - a.segment.lengthEuclidean)
+    .sort(
+      (a, b) =>
+        stabilityRank(b.stabilityState) -
+          stabilityRank(a.stabilityState) ||
+        b.segment.confidence - a.segment.confidence ||
+        b.observations - a.observations ||
+        b.segment.lengthEuclidean - a.segment.lengthEuclidean
+    )
     .slice(0, options.maxSegments);
 }
 
 export function stabilizeLineSegmentsInAnalysis(
   analysis: NativeFrameAnalysisResult,
-  previousStableSegments: StabilizedLineSegment[]
+  previousStableSegments: StabilizedLineSegment[],
+  currentNowMs: number = nowMs()
 ): { analysis: NativeFrameAnalysisResult; stabilizedSegments: StabilizedLineSegment[] } {
   if (analysis.analysisSource !== 'live-frame' || analysis.status === 'unavailable' || analysis.status === 'error') {
     return { analysis, stabilizedSegments: [] };
@@ -206,7 +221,7 @@ export function stabilizeLineSegmentsInAnalysis(
   const stabilizedSegments = stabilizeRecentLineSegments({
     previousStableSegments,
     latestSegments: analysis.lineSegments,
-    nowMs: analysis.createdAtMs
+    nowMs: currentNowMs
   });
 
   return {

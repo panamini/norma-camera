@@ -77,6 +77,21 @@ describe('stabilizeRecentLineSegments', () => {
     expect(retained[0].lastSeenAtMs).toBe(1_250);
   });
 
+  it('keeps a retained stable segment when fresh segments fill the cap', () => {
+    const first = stabilize([], [makeSegment()], 1_000);
+    const stable = stabilize(first, [makeSegment()], 1_250);
+    const latest = [
+      makeSegment({ y1: 0.1, y2: 0.1, confidence: 0.98 }),
+      makeSegment({ y1: 0.2, y2: 0.2, confidence: 0.97 }),
+      makeSegment({ y1: 0.4, y2: 0.4, confidence: 0.96 }),
+      makeSegment({ y1: 0.5, y2: 0.5, confidence: 0.95 })
+    ];
+    const result = stabilize(stable, latest, 1_450);
+
+    expect(result).toHaveLength(4);
+    expect(result.some((entry) => entry.stabilityState === 'retained')).toBe(true);
+  });
+
   it('drops a missing segment after the retention window', () => {
     const first = stabilize([], [makeSegment()], 1_000);
     const stable = stabilize(first, [makeSegment()], 1_250);
