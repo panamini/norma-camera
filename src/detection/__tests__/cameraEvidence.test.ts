@@ -153,7 +153,7 @@ describe('camera evidence model', () => {
       confidence: 0.72,
       lineKind: 'horizontal-line',
       angleDeg: 0,
-      lengthNormalized: 0.8,
+      lengthEuclidean: 0.8,
       orientationKind: 'horizontal',
       line: { x1: 0.1, y1: 0.3, x2: 0.9, y2: 0.3 }
     });
@@ -174,7 +174,7 @@ describe('camera evidence model', () => {
       lineKind: 'horizontal-line',
       orientationKind: 'horizontal',
       angleDeg: 0,
-      lengthNormalized: 0.8
+      lengthEuclidean: 0.8
     });
     expect(mappedLine).toMatchObject({
       space: 'preview',
@@ -182,7 +182,7 @@ describe('camera evidence model', () => {
       orientationKind: 'vertical'
     });
     expect(mappedLine.angleDeg).toBeCloseTo(-90, 6);
-    expect(mappedLine.lengthNormalized).toBeCloseTo(0.8, 6);
+    expect(mappedLine.lengthEuclidean).toBeCloseTo(0.8, 6);
     expect(mappedLine.line).toEqual({ x1: 0.3, y1: 0.9, x2: 0.3, y2: 0.09999999999999998 });
   });
 
@@ -205,10 +205,10 @@ describe('camera evidence model', () => {
 
     expect(diagonalLine.orientationKind).toBe('diagonal');
     expect(diagonalLine.angleDeg).toBeCloseTo(45, 6);
-    expect(diagonalLine.lengthNormalized).toBeCloseTo(Math.hypot(0.4, 0.4), 6);
+    expect(diagonalLine.lengthEuclidean).toBeCloseTo(Math.hypot(0.4, 0.4), 6);
     expect(zeroLengthLine.orientationKind).toBe('unknown');
     expect(zeroLengthLine.angleDeg).toBeNull();
-    expect(zeroLengthLine.lengthNormalized).toBe(0);
+    expect(zeroLengthLine.lengthEuclidean).toBe(0);
   });
 
   it('converts manual subject into preview scoring point evidence', () => {

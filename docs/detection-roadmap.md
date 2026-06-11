@@ -175,7 +175,7 @@ The PR4.3 TypeScript model keeps evidence explicit by source, shape, coordinate 
 
 Manual subject points, native visual-mass centers, native visual-mass bounds, native line signals, and visual-mass heatmap summaries are all evidence. They do not mean that an object, person, face, or scene has been detected. Visual mass remains contrast/luminance evidence. Line signal remains geometric evidence. The evidence snapshot can expose raw and mapped evidence side by side without changing the existing scoring formula or auto-capture gates.
 
-PR4.4 generalizes line evidence as a line segment contract without changing the detector. `CameraLineSegmentEvidence` stores endpoints, derived `angleDeg`, derived `lengthNormalized`, and visual `orientationKind` (`horizontal`, `vertical`, `diagonal`, or `unknown`). The legacy native `lineKind` remains available for the current horizontal scoring guardrail, but future native line segment detectors should feed the same endpoint-based evidence shape in raw-frame and preview-mapped spaces.
+PR4.4 generalizes line evidence as a line segment contract without changing the detector. `CameraLineSegmentEvidence` stores endpoints, derived `angleDeg`, derived `lengthEuclidean`, and visual `orientationKind` (`horizontal`, `vertical`, `diagonal`, or `unknown`). The legacy native `lineKind` remains available for the current horizontal scoring guardrail, but future native line segment detectors should feed the same endpoint-based evidence shape in raw-frame and preview-mapped spaces.
 
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 

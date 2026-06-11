@@ -34,7 +34,7 @@ export type CameraLineSegmentEvidence = CameraEvidenceBase & {
   kind: 'line-segment';
   line: NormalizedLineSegment;
   angleDeg: number | null;
-  lengthNormalized: number;
+  lengthEuclidean: number;
   orientationKind: LineSegmentOrientationKind;
   lineKind: NativeLineCandidate['kind'];
 };
@@ -171,19 +171,17 @@ function isFiniteUnitLineSegment(line: NormalizedLineSegment | null | undefined)
   return Boolean(line) && isFiniteUnitNumber(line?.x1) && isFiniteUnitNumber(line?.y1) && isFiniteUnitNumber(line?.x2) && isFiniteUnitNumber(line?.y2);
 }
 
-function lineLengthNormalized(line: NormalizedLineSegment): number {
+function lineLengthEuclidean(line: NormalizedLineSegment): number {
   return Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
 }
 
-function lineAngleDeg(line: NormalizedLineSegment): number | null {
-  const length = lineLengthNormalized(line);
+function lineAngleDeg(line: NormalizedLineSegment, length: number): number | null {
   if (!isFiniteNumber(length) || length === 0) return null;
 
   return (Math.atan2(line.y2 - line.y1, line.x2 - line.x1) * 180) / Math.PI;
 }
 
-function lineOrientationKind(line: NormalizedLineSegment): LineSegmentOrientationKind {
-  const angle = lineAngleDeg(line);
+function lineOrientationKind(angle: number | null): LineSegmentOrientationKind {
   if (angle === null) return 'unknown';
 
   const absoluteAngle = Math.abs(angle);
@@ -257,6 +255,8 @@ function makeLineEvidence(params: {
     x2: params.line.x2,
     y2: params.line.y2
   };
+  const lengthEuclidean = lineLengthEuclidean(line);
+  const angleDeg = lineAngleDeg(line, lengthEuclidean);
 
   return {
     id: evidenceId('native-line-signal', params.space, params.createdAtMs),
@@ -268,9 +268,9 @@ function makeLineEvidence(params: {
     createdAtMs: params.createdAtMs,
     explanation: NATIVE_LINE_SIGNAL_EXPLANATION,
     line,
-    angleDeg: lineAngleDeg(line),
-    lengthNormalized: lineLengthNormalized(line),
-    orientationKind: lineOrientationKind(line),
+    angleDeg,
+    lengthEuclidean,
+    orientationKind: lineOrientationKind(angleDeg),
     lineKind: params.line.kind
   };
 }
