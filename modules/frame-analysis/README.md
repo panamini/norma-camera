@@ -34,6 +34,7 @@ VisionCamera frame
   -> horizontal-line signal
   -> debug-only line segment spike candidates
   -> compact normalized result to JS
+  -> JS-side debug-only line segment temporal stabilization
 ```
 
 No raw pixels or luminance grids should cross the JS bridge during live analysis.
@@ -104,7 +105,7 @@ type NativeVisualMassDebug = {
 };
 ```
 
-The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. `lineSegments` is a debug-only native spike over the same downsampled luma grid. None of these signals are semantic recognition.
+The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. `lineSegments` is a debug-only native spike over the same downsampled luma grid. JS may enrich displayed `lineSegments` with `fresh`, `stable`, or `retained` debug state, but none of these signals are semantic recognition.
 The visual-mass debug payload is compact contrast/luminance evidence only: coarse heat cells, top coarse candidate summaries, raw selected candidate, and stabilized candidate. It does not expose raw pixels, a full luminance grid, semantic labels, or object identity.
 
 ## Coordinate calibration
@@ -160,6 +161,8 @@ This spike is debug-only:
 PR4.6 keeps this spike debug-only and calibrates the presentation layer: JS pairs each raw segment with its mapped segment or a mapped-rejection reason, and overlay keys are deterministic from rounded endpoints, source, and orientation rather than UUIDs or index-only keys.
 
 PR4.7 keeps the spike debug-only and calibrates native candidate thresholds only. The detector now keeps at most 3 segments, requires stronger overall edge energy, a higher adaptive edge threshold, 6-cell runs, normalized length at least 0.22, confidence at least 0.32, and same-orientation deduplication within a 0.08 normalized center distance.
+
+PR4.8 keeps the native detector unchanged and stabilizes `lineSegments` in JS for debug presentation only. Same-orientation segments with coherent center, angle, and length become `stable` after repeated observations; previously stable missing segments can be shown briefly as `retained`. This does not create a subject candidate, feed scoring, affect readiness text, trigger capture, or change auto-capture.
 
 Limitations:
 
@@ -217,5 +220,7 @@ Passing JS tests and Expo introspection are necessary but do not prove the nativ
 For PR4.1, capture raw + mapped debug values for a physical horizontal edge and a physical vertical edge in portrait, landscape-left, and landscape-right.
 
 For PR4.6, validate `LINE SEGMENT SPIKE` in portrait upright, landscape-left, and landscape-right against a horizontal table edge, vertical door edge, rectangular screen, keyboard, visible diagonal, cluttered scene, and nearly empty wall. Check visible-line alignment, rotation behavior, raw/mapped coherence, false-positive volume, diagonal visibility, debug text usefulness, native-mode stability, and obvious FPS regressions.
+
+For PR4.8, repeat the PR4.6 scenes and confirm the debug readout distinguishes `fresh`, `stable`, and `retained`; stable visible edges should flicker less, retained segments should disappear quickly, and no ghost segment should persist after the scene changes.
 
 Manual calibration not performed in this coding pass: `adb devices` returned no attached device/emulator.

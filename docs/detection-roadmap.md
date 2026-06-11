@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.5 Native Line Segment Detection Spike
+## Current target: PR4.8 Line Segment Temporal Stabilization
 
 The feature stack is complete for this release candidate:
 
@@ -17,8 +17,9 @@ The feature stack is complete for this release candidate:
 - compact visual-mass heatmap/debug explanation
 - general camera evidence model for raw-frame, preview-mapped, scoring, and debug-only evidence
 - debug-only native line segment spike candidates
+- debug-only line segment temporal stabilization
 
-PR4.5 is a controlled native spike. It adds compact line segment candidates for debug learning only. It must not change scoring, readiness text, capture triggers, auto-capture behavior, the frame pipeline, or the native bridge.
+PR4.8 stabilizes native line segment spike candidates in JS for debug learning only. It must not change scoring, readiness text, capture triggers, auto-capture behavior, the frame pipeline, or the native bridge.
 
 ## Native implementation status
 
@@ -204,6 +205,8 @@ PR4.4 generalizes line evidence as a line segment contract without changing the 
 
 PR4.5 feeds the same evidence model with `source: 'native-line-segment-spike'` and `purpose: 'debug-only'`. Raw and mapped segment evidence are exposed side by side. The debug overlay can show these segments in native debug modes, labeled `LINE SEGMENT SPIKE`.
 
+PR4.8 keeps those segments debug-only and adds JS-side temporal stabilization for presentation. Repeated coherent observations become `stable`, previously stable missing segments can be shown briefly as `retained`, and invalid or drifting segments are rejected rather than refreshed.
+
 ## PR4.5 dependency decision and limits
 
 Chosen option: no new dependency Kotlin prototype over the existing downsampled luma grid.
@@ -257,6 +260,34 @@ Unchanged behavior:
 - `lineSegments` remains `purpose: 'debug-only'`.
 - Composition scoring, readiness text, capture triggers, and auto-capture are unchanged.
 - No OpenCV, Hough transform, ML Kit, backend, cloud, or JS pixel loop is added.
+
+## PR4.8 line segment temporal stabilization
+
+PR4.8 keeps the line segment spike debug-only and adds a JS-side temporal presentation filter. It does not change Kotlin detection thresholds or native frame analysis.
+
+Stabilization rules:
+
+- match only same-orientation segments
+- require close normalized centers
+- require small angle and length deltas
+- require finite coordinates, confidence, and length
+- require repeated observations before a segment can become `stable`
+- retain only previously stable segments, and only briefly
+- cap the output list to the strongest four debug segments
+
+Debug states:
+
+- `fresh`: valid current-frame segment with no coherent previous observation yet
+- `stable`: coherent segment observed in at least two recent frames
+- `retained`: previously stable segment that is briefly held after a missing frame
+
+Unchanged behavior:
+
+- `lineSegments` remains debug-only.
+- `lineSegments` does not create a subject candidate.
+- `lineSegments` does not feed composition scoring.
+- `lineSegments` does not feed readiness text, capture triggers, or auto-capture.
+- No OpenCV, Hough transform, ML Kit, backend, cloud, JS pixel loop, or native dependency is added.
 
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 

@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 import { normalizedLineCandidateOverlaySegment, normalizedLineSegmentSpikeOverlaySegments } from '../detection/nativeLineDiagnosticOverlay';
 import type { NativeLineCandidate, NativeLineSegmentCandidate } from '../detection/nativeHeuristicTypes';
+import type { LineSegmentStabilityState } from '../detection/nativeLineSegmentRetention';
 
 type Props = {
   width: number;
@@ -42,6 +43,12 @@ function labelStyleForSegment(segment: { x1: number; y1: number; x2: number; y2:
   };
 }
 
+function spikeLineStyleForState(stabilityState: LineSegmentStabilityState) {
+  if (stabilityState === 'stable') return styles.stableSpikeLine;
+  if (stabilityState === 'retained') return styles.retainedSpikeLine;
+  return styles.spikeLine;
+}
+
 function HorizontalLineDiagnosticComponent({ width, height, lineCandidate, mappedLineCandidate, lineSegments, showLineSegmentSpike = false }: Props) {
   if (width <= 0 || height <= 0) return null;
 
@@ -58,7 +65,7 @@ function HorizontalLineDiagnosticComponent({ width, height, lineCandidate, mappe
         </>
       ) : null}
       {spikeSegments.map((spikeSegment) => (
-        <View key={spikeSegment.key} style={[styles.spikeLine, lineStyleForSegment(spikeSegment, width, height, 2)]} />
+        <View key={spikeSegment.key} style={[spikeLineStyleForState(spikeSegment.stabilityState), lineStyleForSegment(spikeSegment, width, height, 2)]} />
       ))}
       {spikeSegments[0] ? <Text style={[styles.spikeLabel, labelStyleForSegment(spikeSegments[0], width, height, 118)]}>LINE SEGMENT SPIKE</Text> : null}
     </View>
@@ -81,6 +88,20 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: 'rgba(255,214,96,0.94)',
     backgroundColor: 'rgba(255,214,96,0.22)'
+  },
+  stableSpikeLine: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,232,128,0.98)',
+    backgroundColor: 'rgba(255,232,128,0.34)'
+  },
+  retainedSpikeLine: {
+    position: 'absolute',
+    borderRadius: 999,
+    borderWidth: 1,
+    borderColor: 'rgba(255,214,96,0.58)',
+    backgroundColor: 'rgba(255,214,96,0.13)'
   },
   label: {
     position: 'absolute',

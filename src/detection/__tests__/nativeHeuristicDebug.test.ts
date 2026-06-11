@@ -189,8 +189,8 @@ describe('native live frame debug formatting', () => {
       mapNativeEvidenceToPreview(analysis, { width: 0, height: 400, resizeMode: 'cover' })
     );
 
-    expect(line).toContain('line segment spike: 1 candidate · debug-only · not scoring');
-    expect(line).toContain('segment 1 raw x1=0.100 y1=0.300 x2=0.900 y2=0.300 · horizontal · confidence 64% · length 0.800');
+    expect(line).toContain('line segment spike: 1 candidate · stable 0 · retained 0 · debug-only · not scoring');
+    expect(line).toContain('segment 1 raw x1=0.100 y1=0.300 x2=0.900 y2=0.300 · horizontal · fresh · confidence 64% · length 0.800');
     expect(line).toContain('segment 1 mapped rejected · mapped line segment unavailable');
     expectNoForbiddenSemanticLabels(line);
   });

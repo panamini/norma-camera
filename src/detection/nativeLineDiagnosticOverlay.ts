@@ -1,5 +1,6 @@
 import type { NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
 import { lineSegmentMappingId, type NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
+import type { LineSegmentStabilityState, StabilizedLineSegmentCandidate } from './nativeLineSegmentRetention';
 
 export const MIN_HORIZONTAL_LINE_OVERLAY_CONFIDENCE = 0.34;
 export const MIN_LINE_SEGMENT_SPIKE_OVERLAY_CONFIDENCE = 0.24;
@@ -11,6 +12,7 @@ export type NormalizedLineSegmentSpikeOverlaySegment = NormalizedLineSegment & {
   orientationKind: NativeLineSegmentCandidate['orientationKind'];
   confidence: number;
   lengthEuclidean: number;
+  stabilityState: LineSegmentStabilityState;
 };
 
 function clamp01(value: number): number {
@@ -47,6 +49,11 @@ function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
 }
 
+function lineSegmentStabilityState(segment: NativeLineSegmentCandidate): LineSegmentStabilityState {
+  const stabilityState = (segment as Partial<StabilizedLineSegmentCandidate>).stabilityState;
+  return stabilityState === 'stable' || stabilityState === 'retained' ? stabilityState : 'fresh';
+}
+
 export function normalizedLineSegmentSpikeOverlaySegments(
   lineSegments: NativeLineSegmentCandidate[] | null | undefined
 ): NormalizedLineSegmentSpikeOverlaySegment[] {
@@ -67,7 +74,8 @@ export function normalizedLineSegmentSpikeOverlaySegments(
         y2: segment.y2,
         orientationKind: segment.orientationKind,
         confidence: segment.confidence,
-        lengthEuclidean: segment.lengthEuclidean
+        lengthEuclidean: segment.lengthEuclidean,
+        stabilityState: lineSegmentStabilityState(segment)
       }
     ];
   }).slice(0, MAX_LINE_SEGMENT_SPIKE_OVERLAY_SEGMENTS);

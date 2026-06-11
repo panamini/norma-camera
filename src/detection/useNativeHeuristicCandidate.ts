@@ -3,7 +3,9 @@ import { NativeModules, Platform } from 'react-native';
 import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
 import { hasRenderableHorizontalLine, shouldRefreshStableHorizontalLineAnchor, stabilizeRecentHorizontalLine } from './nativeLineDiagnosticRetention';
+import { stabilizeLineSegmentsInAnalysis, type StabilizedLineSegment } from './nativeLineSegmentRetention';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
+import { nowMs } from '../shared/time';
 
 const POLL_INTERVAL_MS = 250;
 
@@ -37,12 +39,14 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
   const module = useMemo(getFrameAnalysisModule, []);
   const lastObservedAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
   const lastStableAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
+  const stableLineSegmentsRef = useRef<StabilizedLineSegment[]>([]);
   const [state, setState] = useState<NativeHeuristicHookState>(() => unavailableState());
 
   useEffect(() => {
     if (!enabled) {
       lastObservedAnalysisWithLineRef.current = null;
       lastStableAnalysisWithLineRef.current = null;
+      stableLineSegmentsRef.current = [];
       setState(unavailableState());
       return;
     }
@@ -50,6 +54,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
     if (!module || typeof module.getLatestAnalysis !== 'function') {
       lastObservedAnalysisWithLineRef.current = null;
       lastStableAnalysisWithLineRef.current = null;
+      stableLineSegmentsRef.current = [];
       setState(unavailableState());
       return;
     }
@@ -65,11 +70,15 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         if (!rawLatest) {
           lastObservedAnalysisWithLineRef.current = null;
           lastStableAnalysisWithLineRef.current = null;
+          stableLineSegmentsRef.current = [];
           setState(unavailableState());
           return;
         }
 
-        const latest = stabilizeRecentHorizontalLine(rawLatest, lastObservedAnalysisWithLineRef.current, lastStableAnalysisWithLineRef.current);
+        const horizontalLineStable = stabilizeRecentHorizontalLine(rawLatest, lastObservedAnalysisWithLineRef.current, lastStableAnalysisWithLineRef.current);
+        const segmentStable = stabilizeLineSegmentsInAnalysis(horizontalLineStable, stableLineSegmentsRef.current, nowMs());
+        const latest = segmentStable.analysis;
+        stableLineSegmentsRef.current = segmentStable.stabilizedSegments;
         if (hasRenderableHorizontalLine(rawLatest)) {
           lastObservedAnalysisWithLineRef.current = rawLatest;
         }
@@ -78,6 +87,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         } else if (rawLatest.analysisSource !== 'live-frame') {
           lastObservedAnalysisWithLineRef.current = null;
           lastStableAnalysisWithLineRef.current = null;
+          stableLineSegmentsRef.current = [];
         }
 
         setState({
@@ -90,6 +100,7 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         if (cancelled) return;
         lastObservedAnalysisWithLineRef.current = null;
         lastStableAnalysisWithLineRef.current = null;
+        stableLineSegmentsRef.current = [];
         const message = error instanceof Error ? error.message : 'Unknown native visual-mass analysis error';
         setState({
           analysis: {
