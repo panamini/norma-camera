@@ -21,6 +21,18 @@ export type NativeLineCandidate = {
   kind: 'horizontal-line' | 'unknown-line';
 };
 
+export type NativeLineSegmentCandidate = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  angleDeg: number;
+  lengthEuclidean: number;
+  confidence: number;
+  orientationKind: 'horizontal' | 'vertical' | 'diagonal' | 'unknown';
+  src: 'native-line-segment-spike';
+};
+
 export type NativeVisualMassDebugCell = {
   x: number;
   y: number;
@@ -72,6 +84,7 @@ export type NativeFrameAnalysisResult = {
   isMirrored?: boolean;
   subject: NativeSubjectCandidate | null;
   lineCandidate?: NativeLineCandidate | null;
+  lineSegments?: NativeLineSegmentCandidate[];
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
   visualMassDebug?: NativeVisualMassDebug | null;

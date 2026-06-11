@@ -1,5 +1,5 @@
 import type { NormalizedPoint } from '../composition/types';
-import type { NativeFrameAnalysisResult, NativeFrameOrientation, NativeLineCandidate } from './nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeFrameOrientation, NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
 import type { NormalizedRect } from './types';
 
 export type { NativeFrameOrientation };
@@ -45,6 +45,8 @@ export type NativeEvidencePreviewMapping = {
   transform: PreviewFrameTransform | null;
   rawLineCandidate: NativeLineCandidate | null;
   mappedLineCandidate: NativeLineCandidate | null;
+  rawLineSegments: NativeLineSegmentCandidate[];
+  mappedLineSegments: NativeLineSegmentCandidate[];
   rawVisualMassCenter: NormalizedPoint | null;
   mappedVisualMassCenter: NormalizedPoint | null;
   rawVisualMassBounds: NormalizedRect | null;
@@ -69,6 +71,17 @@ function isFiniteRect(rect: NormalizedRect | null | undefined): rect is Normaliz
 
 function isFiniteLine(line: NormalizedLineSegment | null | undefined): line is NormalizedLineSegment {
   return Boolean(line) && isFiniteNumber(line?.x1) && isFiniteNumber(line?.y1) && isFiniteNumber(line?.x2) && isFiniteNumber(line?.y2);
+}
+
+function isFiniteNativeLineSegmentCandidate(segment: NativeLineSegmentCandidate | null | undefined): segment is NativeLineSegmentCandidate {
+  return (
+    Boolean(segment) &&
+    segment?.src === 'native-line-segment-spike' &&
+    isFiniteLine(segment) &&
+    isFiniteNumber(segment?.angleDeg) &&
+    isFiniteNumber(segment?.lengthEuclidean) &&
+    isFiniteNumber(segment?.confidence)
+  );
 }
 
 export function isNativeFrameOrientation(value: unknown): value is NativeFrameOrientation {
@@ -223,6 +236,22 @@ function lineAngleDeg(line: NormalizedLineSegment): number {
   return (Math.atan2(line.y2 - line.y1, line.x2 - line.x1) * 180) / Math.PI;
 }
 
+function lineLengthEuclidean(line: NormalizedLineSegment): number {
+  return Math.hypot(line.x2 - line.x1, line.y2 - line.y1);
+}
+
+function lineOrientationKind(line: NormalizedLineSegment): NativeLineSegmentCandidate['orientationKind'] {
+  const length = lineLengthEuclidean(line);
+  if (!isFiniteNumber(length) || length <= 0) return 'unknown';
+
+  const absoluteAngle = Math.abs(lineAngleDeg(line));
+  const horizontalDistance = Math.min(absoluteAngle, Math.abs(180 - absoluteAngle));
+  const verticalDistance = Math.abs(90 - absoluteAngle);
+  if (horizontalDistance <= 15) return 'horizontal';
+  if (verticalDistance <= 15) return 'vertical';
+  return 'diagonal';
+}
+
 function mappedLineKind(line: NormalizedLineSegment): NativeLineCandidate['kind'] {
   const dx = Math.abs(line.x2 - line.x1);
   const dy = Math.abs(line.y2 - line.y1);
@@ -246,6 +275,30 @@ export function mapNativeLineCandidateToPreviewLineCandidate(
   };
 }
 
+export function mapNativeLineSegmentCandidateToPreviewLineSegmentCandidate(
+  segment: NativeLineSegmentCandidate | null | undefined,
+  frame: NativeFrameGeometry,
+  preview: PreviewGeometry
+): NativeLineSegmentCandidate | null {
+  if (!isFiniteNativeLineSegmentCandidate(segment)) return null;
+
+  const mappedLine = mapNormalizedFrameLineToPreviewLine(segment, frame, preview);
+  if (!mappedLine) return null;
+
+  return {
+    ...segment,
+    ...mappedLine,
+    angleDeg: lineAngleDeg(mappedLine),
+    lengthEuclidean: lineLengthEuclidean(mappedLine),
+    orientationKind: lineOrientationKind(mappedLine)
+  };
+}
+
+function nativeLineSegmentsFromAnalysis(analysis: NativeFrameAnalysisResult | null | undefined): NativeLineSegmentCandidate[] {
+  if (!Array.isArray(analysis?.lineSegments)) return [];
+  return analysis.lineSegments.filter(isFiniteNativeLineSegmentCandidate);
+}
+
 export function mapNativeEvidenceToPreview(
   analysis: NativeFrameAnalysisResult | null | undefined,
   previewGeometry: PreviewGeometry
@@ -253,6 +306,7 @@ export function mapNativeEvidenceToPreview(
   const frameGeometry = nativeFrameGeometryFromAnalysis(analysis);
   const transform = frameGeometry ? getPreviewFrameTransform(frameGeometry, previewGeometry) : null;
   const rawLineCandidate = analysis?.lineCandidate ?? null;
+  const rawLineSegments = nativeLineSegmentsFromAnalysis(analysis);
   const rawVisualMassCenter = analysis?.subject?.center ?? null;
   const rawVisualMassBounds = analysis?.subject?.bounds ?? null;
 
@@ -262,6 +316,12 @@ export function mapNativeEvidenceToPreview(
     transform,
     rawLineCandidate,
     mappedLineCandidate: frameGeometry ? mapNativeLineCandidateToPreviewLineCandidate(rawLineCandidate, frameGeometry, previewGeometry) : null,
+    rawLineSegments,
+    mappedLineSegments: frameGeometry
+      ? rawLineSegments
+          .map((segment) => mapNativeLineSegmentCandidateToPreviewLineSegmentCandidate(segment, frameGeometry, previewGeometry))
+          .filter((segment): segment is NativeLineSegmentCandidate => segment !== null)
+      : [],
     rawVisualMassCenter,
     mappedVisualMassCenter:
       frameGeometry && rawVisualMassCenter ? mapNormalizedFramePointToPreviewPoint(rawVisualMassCenter, frameGeometry, previewGeometry) : null,

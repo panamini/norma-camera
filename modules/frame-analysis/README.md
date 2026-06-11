@@ -32,6 +32,7 @@ VisionCamera frame
   -> sharpness / edge energy
   -> contrast visual-mass candidate
   -> horizontal-line signal
+  -> debug-only line segment spike candidates
   -> compact normalized result to JS
 ```
 
@@ -51,6 +52,7 @@ type NativeFrameAnalysisResult = {
   isMirrored?: boolean;
   subject: NativeSubjectCandidate | null;
   lineCandidate?: NativeLineCandidate | null;
+  lineSegments?: NativeLineSegmentCandidate[];
   exposure: NativeExposureMetrics | null;
   sharpness: NativeSharpnessMetrics | null;
   visualMassDebug?: NativeVisualMassDebug | null;
@@ -77,6 +79,18 @@ type NativeLineCandidate = {
   kind: 'horizontal-line' | 'unknown-line';
 };
 
+type NativeLineSegmentCandidate = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  angleDeg: number;
+  lengthEuclidean: number;
+  confidence: number;
+  orientationKind: 'horizontal' | 'vertical' | 'diagonal' | 'unknown';
+  src: 'native-line-segment-spike';
+};
+
 type NativeVisualMassDebug = {
   gridWidth: number;
   gridHeight: number;
@@ -90,7 +104,7 @@ type NativeVisualMassDebug = {
 };
 ```
 
-The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. Neither is semantic recognition.
+The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. `lineSegments` is a debug-only native spike over the same downsampled luma grid. None of these signals are semantic recognition.
 The visual-mass debug payload is compact contrast/luminance evidence only: coarse heat cells, top coarse candidate summaries, raw selected candidate, and stabilized candidate. It does not expose raw pixels, a full luminance grid, semantic labels, or object identity.
 
 ## Coordinate calibration
@@ -102,6 +116,8 @@ JS keeps raw and mapped evidence side by side:
 ```txt
 rawLineCandidate
 mappedLineCandidate
+rawLineSegments
+mappedLineSegments
 rawVisualMassBounds
 mappedVisualMassBounds
 rawVisualMassCenter
@@ -128,6 +144,24 @@ PR4.3 adds a TypeScript camera evidence model on the JS side. It adapts the exis
 PR4.4 keeps the native analyzer unchanged and generalizes line evidence as endpoint-based `CameraLineSegmentEvidence`. The evidence layer derives `angleDeg`, `lengthEuclidean`, and visual `orientationKind` from `x1/y1/x2/y2` in whichever coordinate space the evidence occupies, so a raw horizontal signal can become vertical or diagonal after preview mapping.
 
 This model is a contract layer only. It does not add OpenCV, Hough lines, a new native detector, coordinate mapping math changes, composition scoring changes, auto-capture changes, or visual-mass/line heuristic changes. Visual mass remains contrast/luminance evidence, not object detection. Line segment evidence remains geometric evidence.
+
+## PR4.5 line segment spike
+
+PR4.5 adds `LineSegmentHeuristic.kt`, a no-dependency Android/Kotlin prototype over the existing 32x24 luma grid. It scans simple horizontal, vertical, and diagonal edge runs, scores by length, coverage, and contrast, keeps a compact top-N list, and emits `lineSegments`.
+
+This spike is debug-only:
+
+- `lineCandidate` remains compatible and unchanged.
+- `lineSegments` does not feed composition scoring.
+- `lineSegments` does not feed readiness text, capture triggers, or auto-capture.
+- No OpenCV, ML Kit, cloud, backend, or JS pixel loop is added.
+- The debug overlay can show mapped segments labeled `LINE SEGMENT SPIKE` in native debug modes.
+
+Limitations:
+
+- The grid is intentionally coarse, so endpoints are approximate.
+- Textures and high-contrast clutter can outrank real scene lines.
+- Kotlin unit tests are not currently wired for this local Expo module; TS tests cover bridge contract, mapping, evidence, debug readout, and scoring guardrails, while Android build validation covers native compilation.
 
 ## PR4.2 visual mass debug heatmap
 

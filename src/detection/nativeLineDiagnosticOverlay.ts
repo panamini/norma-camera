@@ -1,7 +1,14 @@
-import type { NativeLineCandidate } from './nativeHeuristicTypes';
+import type { NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
 import type { NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 
 export const MIN_HORIZONTAL_LINE_OVERLAY_CONFIDENCE = 0.34;
+export const MIN_LINE_SEGMENT_SPIKE_OVERLAY_CONFIDENCE = 0.24;
+export const MIN_LINE_SEGMENT_SPIKE_OVERLAY_LENGTH = 0.08;
+
+export type NormalizedLineSegmentSpikeOverlaySegment = NormalizedLineSegment & {
+  orientationKind: NativeLineSegmentCandidate['orientationKind'];
+  confidence: number;
+};
 
 function clamp01(value: number): number {
   return Math.max(0, Math.min(1, value));
@@ -31,4 +38,32 @@ export function normalizedLineCandidateOverlaySegment(lineCandidate: NativeLineC
     x2: lineCandidate.x2,
     y2: lineCandidate.y2
   };
+}
+
+function isFiniteNumber(value: number | null | undefined): value is number {
+  return typeof value === 'number' && Number.isFinite(value);
+}
+
+export function normalizedLineSegmentSpikeOverlaySegments(
+  lineSegments: NativeLineSegmentCandidate[] | null | undefined
+): NormalizedLineSegmentSpikeOverlaySegment[] {
+  if (!Array.isArray(lineSegments)) return [];
+
+  return lineSegments.flatMap((segment) => {
+    if (segment.src !== 'native-line-segment-spike') return [];
+    if (!isFiniteNumber(segment.x1) || !isFiniteNumber(segment.x2) || !isFiniteNumber(segment.y1) || !isFiniteNumber(segment.y2)) return [];
+    if (!isFiniteNumber(segment.confidence) || segment.confidence < MIN_LINE_SEGMENT_SPIKE_OVERLAY_CONFIDENCE) return [];
+    if (!isFiniteNumber(segment.lengthEuclidean) || segment.lengthEuclidean < MIN_LINE_SEGMENT_SPIKE_OVERLAY_LENGTH) return [];
+
+    return [
+      {
+        x1: segment.x1,
+        y1: segment.y1,
+        x2: segment.x2,
+        y2: segment.y2,
+        orientationKind: segment.orientationKind,
+        confidence: segment.confidence
+      }
+    ];
+  });
 }
