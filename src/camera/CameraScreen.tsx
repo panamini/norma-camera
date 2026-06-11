@@ -595,6 +595,8 @@ export function CameraScreen() {
           candidateBounds={candidateBounds}
           lineCandidate={nativeHeuristic.analysis?.lineCandidate}
           mappedLineCandidate={nativeEvidenceMapping.mappedLineCandidate}
+          lineSegments={nativeEvidenceMapping.mappedLineSegments}
+          showLineSegmentSpike={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
           visualMassDebug={visualMassDebugOverlay?.mapped ?? null}
           showVisualMassDebug={detectionMode === 'native-heuristic' && debugQualityMode !== 'normal'}
         />

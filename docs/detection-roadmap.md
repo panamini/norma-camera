@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.3 General Camera Evidence Model
+## Current target: PR4.5 Native Line Segment Detection Spike
 
 The feature stack is complete for this release candidate:
 
@@ -16,8 +16,9 @@ The feature stack is complete for this release candidate:
 - explicit native evidence coordinate mapping for overlay/debug
 - compact visual-mass heatmap/debug explanation
 - general camera evidence model for raw-frame, preview-mapped, scoring, and debug-only evidence
+- debug-only native line segment spike candidates
 
-PR4.3 is a camera-side evidence-model pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
+PR4.5 is a controlled native spike. It adds compact line segment candidates for debug learning only. It must not change scoring, readiness text, capture triggers, auto-capture behavior, the frame pipeline, or the native bridge.
 
 ## Native implementation status
 
@@ -52,6 +53,7 @@ VisionCamera frame
   -> contrast visual-mass candidate
   -> compact contrast/luminance debug cells and candidate summaries
   -> horizontal-line signal
+  -> debug-only no-dependency line segment spike candidates
   -> native frame/grid/orientation/mirroring metadata
   -> compact normalized result to JS
   -> explicit raw-frame to preview-coordinate mapping for overlay/debug
@@ -130,6 +132,29 @@ type NativeLineCandidate = {
 
 The line signal is secondary. It can add a small tested contribution to composition scoring only when a subject candidate exists. It must not make a no-subject frame ready.
 
+### Native line segment spike
+
+```ts
+type NativeLineSegmentCandidate = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+  angleDeg: number;
+  lengthEuclidean: number;
+  confidence: number;
+  orientationKind: 'horizontal' | 'vertical' | 'diagonal' | 'unknown';
+  src: 'native-line-segment-spike';
+};
+
+type NativeFrameAnalysisResult = {
+  lineCandidate?: NativeLineCandidate | null;
+  lineSegments?: NativeLineSegmentCandidate[];
+};
+```
+
+`lineSegments` is separate from the legacy `lineCandidate`. It is debug-only evidence from a no-dependency Kotlin prototype over the existing 32x24 luma grid. It is not used for scoring, readiness text, capture triggers, or auto-capture.
+
 ## Coordinate calibration contract
 
 Native visual mass is contrast/luminance evidence, not object detection. Horizontal line signal is geometric evidence, not semantic composition.
@@ -176,6 +201,25 @@ The PR4.3 TypeScript model keeps evidence explicit by source, shape, coordinate 
 Manual subject points, native visual-mass centers, native visual-mass bounds, native line signals, and visual-mass heatmap summaries are all evidence. They do not mean that an object, person, face, or scene has been detected. Visual mass remains contrast/luminance evidence. Line signal remains geometric evidence. The evidence snapshot can expose raw and mapped evidence side by side without changing the existing scoring formula or auto-capture gates.
 
 PR4.4 generalizes line evidence as a line segment contract without changing the detector. `CameraLineSegmentEvidence` stores endpoints, derived `angleDeg`, derived `lengthEuclidean`, and visual `orientationKind` (`horizontal`, `vertical`, `diagonal`, or `unknown`). The legacy native `lineKind` remains available for the current horizontal scoring guardrail, but future native line segment detectors should feed the same endpoint-based evidence shape in raw-frame and preview-mapped spaces.
+
+PR4.5 feeds the same evidence model with `source: 'native-line-segment-spike'` and `purpose: 'debug-only'`. Raw and mapped segment evidence are exposed side by side. The debug overlay can show these segments in native debug modes, labeled `LINE SEGMENT SPIKE`.
+
+## PR4.5 dependency decision and limits
+
+Chosen option: no new dependency Kotlin prototype over the existing downsampled luma grid.
+
+Rejected for PR4.5:
+
+- OpenCV Android `HoughLinesP`: requires explicit approval because it affects Android build complexity, Expo/dev-client rebuild expectations, APK size, and maintenance surface.
+- Native C++/Nitro/OpenCV path: better evaluated after the no-dependency spike produces device evidence.
+- JS pixel processing: violates the live-analysis bridge constraint.
+
+Known limits:
+
+- The 32x24 grid is coarse; endpoints and diagonals are approximate.
+- High-contrast texture can produce stronger candidates than real composition lines.
+- The spike scans horizontal, vertical, and simple diagonals only; it is not semantic scene understanding.
+- Kotlin unit test infrastructure is not currently present in `modules/frame-analysis`; PR4.5 covers TS mapping/evidence/debug guardrails and validates native compilation through Android build.
 
 PR4.3 keeps `CompositionCandidate` and the existing native DTOs in place. The evidence model is a transition layer for clarity and future adapters, including future line segments, future detectors, manual evidence, or a later Norma Core adapter.
 
@@ -257,7 +301,7 @@ Manual Android checks:
 
 Do not add:
 
-- new detector
+- new production detector
 - new composition heuristic
 - new scoring formula
 - OpenCV

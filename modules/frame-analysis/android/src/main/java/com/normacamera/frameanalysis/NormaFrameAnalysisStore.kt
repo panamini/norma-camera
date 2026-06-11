@@ -30,19 +30,42 @@ object NormaFrameAnalysisStore {
       valueRange = valueRange,
       overallEdgeEnergy = metrics.sharpness.edgeEnergy
     )
+    val lineSegments = LineSegmentHeuristic.detect(
+      grid = values,
+      width = width,
+      height = height,
+      valueRange = valueRange,
+      overallEdgeEnergy = metrics.sharpness.edgeEnergy
+    )
     val explanation = when {
+      analysisSource == "live-frame" && lineSegments.isNotEmpty() && subject != null && lineCandidate != null ->
+        "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. Debug-only line segment spike candidates are available. No recognition is used."
+      analysisSource == "live-frame" && lineSegments.isNotEmpty() && lineCandidate != null ->
+        "Real live Android luminance metrics are available. A horizontal-line signal is available, and debug-only line segment spike candidates are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       analysisSource == "live-frame" && subject != null && lineCandidate != null ->
         "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. No recognition is used."
       analysisSource == "live-frame" && lineCandidate != null ->
         "Real live Android luminance metrics are available. A horizontal-line signal is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
+      lineSegments.isNotEmpty() && subject != null && lineCandidate != null ->
+        "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. Debug-only line segment spike candidates are available. No recognition is used."
+      lineSegments.isNotEmpty() && lineCandidate != null ->
+        "Real Android luminance metrics are available. A horizontal-line signal is available, and debug-only line segment spike candidates are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       subject != null && lineCandidate != null ->
         "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. A horizontal-line signal is available. No recognition is used."
       lineCandidate != null ->
         "Real Android luminance metrics are available. A horizontal-line signal is available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
+      analysisSource == "live-frame" && lineSegments.isNotEmpty() && subject != null ->
+        "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. Debug-only line segment spike candidates are available. No recognition is used."
+      analysisSource == "live-frame" && lineSegments.isNotEmpty() ->
+        "Real live Android luminance metrics are available. Debug-only line segment spike candidates are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       analysisSource == "live-frame" && subject != null ->
         "Real live Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       analysisSource == "live-frame" ->
         "Real live Android luminance metrics are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
+      lineSegments.isNotEmpty() && subject != null ->
+        "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. Debug-only line segment spike candidates are available. No recognition is used."
+      lineSegments.isNotEmpty() ->
+        "Real Android luminance metrics are available. Debug-only line segment spike candidates are available, but no strong visual-mass candidate passed the confidence threshold. No recognition is used."
       subject != null ->
         "Real Android luminance metrics and a stabilized coarse native visual-mass candidate are available. No recognition is used."
       else ->
@@ -53,6 +76,7 @@ object NormaFrameAnalysisStore {
       "createdAtMs" to createdAtMs,
       "subject" to subject?.toMap(),
       "lineCandidate" to lineCandidate?.toMap(),
+      "lineSegments" to lineSegments.map { it.toMap() },
       "exposure" to mapOf(
         "exposureScore" to metrics.exposure.exposureScore,
         "meanLuma" to metrics.exposure.meanLuma,
@@ -89,6 +113,7 @@ object NormaFrameAnalysisStore {
       "createdAtMs" to createdAtMs,
       "subject" to null,
       "lineCandidate" to null,
+      "lineSegments" to emptyList<Map<String, Any>>(),
       "exposure" to null,
       "sharpness" to null,
       "analysisSource" to "analyzer-unavailable",

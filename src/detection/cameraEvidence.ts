@@ -1,9 +1,9 @@
 import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
-import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeVisualMassDebug } from './nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate, NativeVisualMassDebug } from './nativeHeuristicTypes';
 import { nativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedPoint, NormalizedRect } from './types';
 
-export type CameraEvidenceSource = 'manual' | 'native-visual-mass' | 'native-line-signal' | 'simulated' | 'placeholder';
+export type CameraEvidenceSource = 'manual' | 'native-visual-mass' | 'native-line-signal' | 'native-line-segment-spike' | 'simulated' | 'placeholder';
 export type CameraEvidenceSpace = 'raw-frame' | 'preview';
 export type CameraEvidenceKind = 'point' | 'rect' | 'line-segment' | 'heatmap';
 export type CameraEvidencePurpose = 'scoring' | 'debug-only';
@@ -36,7 +36,8 @@ export type CameraLineSegmentEvidence = CameraEvidenceBase & {
   angleDeg: number | null;
   lengthEuclidean: number;
   orientationKind: LineSegmentOrientationKind;
-  lineKind: NativeLineCandidate['kind'];
+  lineKind?: NativeLineCandidate['kind'];
+  lineSegmentSource?: NativeLineSegmentCandidate['src'];
 };
 
 export type CameraHeatmapSummary = {
@@ -85,9 +86,11 @@ export type BuildCameraEvidenceSnapshotInput = {
 
 const NATIVE_VISUAL_MASS_EXPLANATION = 'Native visual mass signal from contrast/luminance analysis; not object detection.';
 const NATIVE_LINE_SIGNAL_EXPLANATION = 'Native line signal is geometric evidence, not object recognition.';
+const NATIVE_LINE_SEGMENT_SPIKE_EXPLANATION = 'Native line segment spike is debug-only geometric evidence; it is not used for scoring or recognition.';
 const MANUAL_SUBJECT_EXPLANATION = 'Manual subject point selected by the user.';
 const VISUAL_MASS_HEATMAP_EXPLANATION = 'Visual mass heatmap summarizes contrast/luminance evidence; not object detection.';
 const MAPPED_EVIDENCE_COORDINATE_LIMIT = 16;
+const MIN_NATIVE_LINE_SEGMENT_SPIKE_EVIDENCE_LENGTH = 0.08;
 
 function isFiniteNumber(value: number | null | undefined): value is number {
   return typeof value === 'number' && Number.isFinite(value);
@@ -111,6 +114,10 @@ function isFiniteMappedNumber(value: number | null | undefined): value is number
 
 function evidenceId(prefix: string, space: CameraEvidenceSpace, createdAtMs: number | null): string {
   return `${prefix}-${space}-${createdAtMs ?? 'unknown'}`;
+}
+
+function indexedEvidenceId(prefix: string, index: number, space: CameraEvidenceSpace, createdAtMs: number | null): string {
+  return `${prefix}-${index}-${space}-${createdAtMs ?? 'unknown'}`;
 }
 
 function isFinitePoint(point: NormalizedPoint | null | undefined): point is NormalizedPoint {
@@ -193,6 +200,10 @@ function lineOrientationKind(angle: number | null): LineSegmentOrientationKind {
   return 'diagonal';
 }
 
+function hasMinimumSpikeLength(line: NormalizedLineSegment | null | undefined): boolean {
+  return isFiniteLineSegment(line) && lineLengthEuclidean(line) >= MIN_NATIVE_LINE_SEGMENT_SPIKE_EVIDENCE_LENGTH;
+}
+
 function snapshotFromEvidence(createdAtMs: number | null, raw: CameraEvidence[], mapped: CameraEvidence[]): CameraEvidenceSnapshot {
   const all = [...raw, ...mapped];
 
@@ -272,6 +283,39 @@ function makeLineEvidence(params: {
     lengthEuclidean,
     orientationKind: lineOrientationKind(angleDeg),
     lineKind: params.line.kind
+  };
+}
+
+function makeLineSegmentSpikeEvidence(params: {
+  segment: NativeLineSegmentCandidate;
+  index: number;
+  space: CameraEvidenceSpace;
+  confidence: number | null;
+  createdAtMs: number | null;
+}): CameraLineSegmentEvidence {
+  const line = {
+    x1: params.segment.x1,
+    y1: params.segment.y1,
+    x2: params.segment.x2,
+    y2: params.segment.y2
+  };
+  const lengthEuclidean = lineLengthEuclidean(line);
+  const angleDeg = lineAngleDeg(line, lengthEuclidean);
+
+  return {
+    id: indexedEvidenceId('native-line-segment-spike', params.index, params.space, params.createdAtMs),
+    source: 'native-line-segment-spike',
+    kind: 'line-segment',
+    space: params.space,
+    purpose: 'debug-only',
+    confidence: params.confidence,
+    createdAtMs: params.createdAtMs,
+    explanation: NATIVE_LINE_SEGMENT_SPIKE_EXPLANATION,
+    line,
+    angleDeg,
+    lengthEuclidean,
+    orientationKind: lineOrientationKind(angleDeg),
+    lineSegmentSource: params.segment.src
   };
 }
 
@@ -377,6 +421,21 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
     );
   }
 
+  if (Array.isArray(analysis.lineSegments)) {
+    analysis.lineSegments.forEach((segment, index) => {
+      if (!isFiniteUnitLineSegment(segment) || !hasMinimumSpikeLength(segment)) return;
+      raw.push(
+        makeLineSegmentSpikeEvidence({
+          segment,
+          index,
+          space: 'raw-frame',
+          confidence: finiteConfidence(segment.confidence),
+          createdAtMs
+        })
+      );
+    });
+  }
+
   const mapping = input.nativeEvidenceMapping ?? null;
   if (isFiniteMappedPoint(mapping?.mappedVisualMassCenter)) {
     mapped.push(
@@ -409,6 +468,21 @@ export function cameraEvidenceFromNativeAnalysis(input: CameraEvidenceFromNative
         createdAtMs
       })
     );
+  }
+
+  if (Array.isArray(mapping?.mappedLineSegments)) {
+    mapping.mappedLineSegments.forEach((segment, index) => {
+      if (!isFiniteMappedLineSegment(segment) || !hasMinimumSpikeLength(segment)) return;
+      mapped.push(
+        makeLineSegmentSpikeEvidence({
+          segment,
+          index,
+          space: 'preview',
+          confidence: finiteConfidence(segment.confidence),
+          createdAtMs
+        })
+      );
+    });
   }
 
   const debugOverlay = nativeVisualMassDebugOverlay(analysis, mapping ?? undefined);

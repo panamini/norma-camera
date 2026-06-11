@@ -2,7 +2,7 @@ import type { GuideKind, NormalizedPoint } from '../composition/types';
 import { nowMs } from '../shared/time';
 import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
 import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
-import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
+import type { NativeFrameAnalysisResult, NativeLineCandidate, NativeLineSegmentCandidate } from './nativeHeuristicTypes';
 import { nativeVisualMassDebugOverlay, type NativeVisualMassDebugOverlay } from './nativeVisualMassOverlay';
 import type { NormalizedRect } from './types';
 
@@ -59,6 +59,12 @@ function formatLineSegment(line: NormalizedLineSegment | null | undefined): stri
   return `x1=${formatFixedMetric(line.x1, 3)} y1=${formatFixedMetric(line.y1, 3)} x2=${formatFixedMetric(line.x2, 3)} y2=${formatFixedMetric(line.y2, 3)}`;
 }
 
+function formatSegmentSpikeLine(index: number, label: 'raw' | 'mapped', segment: NativeLineSegmentCandidate | null | undefined): string | null {
+  if (!segment) return null;
+  const confidence = Math.round(clamp01(segment.confidence) * 100);
+  return `segment ${index + 1} ${label} ${formatLineSegment(segment)} · ${segment.orientationKind} · confidence ${confidence}%`;
+}
+
 function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
   if (typeof analysis.updateCount === 'number') return `updates ${Math.round(analysis.updateCount)}`;
   return `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
@@ -81,6 +87,16 @@ function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | und
 
   const frame = mapping.frameGeometry;
   const transform = mapping.transform;
+  const lineSegmentSpikeLines =
+    mapping.rawLineSegments.length > 0
+      ? [
+          `line segment spike: ${mapping.rawLineSegments.length} candidate${mapping.rawLineSegments.length === 1 ? '' : 's'} · debug-only · not scoring`,
+          ...mapping.rawLineSegments
+            .slice(0, 3)
+            .flatMap((segment, index) => [formatSegmentSpikeLine(index, 'raw', segment), formatSegmentSpikeLine(index, 'mapped', mapping.mappedLineSegments[index])])
+            .filter((line): line is string => line !== null)
+        ]
+      : [];
   return [
     `frame ${formatOptionalSize(frame?.frameWidth, frame?.frameHeight)} · grid ${formatOptionalSize(frame?.gridWidth, frame?.gridHeight)} · preview ${formatOptionalSize(mapping.previewGeometry.width, mapping.previewGeometry.height)}`,
     `orientation ${frame?.frameOrientation ?? 'unavailable'} · mirror ${formatMappingBool(frame?.isMirrored)} · resize ${mapping.previewGeometry.resizeMode ?? 'cover'}`,
@@ -88,6 +104,7 @@ function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | und
       ? `presented ${formatOptionalSize(transform.presentedFrameWidth, transform.presentedFrameHeight)} · scale ${formatFixedMetric(transform.scale, 3)} · crop x ${formatFixedMetric(transform.offsetX, 1)} y ${formatFixedMetric(transform.offsetY, 1)}`
       : 'presented n/a · scale n/a · crop x n/a y n/a',
     `line raw ${formatLineSegment(mapping.rawLineCandidate)} · line mapped ${formatLineSegment(mapping.mappedLineCandidate)}`,
+    ...lineSegmentSpikeLines,
     `mass raw center ${formatPoint(mapping.rawVisualMassCenter)} · bounds ${formatRect(mapping.rawVisualMassBounds)}`,
     `mass mapped center ${formatPoint(mapping.mappedVisualMassCenter)} · bounds ${formatRect(mapping.mappedVisualMassBounds)}`
   ];
@@ -161,6 +178,7 @@ export function normalizeNativeAnalysisFreshness(
     status: 'unavailable',
     subject: null,
     lineCandidate: null,
+    lineSegments: [],
     exposure: null,
     sharpness: null,
     analysisSource: 'stale-live-frame',

@@ -3,7 +3,7 @@ import { StyleSheet, View } from 'react-native';
 import { guideKindsForOverlayMode } from '../composition/guides';
 import type { OverlayMode } from '../composition/types';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
-import type { NativeLineCandidate, NativeVisualMassDebug } from '../detection/nativeHeuristicTypes';
+import type { NativeLineCandidate, NativeLineSegmentCandidate, NativeVisualMassDebug } from '../detection/nativeHeuristicTypes';
 import type { DetectionSource, NormalizedRect } from '../detection/types';
 import { CandidateBounds } from './CandidateBounds';
 import { GuideLines } from './GuideLines';
@@ -20,6 +20,8 @@ type Props = {
   candidateBounds?: NormalizedRect;
   lineCandidate?: NativeLineCandidate | null;
   mappedLineCandidate?: NativeLineCandidate | null;
+  lineSegments?: NativeLineSegmentCandidate[] | null;
+  showLineSegmentSpike?: boolean;
   visualMassDebug?: NativeVisualMassDebug | null;
   showVisualMassDebug?: boolean;
 };
@@ -32,6 +34,8 @@ function CompositionOverlayComponent({
   candidateSource,
   lineCandidate,
   mappedLineCandidate,
+  lineSegments,
+  showLineSegmentSpike = false,
   visualMassDebug,
   showVisualMassDebug = false
 }: Props) {
@@ -44,7 +48,14 @@ function CompositionOverlayComponent({
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <GuideLines width={width} height={height} activeGuideKinds={activeGuideKinds} sharedValues={sharedValues} />
-      <HorizontalLineDiagnostic width={width} height={height} lineCandidate={lineCandidate} mappedLineCandidate={mappedLineCandidate} />
+      <HorizontalLineDiagnostic
+        width={width}
+        height={height}
+        lineCandidate={lineCandidate}
+        mappedLineCandidate={mappedLineCandidate}
+        lineSegments={lineSegments}
+        showLineSegmentSpike={showLineSegmentSpike}
+      />
       {showVisualMassDebug ? <VisualMassHeatmap width={width} height={height} debug={visualMassDebug ?? null} /> : null}
       <CandidateBounds width={width} height={height} source={candidateSource} sharedValues={sharedValues} />
       <SubjectMarker width={width} height={height} sharedValues={sharedValues} source={candidateSource} />
