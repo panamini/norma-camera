@@ -187,7 +187,7 @@ Installed VisionCamera types define orientation as `'up' | 'right' | 'down' | 'l
 
 For PR4.1, overlay/debug uses mapped evidence. Scoring remains on the existing raw native candidate inputs, so the scoring formula and auto-capture behavior are unchanged. If a later PR changes scoring inputs to mapped coordinates, the PR must state: `Scoring formula unchanged, but native candidate input coordinates are corrected from raw-frame space to preview/composition space.`
 
-For PR4.2, non-normal debug quality modes introduced a mapped visual-mass heatmap. PR4.9 separates that heatmap into the `mass` debug overlay preset so line segment calibration can run without the heatmap covering the camera image. The debug copy must say contrast/luminance evidence, not object detection. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
+For PR4.2, non-normal debug quality modes introduced a mapped visual-mass heatmap. PR4.9 separates that heatmap into the `mass` debug overlay preset so line segment calibration can run without the heatmap covering the camera image. The debug copy must say contrast/luminance evidence, not object detection, and the heatmap label remains `CONTRAST MASS · NOT OBJECT DETECTION`. Visual mass can be wrong in cluttered scenes and can prefer high-contrast black/white regions over subtle objects.
 
 ## Camera Evidence Model
 

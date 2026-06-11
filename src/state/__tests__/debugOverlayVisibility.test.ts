@@ -50,6 +50,22 @@ describe('debug overlay visibility policy', () => {
     });
   });
 
+  it('shows the mixed preset with all native overlays in native heuristic mode', () => {
+    expect(
+      getDebugOverlayVisibility({
+        detectionMode: 'native-heuristic',
+        debugQualityMode: 'motion',
+        showPanels: true,
+        hasNativeAnalysis: true
+      })
+    ).toEqual({
+      showVisualMassDebug: true,
+      showLineSignal: true,
+      showLineSegmentSpike: true,
+      showNativeDebugText: true
+    });
+  });
+
   it('keeps overlay visibility stable when panels are hidden', () => {
     expect(
       getDebugOverlayVisibility({

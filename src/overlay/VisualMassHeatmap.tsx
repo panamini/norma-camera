@@ -59,7 +59,7 @@ function VisualMassHeatmapComponent({ width, height, debug }: Props) {
         />
       ) : null}
       <View style={styles.label}>
-        <Text style={styles.labelText}>CONTRAST MASS</Text>
+        <Text style={styles.labelText}>CONTRAST MASS · NOT OBJECT DETECTION</Text>
       </View>
     </View>
   );

@@ -185,7 +185,7 @@ Limitations:
 
 PR4.2 makes native visual mass auditable without changing detection, scoring, or capture behavior.
 
-In native mode, the `mass` debug overlay preset shows a mapped heatmap overlay labeled `CONTRAST MASS`. The debug readout keeps raw and mapped visual-mass values side by side so device tests can explain why the box appears in a region.
+In native mode, the `mass` debug overlay preset shows a mapped heatmap overlay labeled `CONTRAST MASS · NOT OBJECT DETECTION`. The debug readout keeps raw and mapped visual-mass values side by side so device tests can explain why the box appears in a region.
 
 Visual mass remains contrast/luminance evidence:
 
