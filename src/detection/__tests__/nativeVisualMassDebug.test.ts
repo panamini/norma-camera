@@ -110,6 +110,48 @@ describe('native visual mass debug overlay', () => {
     expect(debug.raw.stabilizedCandidate?.reason).toContain('stabilized');
   });
 
+  it('ignores invalid top candidates after the debug top-candidate cap', () => {
+    const debug = nativeVisualMassDebugOverlay(
+      makeAnalysis({
+        visualMassDebug: makeVisualMassDebug({
+          topCandidates: [
+            {
+              center: { x: 0.188, y: 0.25 },
+              bounds: { x: 0.125, y: 0.167, width: 0.125, height: 0.167 },
+              confidence: 0.42,
+              energy: 0.86,
+              reason: 'coarse luma/contrast energy'
+            },
+            {
+              center: { x: 0.313, y: 0.25 },
+              bounds: { x: 0.25, y: 0.167, width: 0.125, height: 0.167 },
+              confidence: 0.32,
+              energy: 0.64,
+              reason: 'coarse luma/contrast energy'
+            },
+            {
+              center: { x: 0.438, y: 0.25 },
+              bounds: { x: 0.375, y: 0.167, width: 0.125, height: 0.167 },
+              confidence: 0.21,
+              energy: 0.51,
+              reason: 'coarse luma/contrast energy'
+            },
+            {
+              center: { x: Number.NaN, y: 0.25 },
+              bounds: { x: 0.5, y: 0.167, width: 0.125, height: 0.167 },
+              confidence: 0.18,
+              energy: 0.44,
+              reason: 'ignored after cap'
+            }
+          ]
+        })
+      })
+    );
+
+    expectMappedDebug(debug);
+    expect(debug.raw.topCandidates).toHaveLength(3);
+  });
+
   it('rejects NaN, Infinity, invalid bounds, invalid energy, and non-live debug payloads', () => {
     expect(
       nativeVisualMassDebugOverlay(

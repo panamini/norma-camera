@@ -92,7 +92,7 @@ internal data class VisualMassDebug(
         center = it.center,
         bounds = it.bounds,
         confidence = it.confidence,
-        energy = selectedCandidate?.energy ?: it.confidence,
+        energy = it.confidence,
         reason = "stabilized visual mass"
       ).toMap()
     },

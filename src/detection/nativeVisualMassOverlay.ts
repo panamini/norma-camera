@@ -112,7 +112,7 @@ function normalizeDebug(debug: NativeVisualMassDebug | null | undefined): Native
   const cells = debug.cells.map(normalizeDebugCell);
   if (cells.some((cell) => cell === null)) return null;
 
-  const topCandidates = debug.topCandidates.map(normalizeDebugCandidate);
+  const topCandidates = debug.topCandidates.slice(0, NATIVE_VISUAL_MASS_DEBUG_TOP_CANDIDATE_LIMIT).map(normalizeDebugCandidate);
   if (topCandidates.some((candidate) => candidate === null)) return null;
 
   const selectedCandidate = normalizeDebugCandidate(debug.selectedCandidate);
@@ -124,7 +124,7 @@ function normalizeDebug(debug: NativeVisualMassDebug | null | undefined): Native
     heatmapWidth: debug.heatmapWidth,
     heatmapHeight: debug.heatmapHeight,
     cells: cells.filter((cell): cell is NativeVisualMassDebugCell => cell !== null),
-    topCandidates: topCandidates.filter((candidate): candidate is NativeVisualMassDebugCandidate => candidate !== null).slice(0, NATIVE_VISUAL_MASS_DEBUG_TOP_CANDIDATE_LIMIT),
+    topCandidates: topCandidates.filter((candidate): candidate is NativeVisualMassDebugCandidate => candidate !== null),
     selectedCandidate,
     stabilizedCandidate,
     explanation: typeof debug.explanation === 'string' ? debug.explanation : 'Visual mass is contrast/luminance evidence, not object detection.'
