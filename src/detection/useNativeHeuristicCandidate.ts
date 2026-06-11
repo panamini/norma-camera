@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { NativeModules, Platform } from 'react-native';
 import { normalizeNativeAnalysisFreshness } from './nativeHeuristicDebug';
 import type { NativeFrameAnalysisModule, NativeFrameAnalysisResult } from './nativeHeuristicTypes';
-import { hasRenderableHorizontalLine, retainRecentHorizontalLine } from './nativeLineDiagnosticRetention';
+import { hasRenderableHorizontalLine, shouldRefreshStableHorizontalLineAnchor, stabilizeRecentHorizontalLine } from './nativeLineDiagnosticRetention';
 import { getNormaFrameAnalysisPlugin } from './normaFrameAnalysisPlugin';
 
 const POLL_INTERVAL_MS = 250;
@@ -35,18 +35,21 @@ function unavailableState(): NativeHeuristicHookState {
 
 export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHookState {
   const module = useMemo(getFrameAnalysisModule, []);
-  const lastAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
+  const lastObservedAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
+  const lastStableAnalysisWithLineRef = useRef<NativeFrameAnalysisResult | null>(null);
   const [state, setState] = useState<NativeHeuristicHookState>(() => unavailableState());
 
   useEffect(() => {
     if (!enabled) {
-      lastAnalysisWithLineRef.current = null;
+      lastObservedAnalysisWithLineRef.current = null;
+      lastStableAnalysisWithLineRef.current = null;
       setState(unavailableState());
       return;
     }
 
     if (!module || typeof module.getLatestAnalysis !== 'function') {
-      lastAnalysisWithLineRef.current = null;
+      lastObservedAnalysisWithLineRef.current = null;
+      lastStableAnalysisWithLineRef.current = null;
       setState(unavailableState());
       return;
     }
@@ -60,16 +63,21 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         if (cancelled) return;
 
         if (!rawLatest) {
-          lastAnalysisWithLineRef.current = null;
+          lastObservedAnalysisWithLineRef.current = null;
+          lastStableAnalysisWithLineRef.current = null;
           setState(unavailableState());
           return;
         }
 
-        const latest = retainRecentHorizontalLine(rawLatest, lastAnalysisWithLineRef.current);
+        const latest = stabilizeRecentHorizontalLine(rawLatest, lastObservedAnalysisWithLineRef.current, lastStableAnalysisWithLineRef.current);
         if (hasRenderableHorizontalLine(rawLatest)) {
-          lastAnalysisWithLineRef.current = rawLatest;
+          lastObservedAnalysisWithLineRef.current = rawLatest;
+        }
+        if (shouldRefreshStableHorizontalLineAnchor(rawLatest, latest)) {
+          lastStableAnalysisWithLineRef.current = rawLatest;
         } else if (rawLatest.analysisSource !== 'live-frame') {
-          lastAnalysisWithLineRef.current = null;
+          lastObservedAnalysisWithLineRef.current = null;
+          lastStableAnalysisWithLineRef.current = null;
         }
 
         setState({
@@ -80,7 +88,8 @@ export function useNativeHeuristicCandidate(enabled: boolean): NativeHeuristicHo
         });
       } catch (error) {
         if (cancelled) return;
-        lastAnalysisWithLineRef.current = null;
+        lastObservedAnalysisWithLineRef.current = null;
+        lastStableAnalysisWithLineRef.current = null;
         const message = error instanceof Error ? error.message : 'Unknown native visual-mass analysis error';
         setState({
           analysis: {
