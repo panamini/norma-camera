@@ -1,6 +1,7 @@
 package com.normacamera.frameanalysis
 
 import androidx.camera.core.ImageProxy
+import com.margelo.nitro.camera.CameraOrientation
 import com.margelo.nitro.camera.HybridFrameSpec
 import com.margelo.nitro.camera.public.NativeFrame
 import java.util.concurrent.atomic.AtomicBoolean
@@ -59,6 +60,10 @@ object NormaVisionCameraFrameAnalyzer {
         createdAtMs = nowMs,
         valueRange = LumaValueRange.BYTE,
         analysisSource = "live-frame",
+        frameWidth = nativeFrame.image.width,
+        frameHeight = nativeFrame.image.height,
+        frameOrientation = normalizeFrameOrientation(frame.orientation),
+        isMirrored = frame.isMirrored,
         updateCount = nextUpdateCount,
         analysisFps = analysisFps
       )
@@ -115,6 +120,15 @@ object NormaVisionCameraFrameAnalyzer {
     }
 
     return LumaGridSample(values = values, width = gridWidth, height = gridHeight)
+  }
+
+  private fun normalizeFrameOrientation(orientation: CameraOrientation): String {
+    return when (orientation) {
+      CameraOrientation.UP -> "up"
+      CameraOrientation.RIGHT -> "right"
+      CameraOrientation.DOWN -> "down"
+      CameraOrientation.LEFT -> "left"
+    }
   }
 
   private data class LumaGridSample(

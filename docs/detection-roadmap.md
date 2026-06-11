@@ -1,6 +1,6 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.0 Production Hardening
+## Current target: PR4.1 Camera Evidence Coordinate Calibration
 
 The feature stack is complete for this release candidate:
 
@@ -13,8 +13,9 @@ The feature stack is complete for this release candidate:
 - composition breakdown
 - line signal stabilization
 - conservative capture-readiness copy
+- explicit native evidence coordinate mapping for overlay/debug
 
-PR4.0 is a hardening pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
+PR4.1 is a coordinate calibration pass. It must not add a detector, a new scoring formula, a new frame pipeline, a new native bridge, or any auto-capture behavior change.
 
 ## Native implementation status
 
@@ -48,7 +49,9 @@ VisionCamera frame
   -> sharpness / edge energy
   -> contrast visual-mass candidate
   -> horizontal-line signal
+  -> native frame/grid/orientation/mirroring metadata
   -> compact normalized result to JS
+  -> explicit raw-frame to preview-coordinate mapping for overlay/debug
   -> existing composition scoring
   -> existing auto-capture gates
 ```
@@ -105,6 +108,34 @@ type NativeLineCandidate = {
 ```
 
 The line signal is secondary. It can add a small tested contribution to composition scoring only when a subject candidate exists. It must not make a no-subject frame ready.
+
+## Coordinate calibration contract
+
+Native visual mass is contrast/luminance evidence, not object detection. Horizontal line signal is geometric evidence, not semantic composition.
+
+PR4.1 keeps raw and mapped evidence available side by side:
+
+```txt
+rawLineCandidate
+mappedLineCandidate
+rawVisualMassBounds
+mappedVisualMassBounds
+rawVisualMassCenter
+mappedVisualMassCenter
+```
+
+The tested mapping layer is:
+
+```txt
+native frame normalized coordinates
+  -> VisionCamera Frame.orientation / Frame.isMirrored correction
+  -> presented frame coordinates
+  -> preview layout coordinates with resizeMode cover crop offsets
+```
+
+Installed VisionCamera types define orientation as `'up' | 'right' | 'down' | 'left'`. Installed `PreviewView` types define resize mode as `'cover' | 'contain'` and default to `cover`; norma-camera sets `cover` explicitly.
+
+For PR4.1, overlay/debug uses mapped evidence. Scoring remains on the existing raw native candidate inputs, so the scoring formula and auto-capture behavior are unchanged. If a later PR changes scoring inputs to mapped coordinates, the PR must state: `Scoring formula unchanged, but native candidate input coordinates are corrected from raw-frame space to preview/composition space.`
 
 ## Stability guardrails
 
@@ -166,6 +197,12 @@ Manual Android checks:
 - score visible
 - composition breakdown visible
 - line signal stable enough
+- native frame/grid/preview geometry visible in debug when available
+- raw + mapped line and visual-mass values visible in native debug when available
+- horizontal physical edge debug values captured in portrait, landscape-left, and landscape-right
+- vertical physical edge debug values captured in portrait, landscape-left, and landscape-right
+- mapped overlay line follows the visual edge orientation more closely than raw-only overlay
+- visual mass bbox remains on the same visual region after rotation when native evidence is stable
 - readiness text conservative
 - ARM behavior unchanged
 - capture works

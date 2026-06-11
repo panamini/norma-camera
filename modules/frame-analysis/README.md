@@ -43,6 +43,12 @@ No raw pixels or luminance grids should cross the JS bridge during live analysis
 type NativeFrameAnalysisResult = {
   status: 'unavailable' | 'ready' | 'low-confidence' | 'error';
   createdAtMs: number;
+  frameWidth?: number;
+  frameHeight?: number;
+  gridWidth?: number;
+  gridHeight?: number;
+  frameOrientation?: 'up' | 'right' | 'down' | 'left';
+  isMirrored?: boolean;
   subject: NativeSubjectCandidate | null;
   lineCandidate?: NativeLineCandidate | null;
   exposure: NativeExposureMetrics | null;
@@ -72,6 +78,34 @@ type NativeLineCandidate = {
 ```
 
 The subject candidate is a native visual-mass contrast candidate. The line candidate is a secondary horizontal-line signal. Neither is semantic recognition.
+
+## Coordinate calibration
+
+Live Android results include native frame dimensions, downsampled grid dimensions, VisionCamera frame orientation, and mirroring when the installed VisionCamera frame exposes them through `HybridFrameSpec`.
+
+JS keeps raw and mapped evidence side by side:
+
+```txt
+rawLineCandidate
+mappedLineCandidate
+rawVisualMassBounds
+mappedVisualMassBounds
+rawVisualMassCenter
+mappedVisualMassCenter
+```
+
+The mapping layer is:
+
+```txt
+native frame normalized coordinates
+  -> orientation / mirror correction
+  -> presented frame coordinates
+  -> preview layout coordinates using VisionCamera resizeMode cover
+```
+
+VisionCamera `PreviewView` documents `resizeMode: 'cover' | 'contain'` and defaults to `cover`; the app sets `cover` explicitly. Device validation still needs to verify that the native preview transform and overlay transform match on the target Android device.
+
+PR4.1 uses mapped evidence for overlay/debug. Composition scoring and auto-capture behavior remain on the existing raw candidate inputs; the scoring formula is unchanged.
 
 ## Safety constraints
 
@@ -105,3 +139,5 @@ If that blocks locally, capture the exact blocker:
 - Gradle/native C++ build failure
 
 Passing JS tests and Expo introspection are necessary but do not prove the native analyzer is present in the installed Android runtime.
+
+For PR4.1, capture raw + mapped debug values for a physical horizontal edge and a physical vertical edge in portrait, landscape-left, and landscape-right.

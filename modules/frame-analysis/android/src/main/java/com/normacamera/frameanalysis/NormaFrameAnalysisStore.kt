@@ -12,6 +12,10 @@ object NormaFrameAnalysisStore {
     createdAtMs: Long,
     valueRange: LumaValueRange = LumaValueRange.AUTO,
     analysisSource: String? = null,
+    frameWidth: Int? = null,
+    frameHeight: Int? = null,
+    frameOrientation: String? = null,
+    isMirrored: Boolean? = null,
     updateCount: Long? = null,
     analysisFps: Double? = null
   ): Map<String, Any?> {
@@ -63,6 +67,12 @@ object NormaFrameAnalysisStore {
     )
 
     if (analysisSource != null) result["analysisSource"] = analysisSource
+    if (frameWidth != null) result["frameWidth"] = frameWidth.toDouble()
+    if (frameHeight != null) result["frameHeight"] = frameHeight.toDouble()
+    result["gridWidth"] = width.toDouble()
+    result["gridHeight"] = height.toDouble()
+    if (frameOrientation != null) result["frameOrientation"] = frameOrientation
+    if (isMirrored != null) result["isMirrored"] = isMirrored
     if (updateCount != null) result["updateCount"] = updateCount.toDouble()
     if (analysisFps != null) result["analysisFps"] = analysisFps
 

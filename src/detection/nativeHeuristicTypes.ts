@@ -2,6 +2,7 @@ import type { NormalizedPoint, NormalizedRect } from './types';
 
 export type NativeHeuristicStatus = 'unavailable' | 'ready' | 'low-confidence' | 'error';
 export type NativeLumaValueRange = 'auto' | 'unit' | 'byte';
+export type NativeFrameOrientation = 'up' | 'right' | 'down' | 'left';
 
 export type NativeSubjectCandidate = {
   center: NormalizedPoint;
@@ -35,6 +36,12 @@ export type NativeSharpnessMetrics = {
 export type NativeFrameAnalysisResult = {
   status: NativeHeuristicStatus;
   createdAtMs: number;
+  frameWidth?: number;
+  frameHeight?: number;
+  gridWidth?: number;
+  gridHeight?: number;
+  frameOrientation?: NativeFrameOrientation;
+  isMirrored?: boolean;
   subject: NativeSubjectCandidate | null;
   lineCandidate?: NativeLineCandidate | null;
   exposure: NativeExposureMetrics | null;

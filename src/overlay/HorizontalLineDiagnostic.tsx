@@ -1,24 +1,54 @@
 import { memo } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
-import { normalizedHorizontalLineOverlayY } from '../detection/nativeLineDiagnosticOverlay';
+import { normalizedLineCandidateOverlaySegment } from '../detection/nativeLineDiagnosticOverlay';
 import type { NativeLineCandidate } from '../detection/nativeHeuristicTypes';
 
 type Props = {
   width: number;
   height: number;
   lineCandidate?: NativeLineCandidate | null;
+  mappedLineCandidate?: NativeLineCandidate | null;
 };
 
-function HorizontalLineDiagnosticComponent({ width, height, lineCandidate }: Props) {
+function clamp(value: number, min: number, max: number): number {
+  return Math.max(min, Math.min(max, value));
+}
+
+function HorizontalLineDiagnosticComponent({ width, height, lineCandidate, mappedLineCandidate }: Props) {
   if (width <= 0 || height <= 0 || !lineCandidate) return null;
 
-  const y = normalizedHorizontalLineOverlayY(lineCandidate);
-  if (y === null) return null;
+  const segment = normalizedLineCandidateOverlaySegment(mappedLineCandidate ?? lineCandidate);
+  if (segment === null) return null;
+
+  const x1 = segment.x1 * width;
+  const y1 = segment.y1 * height;
+  const x2 = segment.x2 * width;
+  const y2 = segment.y2 * height;
+  const dx = Math.abs(x2 - x1);
+  const dy = Math.abs(y2 - y1);
+  const isVertical = dy > dx;
+  const lineStyle = isVertical
+    ? {
+        left: (x1 + x2) / 2 - 1,
+        top: Math.min(y1, y2),
+        width: 2,
+        height: Math.max(2, dy)
+      }
+    : {
+        left: Math.min(x1, x2),
+        top: (y1 + y2) / 2 - 1,
+        width: Math.max(2, dx),
+        height: 2
+      };
+  const labelStyle = {
+    left: clamp((x1 + x2) / 2 + 6, 8, Math.max(8, width - 84)),
+    top: clamp((y1 + y2) / 2 + 6, 8, Math.max(8, height - 18))
+  };
 
   return (
-    <View pointerEvents="none" style={[styles.container, { top: height * y - 1 }]}>
-      <View style={styles.line} />
-      <Text style={styles.label}>LINE SIGNAL</Text>
+    <View pointerEvents="none" style={StyleSheet.absoluteFill}>
+      <View style={[styles.line, lineStyle]} />
+      <Text style={[styles.label, labelStyle]}>LINE SIGNAL</Text>
     </View>
   );
 }
@@ -26,15 +56,8 @@ function HorizontalLineDiagnosticComponent({ width, height, lineCandidate }: Pro
 export const HorizontalLineDiagnostic = memo(HorizontalLineDiagnosticComponent);
 
 const styles = StyleSheet.create({
-  container: {
-    position: 'absolute',
-    left: 12,
-    right: 12,
-    height: 18,
-    justifyContent: 'center'
-  },
   line: {
-    height: 2,
+    position: 'absolute',
     borderRadius: 999,
     borderWidth: 1,
     borderColor: 'rgba(80,210,255,0.94)',
@@ -42,8 +65,6 @@ const styles = StyleSheet.create({
   },
   label: {
     position: 'absolute',
-    right: 0,
-    top: 4,
     paddingHorizontal: 5,
     paddingVertical: 1,
     borderRadius: 4,

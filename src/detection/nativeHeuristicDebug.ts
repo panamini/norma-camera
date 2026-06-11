@@ -1,7 +1,9 @@
-import type { GuideKind } from '../composition/types';
+import type { GuideKind, NormalizedPoint } from '../composition/types';
 import { nowMs } from '../shared/time';
 import { scoreHorizontalLineAgainstGuides, type LineGuideScoreResult } from './lineGuideScore';
+import type { NativeEvidencePreviewMapping, NormalizedLineSegment } from './nativeEvidenceCoordinateMapping';
 import type { NativeFrameAnalysisResult, NativeLineCandidate } from './nativeHeuristicTypes';
+import type { NormalizedRect } from './types';
 
 export const STALE_NATIVE_ANALYSIS_MS = 1_500;
 export const NATIVE_VISUAL_MASS_ACTIVE_CONFIDENCE_MIN = 0.2;
@@ -31,6 +33,31 @@ function formatGuideScore(guideScore: number | null | undefined): string {
   return typeof guideScore === 'number' && Number.isFinite(guideScore) ? `${Math.round(Math.max(0, Math.min(100, guideScore)))} / 100` : 'n/a';
 }
 
+function formatOptionalSize(width: number | undefined, height: number | undefined): string {
+  return typeof width === 'number' && Number.isFinite(width) && typeof height === 'number' && Number.isFinite(height)
+    ? `${Math.round(width)}x${Math.round(height)}`
+    : 'n/a';
+}
+
+function formatMappingBool(value: boolean | null | undefined): string {
+  return typeof value === 'boolean' ? String(value) : 'unavailable';
+}
+
+function formatPoint(point: NormalizedPoint | null | undefined): string {
+  if (!point) return 'n/a';
+  return `x=${formatFixedMetric(point.x, 3)} y=${formatFixedMetric(point.y, 3)}`;
+}
+
+function formatRect(rect: NormalizedRect | null | undefined): string {
+  if (!rect) return 'n/a';
+  return `x=${formatFixedMetric(rect.x, 3)} y=${formatFixedMetric(rect.y, 3)} w=${formatFixedMetric(rect.width, 3)} h=${formatFixedMetric(rect.height, 3)}`;
+}
+
+function formatLineSegment(line: NormalizedLineSegment | null | undefined): string {
+  if (!line) return 'n/a';
+  return `x1=${formatFixedMetric(line.x1, 3)} y1=${formatFixedMetric(line.y1, 3)} x2=${formatFixedMetric(line.x2, 3)} y2=${formatFixedMetric(line.y2, 3)}`;
+}
+
 function formatUpdateText(analysis: NativeFrameAnalysisResult): string {
   if (typeof analysis.updateCount === 'number') return `updates ${Math.round(analysis.updateCount)}`;
   return `fps ${formatFixedMetric(analysis.analysisFps, 1)}`;
@@ -46,6 +73,23 @@ function formatHorizontalLineSignal(lineCandidate: NativeLineCandidate | null | 
 function formatLineGuideScore(lineGuideScore: LineGuideScoreResult): string {
   if (!lineGuideScore.hasLine || lineGuideScore.score === null || lineGuideScore.nearestGuideLabel === null || lineGuideScore.distance === null) return 'line guide score n/a';
   return `line guide score ${formatGuideScore(lineGuideScore.score)} · nearest ${lineGuideScore.nearestGuideLabel} · distance ${lineGuideScore.distance.toFixed(3)} · secondary composition signal`;
+}
+
+function formatNativeEvidenceMapping(mapping: NativeEvidencePreviewMapping | undefined): string[] {
+  if (!mapping) return [];
+
+  const frame = mapping.frameGeometry;
+  const transform = mapping.transform;
+  return [
+    `frame ${formatOptionalSize(frame?.frameWidth, frame?.frameHeight)} · grid ${formatOptionalSize(frame?.gridWidth, frame?.gridHeight)} · preview ${formatOptionalSize(mapping.previewGeometry.width, mapping.previewGeometry.height)}`,
+    `orientation ${frame?.frameOrientation ?? 'unavailable'} · mirror ${formatMappingBool(frame?.isMirrored)} · resize ${mapping.previewGeometry.resizeMode ?? 'cover'}`,
+    transform
+      ? `presented ${formatOptionalSize(transform.presentedFrameWidth, transform.presentedFrameHeight)} · scale ${formatFixedMetric(transform.scale, 3)} · crop x ${formatFixedMetric(transform.offsetX, 1)} y ${formatFixedMetric(transform.offsetY, 1)}`
+      : 'presented n/a · scale n/a · crop x n/a y n/a',
+    `line raw ${formatLineSegment(mapping.rawLineCandidate)} · line mapped ${formatLineSegment(mapping.mappedLineCandidate)}`,
+    `mass raw center ${formatPoint(mapping.rawVisualMassCenter)} · bounds ${formatRect(mapping.rawVisualMassBounds)}`,
+    `mass mapped center ${formatPoint(mapping.mappedVisualMassCenter)} · bounds ${formatRect(mapping.mappedVisualMassBounds)}`
+  ];
 }
 
 export function nativeVisualMassStateForAnalysis(analysis: NativeFrameAnalysisResult | null): NativeVisualMassState {
@@ -73,6 +117,7 @@ function formatNativeReadout(params: {
   lineCandidate?: NativeLineCandidate | null;
   activeGuideKinds?: GuideKind[];
   lineGuideScore?: LineGuideScoreResult;
+  nativeEvidenceMapping?: NativeEvidencePreviewMapping;
 }): string {
   const lineGuideScore = params.lineGuideScore ?? scoreHorizontalLineAgainstGuides(params.lineCandidate, params.activeGuideKinds);
   return [
@@ -81,7 +126,8 @@ function formatNativeReadout(params: {
     `native visual mass: ${params.visualMassState} · visual confidence ${params.visualConfidenceText}`,
     `guide score ${formatGuideScore(params.guideScore)}`,
     formatHorizontalLineSignal(params.lineCandidate, lineGuideScore),
-    formatLineGuideScore(lineGuideScore)
+    formatLineGuideScore(lineGuideScore),
+    ...formatNativeEvidenceMapping(params.nativeEvidenceMapping)
   ].join('\n');
 }
 
@@ -113,7 +159,8 @@ export function makeNativeAnalysisDebugLine(
   currentNowMs: number = nowMs(),
   guideScore?: number | null,
   activeGuideKinds?: GuideKind[],
-  lineGuideScore?: LineGuideScoreResult
+  lineGuideScore?: LineGuideScoreResult,
+  nativeEvidenceMapping?: NativeEvidencePreviewMapping
 ): string | null {
   const freshAnalysis = normalizeNativeAnalysisFreshness(analysis, currentNowMs);
 
@@ -130,7 +177,8 @@ export function makeNativeAnalysisDebugLine(
       guideScore,
       lineCandidate: freshAnalysis.lineCandidate,
       activeGuideKinds,
-      lineGuideScore
+      lineGuideScore,
+      nativeEvidenceMapping
     });
   }
 
@@ -147,7 +195,8 @@ export function makeNativeAnalysisDebugLine(
       guideScore: null,
       lineCandidate: null,
       activeGuideKinds,
-      lineGuideScore
+      lineGuideScore,
+      nativeEvidenceMapping
     });
   }
 
@@ -164,7 +213,8 @@ export function makeNativeAnalysisDebugLine(
       guideScore: null,
       lineCandidate: null,
       activeGuideKinds,
-      lineGuideScore
+      lineGuideScore,
+      nativeEvidenceMapping
     });
   }
 
@@ -180,6 +230,7 @@ export function makeNativeAnalysisDebugLine(
     guideScore: null,
     lineCandidate: null,
     activeGuideKinds,
-    lineGuideScore
+    lineGuideScore,
+    nativeEvidenceMapping
   });
 }
