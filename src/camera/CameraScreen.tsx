@@ -10,7 +10,7 @@ import type { AutoCaptureDecision } from '../autocapture/types';
 import { guideKindsForOverlayMode } from '../composition/guides';
 import { displayNameForGuide, formatCompositionBreakdown, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
-import type { CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
+import type { AxisGuide, CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import {
@@ -58,8 +58,12 @@ const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
 
-function findBestAxisHit(hits: GuideHit[], axis: 'x' | 'y'): GuideHit | null {
-  const best = hits.filter((hit) => hit.guide.axis === axis).sort((a, b) => b.score - a.score || a.distance - b.distance)[0];
+type AxisGuideHit = GuideHit & { guide: AxisGuide };
+
+function findBestAxisHit(hits: GuideHit[], axis: 'x' | 'y'): AxisGuideHit | null {
+  const best = hits
+    .filter((hit): hit is AxisGuideHit => hit.guide.axis === axis)
+    .sort((a, b) => b.score - a.score || a.distance - b.distance)[0];
   return best && best.score >= HIGHLIGHT_SCORE_THRESHOLD ? best : null;
 }
 

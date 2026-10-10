@@ -1,6 +1,6 @@
 import { guidesForKinds } from '../composition/guides';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scoreDistanceToGuide } from '../composition/scorePointAgainstGuides';
-import type { GuideKind } from '../composition/types';
+import type { AxisGuide, GuideKind } from '../composition/types';
 import type { NativeLineCandidate } from './nativeHeuristicTypes';
 import { normalizedHorizontalLineOverlayY } from './nativeLineDiagnosticOverlay';
 
@@ -27,10 +27,14 @@ type ScoredHorizontalGuideHit = {
 };
 
 const DEFAULT_HORIZONTAL_LINE_GUIDE_KINDS: GuideKind[] = ['third', 'half'];
-const HORIZONTAL_GUIDE_DISPLAY_LABELS: Readonly<Record<'UPPER_THIRD' | 'CENTER_Y' | 'LOWER_THIRD', string>> = {
+const HORIZONTAL_GUIDE_DISPLAY_LABELS: Readonly<Record<string, string>> = {
   UPPER_THIRD: 'upper third',
   CENTER_Y: 'center',
-  LOWER_THIRD: 'lower third'
+  LOWER_THIRD: 'lower third',
+  PHI_UPPER: 'upper phi',
+  PHI_LOWER: 'lower phi',
+  ROOT2_UPPER: 'upper root-2',
+  ROOT2_LOWER: 'lower root-2'
 };
 
 function emptyLineGuideScore(): LineGuideScoreResult {
@@ -44,8 +48,7 @@ function emptyLineGuideScore(): LineGuideScoreResult {
 }
 
 function displayLabelForGuideLabel(label: string): string | null {
-  if (label === 'UPPER_THIRD' || label === 'CENTER_Y' || label === 'LOWER_THIRD') return HORIZONTAL_GUIDE_DISPLAY_LABELS[label];
-  return null;
+  return HORIZONTAL_GUIDE_DISPLAY_LABELS[label] ?? null;
 }
 
 export function scoreHorizontalLineAgainstGuides(
@@ -57,7 +60,7 @@ export function scoreHorizontalLineAgainstGuides(
   if (lineY === null) return emptyLineGuideScore();
 
   const bestHit = guidesForKinds(activeGuideKinds)
-    .filter((guide) => guide.axis === 'y')
+    .filter((guide): guide is AxisGuide => guide.axis === 'y')
     .map<ScoredHorizontalGuideHit | null>((guide) => {
       const nearestGuideLabel = displayLabelForGuideLabel(guide.label);
       if (!nearestGuideLabel) return null;

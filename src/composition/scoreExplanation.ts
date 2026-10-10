@@ -36,6 +36,26 @@ export function displayNameForGuide(guide: CompositionGuide): string {
       return 'vertical center';
     case 'CENTER_Y':
       return 'horizontal center';
+    case 'PHI_LEFT':
+      return 'left phi line';
+    case 'PHI_RIGHT':
+      return 'right phi line';
+    case 'PHI_UPPER':
+      return 'upper phi line';
+    case 'PHI_LOWER':
+      return 'lower phi line';
+    case 'ROOT2_LEFT':
+      return 'left root-2 line';
+    case 'ROOT2_RIGHT':
+      return 'right root-2 line';
+    case 'ROOT2_UPPER':
+      return 'upper root-2 line';
+    case 'ROOT2_LOWER':
+      return 'lower root-2 line';
+    case 'DIAGONAL_FALLING':
+      return 'falling diagonal';
+    case 'DIAGONAL_RISING':
+      return 'rising diagonal';
     default:
       return guide.label.toLowerCase().replaceAll('_', ' ');
   }
@@ -44,6 +64,10 @@ export function displayNameForGuide(guide: CompositionGuide): string {
 export function formatGuideHit(hit: GuideHit | null): string | null {
   if (!hit) {
     return null;
+  }
+
+  if (hit.guide.axis === 'segment') {
+    return `${displayNameForGuide(hit.guide)} · segment · Δ=${hit.distance.toFixed(3)}`;
   }
 
   return `${displayNameForGuide(hit.guide)} · ${hit.guide.axis}=${formatGuideValue(hit.guide.value)} · Δ=${hit.distance.toFixed(3)}`;

@@ -2,7 +2,7 @@ import { Canvas, Line, vec } from '@shopify/react-native-skia';
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
-import { guidesForKinds } from '../composition/guides';
+import { guidesForKinds, isAxisGuide } from '../composition/guides';
 import type { GuideKind } from '../composition/types';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
 
@@ -41,7 +41,7 @@ function HighlightLine({ axis, value, width, height, sharedValues }: HighlightLi
 }
 
 function GuideLinesComponent({ width, height, activeGuideKinds, sharedValues }: Props) {
-  const guides = guidesForKinds(activeGuideKinds);
+  const guides = guidesForKinds(activeGuideKinds).filter(isAxisGuide);
 
   return (
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
