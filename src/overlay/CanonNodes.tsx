@@ -1,7 +1,7 @@
 import { Canvas, Circle, Group, Line, vec } from '@shopify/react-native-skia';
 import { memo } from 'react';
 import { StyleSheet, View } from 'react-native';
-import { useDerivedValue } from 'react-native-reanimated';
+import { useDerivedValue, type SharedValue } from 'react-native-reanimated';
 import { DEFAULT_MAX_GUIDE_DISTANCE } from '../composition/scorePointAgainstGuides';
 import type { CanonDefinition, CanonNode } from '../composition/types';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
@@ -18,7 +18,9 @@ type NodeMarkProps = {
   node: CanonNode;
   width: number;
   height: number;
-  sharedValues: CompositionSharedValues;
+  subjectX: SharedValue<number>;
+  subjectY: SharedValue<number>;
+  hasSubject: SharedValue<number>;
 };
 
 const NODE_LIGHT_RADIUS = DEFAULT_MAX_GUIDE_DISTANCE;
@@ -32,14 +34,14 @@ const CORE_DOT_RADIUS = 2.5;
  * up as the subject's visual mass approaches. Activation is derived on the
  * UI thread from the subject shared values (no per-frame React renders).
  */
-function CanonNodeMark({ node, width, height, sharedValues }: NodeMarkProps) {
+function CanonNodeMark({ node, width, height, subjectX, subjectY, hasSubject }: NodeMarkProps) {
   const cx = node.point.x * width;
   const cy = node.point.y * height;
 
   const activation = useDerivedValue(() => {
-    if (sharedValues.hasSubject.value < 0.5) return 0;
-    const dx = sharedValues.subjectX.value - node.point.x;
-    const dy = sharedValues.subjectY.value - node.point.y;
+    if (hasSubject.value < 0.5) return 0;
+    const dx = subjectX.value - node.point.x;
+    const dy = subjectY.value - node.point.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
     const closeness = 1 - Math.min(1, distance / NODE_LIGHT_RADIUS);
     return closeness * closeness;
@@ -75,7 +77,15 @@ function CanonNodesComponent({ width, height, canon, sharedValues }: Props) {
     <View pointerEvents="none" style={StyleSheet.absoluteFill}>
       <Canvas style={StyleSheet.absoluteFill}>
         {canon.nodes.map((node) => (
-          <CanonNodeMark key={node.label} node={node} width={width} height={height} sharedValues={sharedValues} />
+          <CanonNodeMark
+            key={node.label}
+            node={node}
+            width={width}
+            height={height}
+            subjectX={sharedValues.subjectX}
+            subjectY={sharedValues.subjectY}
+            hasSubject={sharedValues.hasSubject}
+          />
         ))}
       </Canvas>
     </View>

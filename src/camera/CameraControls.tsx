@@ -1,7 +1,7 @@
 import { memo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
 import { CANONS } from '../composition/canons';
-import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
 import type { DetectionMode } from '../detection/types';
 import { ResonanceArc } from '../overlay/ResonanceArc';
 import { useCameraUiStore } from '../state/cameraUiStore';
@@ -14,7 +14,7 @@ type Props = {
   onOpenGallery: () => void;
   isCapturing: boolean;
   readyThreshold: number;
-  sharedValues: CompositionSharedValues;
+  score: SharedValue<number>;
 };
 
 const SHUTTER_ZONE = 86;
@@ -25,7 +25,7 @@ const DEV_DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessib
   { value: 'simulated-detector', label: 'sim detector', accessibilityLabel: 'Use simulated detector mode' }
 ];
 
-function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, readyThreshold, sharedValues }: Props) {
+function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, readyThreshold, score }: Props) {
   const canonId = useCameraUiStore((state) => state.canonId);
   const lastCapture = useCameraUiStore((state) => state.capturedPhotos[0] ?? null);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
@@ -130,7 +130,7 @@ function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, 
         </Pressable>
 
         <View style={styles.shutterZone}>
-          <ResonanceArc size={SHUTTER_ZONE} readyThreshold={readyThreshold} sharedValues={sharedValues} />
+          <ResonanceArc size={SHUTTER_ZONE} readyThreshold={readyThreshold} score={score} />
           <Pressable
             accessibilityRole="button"
             accessibilityLabel="Take photo manually"
@@ -169,6 +169,7 @@ function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, 
         accessibilityLabel={devOpen ? 'Hide developer tools' : 'Show developer tools'}
         accessibilityState={{ checked: devOpen }}
         onPress={() => setDevOpen((open) => !open)}
+        hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
         style={styles.devToggle}
       >
         <Text style={[styles.devToggleText, devOpen ? styles.devToggleTextActive : null]}>···</Text>
@@ -190,6 +191,8 @@ const styles = StyleSheet.create({
   },
   canonRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
     backgroundColor: normaColors.graphiteScrim,
     borderRadius: 6,
     padding: 3,

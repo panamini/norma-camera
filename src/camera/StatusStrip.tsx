@@ -28,8 +28,9 @@ function StatusStripComponent({ canon, title, score, instruction, armedLine, cap
         </View>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Show why this frame scored as it did"
+          accessibilityLabel={`${title}${score !== null ? `, score ${Math.round(score)}` : ''}. Show why this frame scored as it did.`}
           onPress={onWhyPress}
+          hitSlop={{ top: 10, bottom: 10, left: 8, right: 8 }}
           style={styles.whyButton}
         >
           <Text numberOfLines={1} style={styles.title}>

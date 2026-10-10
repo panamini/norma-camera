@@ -129,7 +129,7 @@ const styles = StyleSheet.create({
     fontFamily: normaFonts.mono,
     fontSize: 9,
     letterSpacing: 1.6,
-    color: normaColors.accentFaint,
+    color: normaColors.accent,
     marginTop: 4
   },
   text: {
@@ -142,7 +142,7 @@ const styles = StyleSheet.create({
     fontFamily: normaFonts.mono,
     fontSize: 10,
     lineHeight: 15,
-    color: normaColors.paperFaint,
+    color: normaColors.paperDim,
     marginTop: 6,
     fontStyle: 'italic'
   },

@@ -11,8 +11,6 @@ export type CompositionSharedValues = {
   candidateBoundsHeight: SharedValue<number>;
   hasCandidateBounds: SharedValue<number>;
   compositionScore: SharedValue<number>;
-  bestGuideX: SharedValue<number>;
-  bestGuideY: SharedValue<number>;
   highlightIntensity: SharedValue<number>;
   sharpnessScore: SharedValue<number>;
   exposureScore: SharedValue<number>;
@@ -30,8 +28,6 @@ export function useCompositionSharedValues(): CompositionSharedValues {
   const candidateBoundsHeight = useSharedValue(0);
   const hasCandidateBounds = useSharedValue(0);
   const compositionScore = useSharedValue(0);
-  const bestGuideX = useSharedValue(-1);
-  const bestGuideY = useSharedValue(-1);
   const highlightIntensity = useSharedValue(0);
   const sharpnessScore = useSharedValue(80);
   const exposureScore = useSharedValue(75);
@@ -49,8 +45,6 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       candidateBoundsHeight,
       hasCandidateBounds,
       compositionScore,
-      bestGuideX,
-      bestGuideY,
       highlightIntensity,
       sharpnessScore,
       exposureScore,
@@ -58,8 +52,6 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       sceneChangedScore
     }),
     [
-      bestGuideX,
-      bestGuideY,
       candidateBoundsHeight,
       candidateBoundsWidth,
       candidateBoundsX,

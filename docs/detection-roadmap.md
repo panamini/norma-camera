@@ -22,6 +22,22 @@ What PR5 changes:
 - Default detection mode is `native-heuristic` with its honest unavailable
   fallback; manual tap still overrides in every mode. Auto-capture stays
   opt-in (ARM off by default).
+- Scoring formula unchanged, but native candidate input coordinates are
+  corrected from raw-frame space to preview/composition space. This is the
+  change anticipated by the PR4.1 coordinate contract: the scored geometry is
+  now exactly the drawn geometry (review found the Diagonals canon could show
+  a lit node while the raw-space score stalled at 62 under `cover` crop).
+  The native line signal input is likewise the mapped line when available.
+  When the mapping is unavailable, raw coordinates are used for both drawing
+  and scoring, so the two can never disagree.
+- The halves guides and the centered special case remain in the engine
+  (tests cover them) but are intentionally unreachable from the v1 canon
+  set — no canon activates `half`.
+- The haptic tick is a node-lock tick: it fires only when the frame is ready
+  AND the subject sits on a canon power point (rising edge, rate-limited,
+  with hysteresis; never for placeholder/simulated candidates). The arc can
+  be full on a line without a node lock — that is by design and the why
+  sheet explains the difference.
 
 What PR5 does not change: native algorithms, native thresholds, the frame
 pipeline, the bridge, the scoring falloff/thresholds/caps, readiness gating,

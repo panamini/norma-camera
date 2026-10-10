@@ -15,18 +15,9 @@ export const normaColors = {
   accent: '#f2b84b',
   accentSoft: 'rgba(242,184,75,0.18)',
   accentFaint: 'rgba(242,184,75,0.45)',
-  nativeEvidence: '#84f28f',
-  danger: '#f2766b'
+  nativeEvidence: '#84f28f'
 } as const;
 
 export const normaFonts = {
   mono: Platform.select({ ios: 'Menlo', default: 'monospace' })
 } as const;
-
-export const microLabel = {
-  fontFamily: normaFonts.mono,
-  fontSize: 10,
-  letterSpacing: 1.2,
-  textTransform: 'uppercase' as const,
-  color: normaColors.paperDim
-};

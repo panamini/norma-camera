@@ -9,8 +9,8 @@ import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
 import { canonById } from '../composition/canons';
 import { displayNameForGuide, formatCompositionBreakdown, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
-import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
-import type { AxisGuide, CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
+import { DEFAULT_MAX_GUIDE_DISTANCE } from '../composition/scorePointAgainstGuides';
+import type { CompositionScoreResult, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
 import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
 import {
@@ -39,6 +39,7 @@ import { useCameraUiStore, type CapturedPhoto } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { tickNodeLock } from '../ui/haptics';
 import { CameraControls } from './CameraControls';
+import { evaluateNodeLockTick, nearestNodeDistance } from './nodeLockTick';
 import { StatusStrip } from './StatusStrip';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
 import { useFrameQualityStub } from './useFrameQualityStub';
@@ -62,19 +63,9 @@ const LABEL_UPDATE_INTERVAL_MS = 500;
 const SUBJECT_EASE_MS = 180;
 const SCORE_EASE_MS = 220;
 const CAPTURE_TOAST_MS = 2500;
-const NODE_LOCK_TICK_MIN_INTERVAL_MS = 700;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
-
-type AxisGuideHit = GuideHit & { guide: AxisGuide };
-
-function findBestAxisHit(hits: GuideHit[], axis: 'x' | 'y'): AxisGuideHit | null {
-  const best = hits
-    .filter((hit): hit is AxisGuideHit => hit.guide.axis === axis)
-    .sort((a, b) => b.score - a.score || a.distance - b.distance)[0];
-  return best && best.score >= HIGHLIGHT_SCORE_THRESHOLD ? best : null;
-}
 
 function uriForFilePath(filePath: string): string {
   return filePath.startsWith('file://') ? filePath : `file://${filePath}`;
@@ -288,6 +279,7 @@ export function CameraScreen() {
   const [whyOpen, setWhyOpen] = useState(false);
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [reviewPhoto, setReviewPhoto] = useState<CapturedPhoto | null>(null);
+  const [captureError, setCaptureError] = useState<string | null>(null);
 
   const canon = useMemo(() => canonById(canonId), [canonId]);
   const activeGuideKinds = canon.guideKinds;
@@ -360,6 +352,12 @@ export function CameraScreen() {
     return () => clearTimeout(timeout);
   }, [captureBanner]);
 
+  useEffect(() => {
+    if (!captureError) return;
+    const timeout = setTimeout(() => setCaptureError(null), CAPTURE_TOAST_MS);
+    return () => clearTimeout(timeout);
+  }, [captureError]);
+
   const selectAndApplyCandidate = useCallback(
     (evaluationNowMs: number): AppliedComposition => {
       const selection = selectCompositionCandidate({
@@ -368,7 +366,12 @@ export function CameraScreen() {
         autoMode: detectionMode,
         nativeFrameAnalysis: nativeHeuristic.analysis
       });
-      const detectedScore = scoreDetectedComposition(selection.candidate, activeGuideKinds, selection.explanation, nativeHeuristic.analysis?.lineCandidate ?? null);
+      // Scoring formula unchanged, but native candidate input coordinates are
+      // corrected from raw-frame space to preview/composition space, so the
+      // scored geometry is exactly the drawn geometry (PR4.1 contract).
+      const compositionCandidate = selection.candidate ? mapNativeCandidateForOverlay(selection.candidate, nativeEvidenceMapping) : null;
+      const compositionLineCandidate = nativeEvidenceMapping.mappedLineCandidate ?? nativeHeuristic.analysis?.lineCandidate ?? null;
+      const detectedScore = scoreDetectedComposition(compositionCandidate, activeGuideKinds, selection.explanation, compositionLineCandidate);
       const candidate = detectedScore.candidate;
       const result = detectedScore.composition;
 
@@ -376,22 +379,23 @@ export function CameraScreen() {
       sharedValues.compositionScore.value = withTiming(result.score, { duration: SCORE_EASE_MS });
       compositionLabelRef.current = titleForCandidate(candidate, result);
 
+      const subjectWasVisible = sharedValues.hasSubject.value > 0.5;
+      const easeOrSnap = (value: number) => (subjectWasVisible ? withTiming(value, { duration: SUBJECT_EASE_MS }) : value);
+
       if (!candidate) {
-        sharedValues.bestGuideX.value = -1;
-        sharedValues.bestGuideY.value = -1;
         sharedValues.highlightIntensity.value = withTiming(0, { duration: 120 });
 
         const visualMassOverlay = nativeVisualMassOverlayCandidate(nativeHeuristic.analysis);
         if (visualMassOverlay) {
           const overlayCenter = nativeEvidenceMapping.mappedVisualMassCenter ?? visualMassOverlay.center;
           const overlayBounds = nativeEvidenceMapping.mappedVisualMassBounds ?? visualMassOverlay.bounds;
-          sharedValues.subjectX.value = withTiming(overlayCenter.x, { duration: SUBJECT_EASE_MS });
-          sharedValues.subjectY.value = withTiming(overlayCenter.y, { duration: SUBJECT_EASE_MS });
+          sharedValues.subjectX.value = easeOrSnap(overlayCenter.x);
+          sharedValues.subjectY.value = easeOrSnap(overlayCenter.y);
           sharedValues.hasSubject.value = 1;
-          sharedValues.candidateBoundsX.value = overlayBounds.x;
-          sharedValues.candidateBoundsY.value = overlayBounds.y;
-          sharedValues.candidateBoundsWidth.value = overlayBounds.width;
-          sharedValues.candidateBoundsHeight.value = overlayBounds.height;
+          sharedValues.candidateBoundsX.value = easeOrSnap(overlayBounds.x);
+          sharedValues.candidateBoundsY.value = easeOrSnap(overlayBounds.y);
+          sharedValues.candidateBoundsWidth.value = easeOrSnap(overlayBounds.width);
+          sharedValues.candidateBoundsHeight.value = easeOrSnap(overlayBounds.height);
           sharedValues.hasCandidateBounds.value = 1;
           return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'native-heuristic' };
         }
@@ -401,26 +405,20 @@ export function CameraScreen() {
         return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: 'none' };
       }
 
-      const overlayCandidate = mapNativeCandidateForOverlay(candidate, nativeEvidenceMapping);
-      sharedValues.subjectX.value = withTiming(overlayCandidate.center.x, { duration: SUBJECT_EASE_MS });
-      sharedValues.subjectY.value = withTiming(overlayCandidate.center.y, { duration: SUBJECT_EASE_MS });
+      sharedValues.subjectX.value = easeOrSnap(candidate.center.x);
+      sharedValues.subjectY.value = easeOrSnap(candidate.center.y);
       sharedValues.hasSubject.value = 1;
 
-      if (overlayCandidate.bounds) {
-        sharedValues.candidateBoundsX.value = overlayCandidate.bounds.x;
-        sharedValues.candidateBoundsY.value = overlayCandidate.bounds.y;
-        sharedValues.candidateBoundsWidth.value = overlayCandidate.bounds.width;
-        sharedValues.candidateBoundsHeight.value = overlayCandidate.bounds.height;
+      if (candidate.bounds) {
+        sharedValues.candidateBoundsX.value = easeOrSnap(candidate.bounds.x);
+        sharedValues.candidateBoundsY.value = easeOrSnap(candidate.bounds.y);
+        sharedValues.candidateBoundsWidth.value = easeOrSnap(candidate.bounds.width);
+        sharedValues.candidateBoundsHeight.value = easeOrSnap(candidate.bounds.height);
         sharedValues.hasCandidateBounds.value = 1;
       } else {
         sharedValues.hasCandidateBounds.value = 0;
       }
 
-      const guideScore = scorePointAgainstGuides(candidate.center, { activeGuideKinds });
-      const bestXHit = findBestAxisHit(guideScore.hits, 'x');
-      const bestYHit = findBestAxisHit(guideScore.hits, 'y');
-      sharedValues.bestGuideX.value = bestXHit?.guide.value ?? -1;
-      sharedValues.bestGuideY.value = bestYHit?.guide.value ?? -1;
       sharedValues.highlightIntensity.value = withTiming(result.score >= HIGHLIGHT_SCORE_THRESHOLD ? 1 : 0, { duration: 120 });
 
       return { selection, detectedScore, snapshot: makeCandidateScoreSnapshot(detectedScore), overlaySource: candidate.source };
@@ -572,6 +570,7 @@ export function CameraScreen() {
         const message = error instanceof Error ? error.message : 'Unknown capture error';
         setAutoStatusLine(`capture failed · ${message}`);
         setGateReasonLine('gate: capture failed');
+        setCaptureError(`CAPTURE FAILED · ${message}`);
       } finally {
         isCapturingRef.current = false;
         if (mountedRef.current) setIsCapturing(false);
@@ -587,12 +586,21 @@ export function CameraScreen() {
       const applied = selectAndApplyCandidate(currentNowMs);
       const hasCandidate = applied.selection.candidate !== null;
 
-      const isNodeLocked = hasCandidate && applied.detectedScore.composition.score >= READY_SCORE_THRESHOLD;
-      if (isNodeLocked && !wasNodeLockedRef.current && currentNowMs - lastNodeLockTickAtMsRef.current >= NODE_LOCK_TICK_MIN_INTERVAL_MS) {
+      const scoredCandidate = applied.detectedScore.candidate;
+      const tickDecision = evaluateNodeLockTick({
+        wasLocked: wasNodeLockedRef.current,
+        score: applied.detectedScore.composition.score,
+        readyThreshold: READY_SCORE_THRESHOLD,
+        nodeDistance: scoredCandidate ? nearestNodeDistance(scoredCandidate.center, canon.nodes) : Number.POSITIVE_INFINITY,
+        source: scoredCandidate?.source ?? 'none',
+        nowMs: currentNowMs,
+        lastTickAtMs: lastNodeLockTickAtMsRef.current
+      });
+      wasNodeLockedRef.current = tickDecision.locked;
+      if (tickDecision.tick) {
         lastNodeLockTickAtMsRef.current = currentNowMs;
         tickNodeLock();
       }
-      wasNodeLockedRef.current = isNodeLocked;
 
       const decision = autoCaptureController.current.evaluate({
         nowMs: currentNowMs,
@@ -616,7 +624,7 @@ export function CameraScreen() {
     }, AUTO_CAPTURE_CHECK_INTERVAL_MS);
 
     return () => clearInterval(interval);
-  }, [armed, capturePhoto, lastCaptureAtMs, publishCandidateUi, selectAndApplyCandidate, sharedValues]);
+  }, [armed, canon, capturePhoto, lastCaptureAtMs, publishCandidateUi, selectAndApplyCandidate, sharedValues]);
 
   if (!device) {
     return (
@@ -654,9 +662,9 @@ export function CameraScreen() {
         canon={canon}
         title={displayTitle}
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
-        instruction={candidateSnapshot.hasCandidate ? null : displayInstruction}
+        instruction={displayModeLabel.includes('·') ? displayModeLabel : displayInstruction}
         armedLine={armed ? autoStatusLine : null}
-        captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : null}
+        captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : captureError}
         onWhyPress={() => setWhyOpen(true)}
       />
       {debugPanelsHidden ? null : (
@@ -680,7 +688,7 @@ export function CameraScreen() {
         onOpenGallery={() => setGalleryOpen(true)}
         isCapturing={isCapturing}
         readyThreshold={READY_SCORE_THRESHOLD}
-        sharedValues={sharedValues}
+        score={sharedValues.compositionScore}
       />
       <WhySheet
         visible={whyOpen}
