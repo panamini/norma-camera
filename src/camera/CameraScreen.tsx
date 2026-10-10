@@ -12,7 +12,7 @@ import { displayNameForGuide, formatCompositionBreakdown, formatGuideHit, format
 import { DEFAULT_MAX_GUIDE_DISTANCE } from '../composition/scorePointAgainstGuides';
 import type { CompositionScoreResult, GuideKind, NormalizedPoint } from '../composition/types';
 import { useCompositionSharedValues } from '../composition/useCompositionSharedValues';
-import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode } from '../detection/candidateLabels';
+import { formatCandidateConfidence, instructionForDetectionMode, modeLabelForDetectionMode, statusInstructionFor } from '../detection/candidateLabels';
 import {
   mapNativeEvidenceToPreview,
   mapNormalizedFramePointToPreviewPoint,
@@ -107,7 +107,7 @@ function formatLineContributionText(result: CompositionScoreResult): string | nu
 }
 
 function makeScoreReason(candidate: CompositionCandidate | null, result: CompositionScoreResult): string {
-  if (!candidate) return 'No subject candidate. Tap subject or switch Auto.';
+  if (!candidate) return 'No subject candidate. Tap your subject to score it.';
   if (!result.bestHit) return 'No active composition guide is available for this overlay mode.';
 
   const guideName = displayNameForGuide(result.bestHit.guide);
@@ -268,7 +268,7 @@ export function CameraScreen() {
     subjectText: null,
     boundsText: null,
     nearestGuideText: null,
-    scoreReason: 'No subject candidate. Tap subject or switch Auto.',
+    scoreReason: 'No subject candidate. Tap your subject to score it.',
     lineContributionText: null,
     compositionBreakdownLines: null,
     candidateExplanation: 'Native visual-mass analyzer unavailable. Manual fallback active. No recognition is used.'
@@ -662,7 +662,7 @@ export function CameraScreen() {
         canon={canon}
         title={displayTitle}
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
-        instruction={displayModeLabel.includes('·') ? displayModeLabel : displayInstruction}
+        instruction={statusInstructionFor(displayModeLabel, displayInstruction)}
         armedLine={armed ? autoStatusLine : null}
         captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : captureError}
         onWhyPress={() => setWhyOpen(true)}
