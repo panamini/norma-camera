@@ -7,6 +7,7 @@ type Props = {
   canon: CanonDefinition;
   title: string;
   score: number | null;
+  instruction: string | null;
   armedLine: string | null;
   captureToast: string | null;
   onWhyPress: () => void;
@@ -17,7 +18,7 @@ type Props = {
  * the right as the one-tap entry into the "why" sheet. Conservative armed
  * copy appears only while armed.
  */
-function StatusStripComponent({ canon, title, score, armedLine, captureToast, onWhyPress }: Props) {
+function StatusStripComponent({ canon, title, score, instruction, armedLine, captureToast, onWhyPress }: Props) {
   return (
     <View pointerEvents="box-none" style={styles.root}>
       <View pointerEvents="box-none" style={styles.row}>
@@ -38,6 +39,11 @@ function StatusStripComponent({ canon, title, score, armedLine, captureToast, on
           </Text>
         </Pressable>
       </View>
+      {instruction ? (
+        <Text numberOfLines={1} style={styles.instruction}>
+          {instruction}
+        </Text>
+      ) : null}
       {armedLine ? (
         <Text numberOfLines={1} style={styles.armedLine}>
           {armedLine}
@@ -108,6 +114,17 @@ const styles = StyleSheet.create({
   },
   whyHint: {
     color: normaColors.accentFaint
+  },
+  instruction: {
+    alignSelf: 'flex-end',
+    fontFamily: normaFonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.8,
+    color: normaColors.paperDim,
+    backgroundColor: normaColors.graphiteScrim,
+    borderRadius: 4,
+    paddingHorizontal: 8,
+    paddingVertical: 3
   },
   armedLine: {
     alignSelf: 'flex-end',

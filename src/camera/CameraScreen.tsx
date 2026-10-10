@@ -649,6 +649,7 @@ export function CameraScreen() {
         canon={canon}
         title={displayTitle}
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
+        instruction={candidateSnapshot.hasCandidate ? null : displayInstruction}
         armedLine={armed ? autoStatusLine : null}
         captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : null}
         onWhyPress={() => setWhyOpen(true)}
