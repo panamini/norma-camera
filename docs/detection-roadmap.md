@@ -60,6 +60,30 @@ required).
   no Play Services; dev-client rebuild required). Detection, scoring, and
   capture gates unchanged.
 
+## PR7.0 Line Harmony readout
+
+Field feedback: the owner's target scenes are made of lines, and the product
+vision (Cartier-Bresson: the frame's directional lines locking onto the canon
+can fire the shutter) needs line evidence, not only visual mass. PR7.0 is
+step one of that path and is strictly a readout:
+
+- `src/detection/lineHarmony.ts` scores how much the stabilized, preview-
+  mapped line segments (PR4.8 output) agree with the active canon's guides:
+  per-segment best guide by angle (≤7°) and perpendicular offset (≤0.035),
+  aggregated as agreement weighted by length×confidence over ALL considered
+  segments, so disagreeing lines honestly drag the score down. Geometry is
+  derived from mapped endpoints only.
+- Viewfinder: agreeing segments draw in gold over the canon (normal preset,
+  native mode only); the strip shows `LINES <score>`; the why sheet gets a
+  LINE HARMONY section with the honest wording: approximate (32×24 luma
+  grid), readout only — it never fires the shutter.
+- Unchanged: composition score, readiness, capture triggers, auto-capture,
+  native code, thresholds, debug presets. `lineSegments` stay debug-grade
+  evidence; this readout exists to gather on-device evidence for a possible
+  later opt-in FULL AUTO · LINES mode. That mode is a separate owner decision
+  and would require explicitly lifting the "a line must not make a no-subject
+  frame ready" guardrail — not done here.
+
 ## PR4.10 Camera Debug Calibration Notes
 
 The feature stack was complete for the PR4 release candidate:

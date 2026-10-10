@@ -20,6 +20,7 @@ import {
   type NativeEvidencePreviewMapping,
   type PreviewGeometry
 } from '../detection/nativeEvidenceCoordinateMapping';
+import { EMPTY_LINE_HARMONY, scoreLineHarmony } from '../detection/lineHarmony';
 import { makeNativeAnalysisDebugLine } from '../detection/nativeHeuristicDebug';
 import type { NativeFrameAnalysisResult } from '../detection/nativeHeuristicTypes';
 import { nativeVisualMassDebugOverlay, nativeVisualMassOverlayCandidate } from '../detection/nativeVisualMassOverlay';
@@ -294,6 +295,10 @@ export function CameraScreen() {
   const visualMassDebugOverlay = useMemo(
     () => nativeVisualMassDebugOverlay(nativeHeuristic.analysis, nativeEvidenceMapping),
     [nativeEvidenceMapping, nativeHeuristic.analysis]
+  );
+  const lineHarmony = useMemo(
+    () => (detectionMode === 'native-heuristic' ? scoreLineHarmony(nativeEvidenceMapping.mappedLineSegments, canon) : EMPTY_LINE_HARMONY),
+    [canon, detectionMode, nativeEvidenceMapping.mappedLineSegments]
   );
   const debugOverlayVisibility = useMemo(
     () =>
@@ -656,6 +661,8 @@ export function CameraScreen() {
           showLineSegmentSpike={debugOverlayVisibility.showLineSegmentSpike}
           visualMassDebug={visualMassDebugOverlay?.mapped ?? null}
           showVisualMassDebug={debugOverlayVisibility.showVisualMassDebug}
+          lineHarmonyMatches={lineHarmony.matches}
+          showLineHarmony={detectionMode === 'native-heuristic' && debugQualityMode === 'normal'}
         />
       </Pressable>
       <StatusStrip
@@ -665,6 +672,7 @@ export function CameraScreen() {
         instruction={statusInstructionFor(displayModeLabel, displayInstruction)}
         armedLine={armed ? autoStatusLine : null}
         captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : captureError}
+        lineHarmony={detectionMode === 'native-heuristic' ? lineHarmony : null}
         onWhyPress={() => setWhyOpen(true)}
       />
       {debugPanelsHidden ? null : (
@@ -696,6 +704,7 @@ export function CameraScreen() {
         canon={canon}
         snapshot={candidateSnapshot}
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
+        lineHarmony={detectionMode === 'native-heuristic' ? lineHarmony : null}
       />
       <GallerySheet
         visible={galleryOpen}

@@ -1,6 +1,7 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import type { CanonDefinition } from '../composition/types';
+import type { LineHarmonyResult } from '../detection/lineHarmony';
 import { normaColors, normaFonts } from '../ui/theme';
 
 type Props = {
@@ -10,6 +11,7 @@ type Props = {
   instruction: string | null;
   armedLine: string | null;
   captureToast: string | null;
+  lineHarmony: LineHarmonyResult | null;
   onWhyPress: () => void;
 };
 
@@ -18,13 +20,24 @@ type Props = {
  * the right as the one-tap entry into the "why" sheet. Conservative armed
  * copy appears only while armed.
  */
-function StatusStripComponent({ canon, title, score, instruction, armedLine, captureToast, onWhyPress }: Props) {
+function StatusStripComponent({ canon, title, score, instruction, armedLine, captureToast, lineHarmony, onWhyPress }: Props) {
+  const showLineHarmony = lineHarmony !== null && lineHarmony.consideredSegments > 0;
+
   return (
     <View pointerEvents="box-none" style={styles.root}>
       <View pointerEvents="box-none" style={styles.row}>
-        <View style={styles.canonTag}>
-          <Text style={styles.canonGlyph}>{canon.glyph}</Text>
-          <Text style={styles.canonName}>{canon.name}</Text>
+        <View style={styles.leftGroup}>
+          <View style={styles.canonTag}>
+            <Text style={styles.canonGlyph}>{canon.glyph}</Text>
+            <Text style={styles.canonName}>{canon.name}</Text>
+          </View>
+          {showLineHarmony ? (
+            <View style={styles.harmonyTag}>
+              <Text style={[styles.harmonyText, lineHarmony.score >= 60 ? styles.harmonyTextStrong : null]}>
+                {`LINES ${lineHarmony.score}`}
+              </Text>
+            </View>
+          ) : null}
         </View>
         <Pressable
           accessibilityRole="button"
@@ -75,6 +88,11 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     gap: 12
   },
+  leftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6
+  },
   canonTag: {
     flexDirection: 'row',
     alignItems: 'baseline',
@@ -83,6 +101,21 @@ const styles = StyleSheet.create({
     borderRadius: 4,
     paddingHorizontal: 8,
     paddingVertical: 4
+  },
+  harmonyTag: {
+    backgroundColor: normaColors.graphiteScrim,
+    borderRadius: 4,
+    paddingHorizontal: 6,
+    paddingVertical: 4
+  },
+  harmonyText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 9,
+    letterSpacing: 1,
+    color: normaColors.paperDim
+  },
+  harmonyTextStrong: {
+    color: normaColors.accent
   },
   canonGlyph: {
     fontFamily: normaFonts.mono,

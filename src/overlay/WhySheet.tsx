@@ -2,6 +2,7 @@ import { memo } from 'react';
 import { Modal, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { CANON_EDITORIAL_NOTE } from '../composition/canons';
 import type { CanonDefinition } from '../composition/types';
+import type { LineHarmonyResult } from '../detection/lineHarmony';
 import { normaColors, normaFonts } from '../ui/theme';
 import type { CandidateScoreSnapshot } from './ScoreBadge';
 
@@ -11,6 +12,7 @@ type Props = {
   canon: CanonDefinition;
   snapshot: CandidateScoreSnapshot;
   score: number | null;
+  lineHarmony: LineHarmonyResult | null;
 };
 
 /**
@@ -18,7 +20,7 @@ type Props = {
  * what the score is, which guide earned it, what the evidence actually is —
  * plus the canon's editorial description and Norma's subjectivity note.
  */
-function WhySheetComponent({ visible, onClose, canon, snapshot, score }: Props) {
+function WhySheetComponent({ visible, onClose, canon, snapshot, score, lineHarmony }: Props) {
   return (
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <Pressable accessibilityRole="button" accessibilityLabel="Close explanation" style={styles.backdrop} onPress={onClose}>
@@ -58,6 +60,16 @@ function WhySheetComponent({ visible, onClose, canon, snapshot, score }: Props) 
 
           <Text style={styles.sectionLabel}>EVIDENCE</Text>
           <Text style={styles.text}>{snapshot.candidateExplanation}</Text>
+
+          {lineHarmony && lineHarmony.consideredSegments > 0 ? (
+            <View>
+              <Text style={styles.sectionLabel}>LINE HARMONY</Text>
+              <Text style={styles.text}>
+                {`${lineHarmony.matches.length} of ${lineHarmony.consideredSegments} stable line segments agree with the canon · ${lineHarmony.score}/100.`}
+              </Text>
+              <Text style={styles.text}>Approximate (32×24 luma grid). Readout only — it never fires the shutter.</Text>
+            </View>
+          ) : null}
 
           <Text style={styles.sectionLabel}>THE CANON</Text>
           <Text style={styles.text}>{canon.description}</Text>
