@@ -5,7 +5,6 @@ export type NormalizedPoint = {
 
 export type GuideKind = 'third' | 'half' | 'phi' | 'root2' | 'diagonal';
 export type Axis = 'x' | 'y';
-export type OverlayMode = 'thirds' | 'halves' | 'both';
 
 export type CanonId = 'thirds' | 'phi' | 'root2' | 'diagonals';
 

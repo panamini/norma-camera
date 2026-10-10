@@ -7,7 +7,7 @@ import { captureReadinessLine } from '../autocapture/captureReadinessText';
 import { createAutoCaptureController } from '../autocapture/createAutoCaptureController';
 import { DEFAULT_AUTO_CAPTURE_CONFIG } from '../autocapture/decideAutoCapture';
 import type { AutoCaptureDecision } from '../autocapture/types';
-import { guideKindsForOverlayMode } from '../composition/guides';
+import { canonById } from '../composition/canons';
 import { displayNameForGuide, formatCompositionBreakdown, formatGuideHit, formatNormalizedPoint } from '../composition/scoreExplanation';
 import { DEFAULT_MAX_GUIDE_DISTANCE, scorePointAgainstGuides } from '../composition/scorePointAgainstGuides';
 import type { AxisGuide, CompositionScoreResult, GuideHit, GuideKind, NormalizedPoint } from '../composition/types';
@@ -54,6 +54,7 @@ type CameraPreviewProps = {
 
 const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
 const LABEL_UPDATE_INTERVAL_MS = 500;
+const SUBJECT_EASE_MS = 180;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
@@ -231,7 +232,7 @@ export function CameraScreen() {
   const wasArmedRef = useRef(false);
   const retainedGuideScoreRef = useRef<{ value: number; expiresAtMs: number } | null>(null);
 
-  const overlayMode = useCameraUiStore((state) => state.overlayMode);
+  const canonId = useCameraUiStore((state) => state.canonId);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const lastCaptureAtMs = useCameraUiStore((state) => state.lastCaptureAtMs);
@@ -273,7 +274,8 @@ export function CameraScreen() {
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
   const [retainedGuideScore, setRetainedGuideScore] = useState<number | null>(null);
 
-  const activeGuideKinds = useMemo(() => guideKindsForOverlayMode(overlayMode), [overlayMode]);
+  const canon = useMemo(() => canonById(canonId), [canonId]);
+  const activeGuideKinds = canon.guideKinds;
   const previewGeometry = useMemo<PreviewGeometry>(
     () => ({ width: layout.width, height: layout.height, resizeMode: 'cover' }),
     [layout.height, layout.width]
@@ -361,8 +363,8 @@ export function CameraScreen() {
         if (visualMassOverlay) {
           const overlayCenter = nativeEvidenceMapping.mappedVisualMassCenter ?? visualMassOverlay.center;
           const overlayBounds = nativeEvidenceMapping.mappedVisualMassBounds ?? visualMassOverlay.bounds;
-          sharedValues.subjectX.value = overlayCenter.x;
-          sharedValues.subjectY.value = overlayCenter.y;
+          sharedValues.subjectX.value = withTiming(overlayCenter.x, { duration: SUBJECT_EASE_MS });
+          sharedValues.subjectY.value = withTiming(overlayCenter.y, { duration: SUBJECT_EASE_MS });
           sharedValues.hasSubject.value = 1;
           sharedValues.candidateBoundsX.value = overlayBounds.x;
           sharedValues.candidateBoundsY.value = overlayBounds.y;
@@ -378,8 +380,8 @@ export function CameraScreen() {
       }
 
       const overlayCandidate = mapNativeCandidateForOverlay(candidate, nativeEvidenceMapping);
-      sharedValues.subjectX.value = overlayCandidate.center.x;
-      sharedValues.subjectY.value = overlayCandidate.center.y;
+      sharedValues.subjectX.value = withTiming(overlayCandidate.center.x, { duration: SUBJECT_EASE_MS });
+      sharedValues.subjectY.value = withTiming(overlayCandidate.center.y, { duration: SUBJECT_EASE_MS });
       sharedValues.hasSubject.value = 1;
 
       if (overlayCandidate.bounds) {
@@ -605,7 +607,7 @@ export function CameraScreen() {
         <CompositionOverlay
           width={layout.width}
           height={layout.height}
-          overlayMode={overlayMode}
+          canon={canon}
           sharedValues={sharedValues}
           candidateSource={candidateSource}
           candidateBounds={candidateBounds}

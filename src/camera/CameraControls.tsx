@@ -1,6 +1,6 @@
 import { memo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { OverlayMode } from '../composition/types';
+import { CANONS } from '../composition/canons';
 import type { DetectionMode } from '../detection/types';
 import { useCameraUiStore } from '../state/cameraUiStore';
 import { DEBUG_OVERLAY_PRESET_OPTIONS } from '../state/debugOverlayVisibility';
@@ -10,7 +10,6 @@ type Props = {
   isCapturing: boolean;
 };
 
-const OVERLAY_MODES: OverlayMode[] = ['thirds', 'halves', 'both'];
 const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
   { value: 'manual', label: 'Manual', accessibilityLabel: 'Use manual tap subject mode' },
   { value: 'auto-placeholder', label: 'Auto placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
@@ -18,12 +17,12 @@ const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilit
   { value: 'native-heuristic', label: 'Native heuristic', accessibilityLabel: 'Use native heuristic visual mass mode' }
 ];
 function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
-  const overlayMode = useCameraUiStore((state) => state.overlayMode);
+  const canonId = useCameraUiStore((state) => state.canonId);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
-  const setOverlayMode = useCameraUiStore((state) => state.setOverlayMode);
+  const setCanonId = useCameraUiStore((state) => state.setCanonId);
   const setDetectionMode = useCameraUiStore((state) => state.setDetectionMode);
   const toggleArmed = useCameraUiStore((state) => state.toggleArmed);
   const setDebugQualityMode = useCameraUiStore((state) => state.setDebugQualityMode);
@@ -50,20 +49,20 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
         })}
       </View>
 
-      <View accessibilityLabel="Overlay mode" style={styles.segmented}>
-        {OVERLAY_MODES.map((mode) => {
-          const active = mode === overlayMode;
+      <View accessibilityLabel="Canon" style={styles.segmented}>
+        {CANONS.map((canon) => {
+          const active = canon.id === canonId;
 
           return (
             <Pressable
-              key={mode}
+              key={canon.id}
               accessibilityRole="button"
-              accessibilityLabel={`Show ${mode} composition guides`}
+              accessibilityLabel={`Use the ${canon.name} canon`}
               accessibilityState={{ selected: active }}
-              onPress={() => setOverlayMode(mode)}
+              onPress={() => setCanonId(canon.id)}
               style={[styles.segmentButton, active ? styles.segmentButtonActive : null]}
             >
-              <Text style={[styles.segmentText, active ? styles.segmentTextActive : null]}>{mode}</Text>
+              <Text style={[styles.segmentText, active ? styles.segmentTextActive : null]}>{canon.name}</Text>
             </Pressable>
           );
         })}

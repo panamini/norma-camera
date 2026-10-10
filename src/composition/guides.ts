@@ -1,4 +1,4 @@
-import type { AxisGuide, CompositionGuide, GuideKind, OverlayMode, SegmentGuide } from './types';
+import type { AxisGuide, CompositionGuide, GuideKind, SegmentGuide } from './types';
 
 export const PHI = (1 + Math.sqrt(5)) / 2;
 export const PHI_INV = 1 / PHI;
@@ -45,17 +45,6 @@ export function isAxisGuide(guide: CompositionGuide): guide is AxisGuide {
 
 export function isSegmentGuide(guide: CompositionGuide): guide is SegmentGuide {
   return guide.axis === 'segment';
-}
-
-export function guideKindsForOverlayMode(mode: OverlayMode): GuideKind[] {
-  switch (mode) {
-    case 'thirds':
-      return ['third'];
-    case 'halves':
-      return ['half'];
-    case 'both':
-      return ['third', 'half'];
-  }
 }
 
 export function guidesForKinds(kinds: GuideKind[]): CompositionGuide[] {
