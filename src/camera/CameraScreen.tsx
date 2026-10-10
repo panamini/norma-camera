@@ -28,12 +28,14 @@ import { scoreDetectedComposition } from '../detection/scoreDetectedComposition'
 import { selectCompositionCandidate } from '../detection/selectCompositionCandidate';
 import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, DetectionSource, DetectedCompositionScore, NormalizedRect } from '../detection/types';
 import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
+import { GallerySheet } from '../capture/GallerySheet';
+import { ReviewScreen } from '../capture/ReviewScreen';
 import { CompositionOverlay } from '../overlay/CompositionOverlay';
 import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../overlay/ScoreBadge';
 import { WhySheet } from '../overlay/WhySheet';
 import { clamp } from '../shared/clamp';
 import { nowMs } from '../shared/time';
-import { useCameraUiStore } from '../state/cameraUiStore';
+import { useCameraUiStore, type CapturedPhoto } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { tickNodeLock } from '../ui/haptics';
 import { CameraControls } from './CameraControls';
@@ -248,6 +250,7 @@ export function CameraScreen() {
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
   const addCapturedPhoto = useCameraUiStore((state) => state.addCapturedPhoto);
+  const capturedPhotos = useCameraUiStore((state) => state.capturedPhotos);
   const nativeHeuristic = useNativeHeuristicCandidate(detectionMode === 'native-heuristic');
   const nativeSharpnessScore = nativeHeuristic.analysis?.sharpness?.sharpnessScore;
   const nativeExposureScore = nativeHeuristic.analysis?.exposure?.exposureScore;
@@ -283,6 +286,8 @@ export function CameraScreen() {
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
   const [retainedGuideScore, setRetainedGuideScore] = useState<number | null>(null);
   const [whyOpen, setWhyOpen] = useState(false);
+  const [galleryOpen, setGalleryOpen] = useState(false);
+  const [reviewPhoto, setReviewPhoto] = useState<CapturedPhoto | null>(null);
 
   const canon = useMemo(() => canonById(canonId), [canonId]);
   const activeGuideKinds = canon.guideKinds;
@@ -672,6 +677,7 @@ export function CameraScreen() {
       )}
       <CameraControls
         onManualCapture={() => void capturePhoto('manual')}
+        onOpenGallery={() => setGalleryOpen(true)}
         isCapturing={isCapturing}
         readyThreshold={READY_SCORE_THRESHOLD}
         sharedValues={sharedValues}
@@ -683,6 +689,13 @@ export function CameraScreen() {
         snapshot={candidateSnapshot}
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
       />
+      <GallerySheet
+        visible={galleryOpen}
+        photos={capturedPhotos}
+        onSelect={(photo) => setReviewPhoto(photo)}
+        onClose={() => setGalleryOpen(false)}
+      />
+      <ReviewScreen photo={reviewPhoto} onClose={() => setReviewPhoto(null)} />
     </View>
   );
 }

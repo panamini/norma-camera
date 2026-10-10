@@ -1,5 +1,5 @@
 import { memo, useState } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
 import { CANONS } from '../composition/canons';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
 import type { DetectionMode } from '../detection/types';
@@ -11,6 +11,7 @@ import { normaColors, normaFonts } from '../ui/theme';
 
 type Props = {
   onManualCapture: () => void;
+  onOpenGallery: () => void;
   isCapturing: boolean;
   readyThreshold: number;
   sharedValues: CompositionSharedValues;
@@ -24,8 +25,9 @@ const DEV_DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessib
   { value: 'simulated-detector', label: 'sim detector', accessibilityLabel: 'Use simulated detector mode' }
 ];
 
-function CameraControlsComponent({ onManualCapture, isCapturing, readyThreshold, sharedValues }: Props) {
+function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, readyThreshold, sharedValues }: Props) {
   const canonId = useCameraUiStore((state) => state.canonId);
+  const lastCapture = useCameraUiStore((state) => state.capturedPhotos[0] ?? null);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
@@ -108,6 +110,15 @@ function CameraControlsComponent({ onManualCapture, isCapturing, readyThreshold,
       </View>
 
       <View style={styles.primaryRow}>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open session gallery"
+          disabled={!lastCapture}
+          onPress={onOpenGallery}
+          style={[styles.galleryThumb, lastCapture ? null : styles.galleryThumbEmpty]}
+        >
+          {lastCapture ? <Image source={{ uri: lastCapture.uri }} resizeMode="cover" style={styles.galleryThumbImage} /> : null}
+        </Pressable>
         <Pressable
           accessibilityRole="switch"
           accessibilityLabel="Toggle armed auto capture"
@@ -219,8 +230,23 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between'
   },
+  galleryThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: normaColors.paperFaint,
+    overflow: 'hidden',
+    backgroundColor: normaColors.graphiteScrim
+  },
+  galleryThumbEmpty: {
+    opacity: 0.4
+  },
+  galleryThumbImage: {
+    ...StyleSheet.absoluteFillObject
+  },
   armPill: {
-    minWidth: 76,
+    minWidth: 64,
     alignItems: 'center',
     borderRadius: 4,
     borderWidth: 1,
