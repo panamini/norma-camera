@@ -6,6 +6,7 @@ import { canonById } from '../composition/canons';
 import { CanonStaticOverlay } from '../overlay/CanonStaticOverlay';
 import type { CapturedPhoto } from '../state/cameraUiStore';
 import { normaColors, normaFonts } from '../ui/theme';
+import { renderCanonBurnIn } from './burnInCanon';
 import { constructExportUrl } from './constructExport';
 import { fitContainRect } from './fitRect';
 
@@ -33,6 +34,7 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
   const [imageSize, setImageSize] = useState<Size | null>(null);
   const [boxSize, setBoxSize] = useState<Size>({ width: 0, height: 0 });
   const [actionNote, setActionNote] = useState<string | null>(null);
+  const [isBurningIn, setIsBurningIn] = useState(false);
 
   const handleImageLoad = useCallback((event: NativeSyntheticEvent<ImageLoadEventData>) => {
     const { width, height } = event.nativeEvent.source;
@@ -58,6 +60,23 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
       setActionNote(`share failed · ${message}`);
     }
   }, []);
+
+  const handleShareWithCanon = useCallback(
+    async (reviewed: CapturedPhoto) => {
+      setIsBurningIn(true);
+      setActionNote(null);
+      try {
+        const burnedUri = await renderCanonBurnIn(reviewed);
+        await handleShare(burnedUri);
+      } catch (error) {
+        const message = error instanceof Error ? error.message : 'unknown error';
+        setActionNote(`canon burn-in failed · ${message}`);
+      } finally {
+        setIsBurningIn(false);
+      }
+    },
+    [handleShare]
+  );
 
   const handleConstruct = useCallback(async (reviewed: CapturedPhoto) => {
     try {
@@ -125,6 +144,15 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
             style={styles.actionChip}
           >
             <Text style={styles.actionText}>SHARE</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Share photo with the canon construction drawn in"
+            disabled={isBurningIn}
+            onPress={() => void handleShareWithCanon(photo)}
+            style={[styles.actionChip, isBurningIn ? styles.actionChipBusy : null]}
+          >
+            <Text style={styles.actionText}>{isBurningIn ? 'DRAWING…' : '+ CANON'}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
@@ -216,6 +244,9 @@ const styles = StyleSheet.create({
   actionChipActive: {
     borderColor: normaColors.accent,
     backgroundColor: normaColors.accentSoft
+  },
+  actionChipBusy: {
+    opacity: 0.5
   },
   actionText: {
     fontFamily: normaFonts.mono,
