@@ -29,6 +29,21 @@ auto-capture behavior, debug overlay presets, or the evidence model. New
 dependency: `expo-haptics` (Expo-native, no Play Services; dev-client rebuild
 required).
 
+## PR6 Capture flow
+
+- Captured photos record their canon; session gallery (in-memory, newest
+  first) and review screen with the canon construction re-projected over the
+  contain-fitted image via shared pixel geometry (`canonGeometry.ts`).
+- System share via `expo-sharing`; `+ CANON` share renders an on-device
+  burn-in copy (raster Skia surface, longest side capped at 2048, cache file)
+  — the original capture is never modified.
+- `CONSTRUCT` opens the canon-metadata URL on norma.science (contract in
+  [`construct-export-contract.md`](construct-export-contract.md)); the photo
+  moves only through the share sheet.
+- New dependencies: `expo-sharing`, `expo-file-system` (Expo-native, offline,
+  no Play Services; dev-client rebuild required). Detection, scoring, and
+  capture gates unchanged.
+
 ## PR4.10 Camera Debug Calibration Notes
 
 The feature stack was complete for the PR4 release candidate:
