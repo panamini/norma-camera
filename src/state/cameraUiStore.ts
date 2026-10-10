@@ -10,6 +10,7 @@ export type CapturedPhoto = {
   createdAtMs: number;
   label: string;
   score: number;
+  canonId: CanonId;
 };
 
 type CameraUiState = {

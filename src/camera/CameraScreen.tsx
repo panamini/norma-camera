@@ -557,7 +557,7 @@ export function CameraScreen() {
           uri = `simulated-capture://${createdAtMs}`;
         }
 
-        addCapturedPhoto({ uri, createdAtMs, label, score });
+        addCapturedPhoto({ uri, createdAtMs, label, score, canonId });
         autoCaptureController.current.reset();
         setCaptureBanner({ score, uri, trigger });
         setAutoStatusLine(trigger === 'auto' ? 'ARMED · captured' : 'manual capture complete');
@@ -572,7 +572,7 @@ export function CameraScreen() {
         if (mountedRef.current) setIsCapturing(false);
       }
     },
-    [addCapturedPhoto, photoOutput]
+    [addCapturedPhoto, canonId, photoOutput]
   );
 
   useEffect(() => {
