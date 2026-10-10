@@ -344,11 +344,10 @@ const styles = StyleSheet.create({
     color: normaColors.accent
   },
   devToggle: {
-    position: 'absolute',
-    right: 0,
-    bottom: 0,
+    alignSelf: 'flex-end',
+    marginTop: -6,
     paddingHorizontal: 8,
-    paddingVertical: 4
+    paddingVertical: 2
   },
   devToggleText: {
     fontFamily: normaFonts.mono,
