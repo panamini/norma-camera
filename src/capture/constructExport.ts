@@ -9,15 +9,17 @@ import type { CapturedPhoto } from '../state/cameraUiStore';
 export const CONSTRUCT_IMPORT_BASE_URL = 'https://norma.science/app';
 
 export function constructExportUrl(photo: CapturedPhoto): string {
-  const params = new URLSearchParams({
-    construct_import: '1',
-    canon: photo.canonId,
-    score: String(Math.round(photo.score)),
-    label: photo.label,
-    captured_at_ms: String(photo.createdAtMs)
-  });
+  // Built by hand: Hermes' URL/URLSearchParams support is incomplete.
+  const params: Array<[string, string]> = [
+    ['construct_import', '1'],
+    ['canon', photo.canonId],
+    ['score', String(Math.round(photo.score))],
+    ['label', photo.label],
+    ['captured_at_ms', String(photo.createdAtMs)]
+  ];
+  const query = params.map(([key, value]) => `${key}=${encodeURIComponent(value)}`).join('&');
 
-  return `${CONSTRUCT_IMPORT_BASE_URL}?${params.toString()}`;
+  return `${CONSTRUCT_IMPORT_BASE_URL}?${query}`;
 }
 
 export function burnInFileName(photo: CapturedPhoto): string {

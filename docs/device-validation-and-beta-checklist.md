@@ -40,6 +40,10 @@ Then the usual two-terminal flow: `npm run u` / `npm run d`.
   gates exactly as before
 - subject marker eases (no 4 fps jumping); arc fills smoothly
 - FPS: no visible stutter on the camera preview with nodes + arc active
+- watch for lit-node vs score disagreement near crop edges in AUTO: nodes use
+  preview-mapped evidence, scoring stays on raw-frame inputs (PR4.1 contract).
+  If visibly wrong on device, a follow-up PR should move scoring inputs to
+  mapped coordinates with the mandated note from detection-roadmap.md
 
 ## 4. Capture flow (new, PR6)
 
