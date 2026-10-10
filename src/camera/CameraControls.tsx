@@ -6,6 +6,7 @@ import type { DetectionMode } from '../detection/types';
 import { ResonanceArc } from '../overlay/ResonanceArc';
 import { useCameraUiStore } from '../state/cameraUiStore';
 import { DEBUG_OVERLAY_PRESET_OPTIONS } from '../state/debugOverlayVisibility';
+import { tickSelection } from '../ui/haptics';
 import { normaColors, normaFonts } from '../ui/theme';
 
 type Props = {
@@ -93,7 +94,10 @@ function CameraControlsComponent({ onManualCapture, isCapturing, readyThreshold,
               accessibilityRole="button"
               accessibilityLabel={`Use the ${canon.name} canon`}
               accessibilityState={{ selected: active }}
-              onPress={() => setCanonId(canon.id)}
+              onPress={() => {
+                if (!active) tickSelection();
+                setCanonId(canon.id);
+              }}
               style={[styles.canonChip, active ? styles.canonChipActive : null]}
             >
               <Text style={[styles.canonGlyph, active ? styles.canonGlyphActive : null]}>{canon.glyph}</Text>

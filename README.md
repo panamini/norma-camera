@@ -3,6 +3,22 @@
 MVP Expo + VisionCamera (appareil photo Android)  
 Ce guide documente le workflow de lancement propre en développement, comme celui utilisé pour faire tourner le build dev-client sur Pixel par USB.
 
+## Harmony Viewfinder (PR5)
+
+*« Point your camera — Norma shows you when the frame sings, and why. »*
+
+Le viseur affiche un **canon** nommé (Thirds · Phi · Root 2 · Diagonals) :
+lignes de construction toujours discrètes, **nœuds** qui s'illuminent quand la
+masse visuelle du sujet s'y pose, score présenté comme un **arc de résonance**
+autour du déclencheur, et une fiche « WHY? » en un tap qui explique le score
+(guide le plus proche, contribution de la ligne d'horizon, nature exacte de
+l'évidence). Les canons sont des choix éditoriaux assumés — des opinions
+classiques, pas une vérité objective — et l'app le dit.
+
+- Mode sujet : `MANUAL` (tap) ou `AUTO` (visual mass natif, fallback honnête).
+- `ARM` : auto-capture strictement opt-in, copy conservatrice inchangée.
+- Outils dev (placeholder, sim detector, presets debug, panels) derrière `···`.
+
 ## Prérequis
 
 - Node.js + npm

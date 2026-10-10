@@ -35,6 +35,7 @@ import { clamp } from '../shared/clamp';
 import { nowMs } from '../shared/time';
 import { useCameraUiStore } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
+import { tickNodeLock } from '../ui/haptics';
 import { CameraControls } from './CameraControls';
 import { StatusStrip } from './StatusStrip';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
@@ -59,6 +60,7 @@ const LABEL_UPDATE_INTERVAL_MS = 500;
 const SUBJECT_EASE_MS = 180;
 const SCORE_EASE_MS = 220;
 const CAPTURE_TOAST_MS = 2500;
+const NODE_LOCK_TICK_MIN_INTERVAL_MS = 700;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
@@ -236,6 +238,8 @@ export function CameraScreen() {
   const isCapturingRef = useRef(false);
   const wasArmedRef = useRef(false);
   const retainedGuideScoreRef = useRef<{ value: number; expiresAtMs: number } | null>(null);
+  const wasNodeLockedRef = useRef(false);
+  const lastNodeLockTickAtMsRef = useRef(0);
 
   const canonId = useCameraUiStore((state) => state.canonId);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
@@ -577,6 +581,14 @@ export function CameraScreen() {
       const currentNowMs = nowMs();
       const applied = selectAndApplyCandidate(currentNowMs);
       const hasCandidate = applied.selection.candidate !== null;
+
+      const isNodeLocked = hasCandidate && applied.detectedScore.composition.score >= READY_SCORE_THRESHOLD;
+      if (isNodeLocked && !wasNodeLockedRef.current && currentNowMs - lastNodeLockTickAtMsRef.current >= NODE_LOCK_TICK_MIN_INTERVAL_MS) {
+        lastNodeLockTickAtMsRef.current = currentNowMs;
+        tickNodeLock();
+      }
+      wasNodeLockedRef.current = isNodeLocked;
+
       const decision = autoCaptureController.current.evaluate({
         nowMs: currentNowMs,
         armed,

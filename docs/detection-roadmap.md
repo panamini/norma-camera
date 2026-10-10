@@ -1,8 +1,37 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.10 Camera Debug Calibration Notes
+## Current target: PR5 Harmony Viewfinder (product phase)
 
-The feature stack is complete for this release candidate:
+PR5.0–PR5.4 are product-UI work on top of the complete V1 engine. See
+[`harmony-viewfinder-plan.md`](harmony-viewfinder-plan.md) for the plan and
+[`phase0-revival-status.md`](phase0-revival-status.md) for the toolchain revival.
+
+What PR5 changes:
+
+- Canon lens model: Thirds, Phi, Root 2, Diagonals as named guide-geometry sets
+  (`src/composition/canons.ts`); the active canon selects which guides feed the
+  existing scoring functions.
+- `GuideKind` gains `phi`, `root2`, `diagonal`; diagonals are segment guides
+  scored by point-to-segment distance through the unchanged falloff formula.
+- The horizontal-line signal aligns against the active canon's y-axis guides;
+  the Diagonals canon has none, so it contributes nothing there.
+- Norma-branded viewfinder: faint canon lines, power-point nodes that light up
+  under the subject, resonance arc around the shutter, one-tap why sheet,
+  haptic tick on node lock, canon selector; debug tooling moved behind a dev
+  toggle (`ScoreBadge` is the dev readout, panels hidden by default).
+- Default detection mode is `native-heuristic` with its honest unavailable
+  fallback; manual tap still overrides in every mode. Auto-capture stays
+  opt-in (ARM off by default).
+
+What PR5 does not change: native algorithms, native thresholds, the frame
+pipeline, the bridge, the scoring falloff/thresholds/caps, readiness gating,
+auto-capture behavior, debug overlay presets, or the evidence model. New
+dependency: `expo-haptics` (Expo-native, no Play Services; dev-client rebuild
+required).
+
+## PR4.10 Camera Debug Calibration Notes
+
+The feature stack was complete for the PR4 release candidate:
 
 - live luminance metrics
 - live sharpness / edge-energy metrics
