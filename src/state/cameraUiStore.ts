@@ -31,12 +31,12 @@ type CameraUiState = {
 
 export const useCameraUiStore = create<CameraUiState>((set) => ({
   canonId: DEFAULT_CANON_ID,
-  detectionMode: 'auto-placeholder',
+  detectionMode: 'native-heuristic',
   armed: false,
   lastCaptureAtMs: null,
   capturedPhotos: [],
   debugQualityMode: 'normal',
-  debugPanelsHidden: false,
+  debugPanelsHidden: true,
   setCanonId: (canonId) => set({ canonId }),
   setDetectionMode: (detectionMode) => set({ detectionMode }),
   setArmed: (armed) => set({ armed }),

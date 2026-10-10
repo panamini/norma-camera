@@ -30,11 +30,13 @@ import type { CandidateSelectionResult, CompositionCandidate, DetectionMode, Det
 import { useNativeHeuristicCandidate } from '../detection/useNativeHeuristicCandidate';
 import { CompositionOverlay } from '../overlay/CompositionOverlay';
 import { ScoreBadge, type CandidateScoreSnapshot, type CaptureBanner } from '../overlay/ScoreBadge';
+import { WhySheet } from '../overlay/WhySheet';
 import { clamp } from '../shared/clamp';
 import { nowMs } from '../shared/time';
 import { useCameraUiStore } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { CameraControls } from './CameraControls';
+import { StatusStrip } from './StatusStrip';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
 import { useFrameQualityStub } from './useFrameQualityStub';
 
@@ -55,6 +57,8 @@ type CameraPreviewProps = {
 const AUTO_CAPTURE_CHECK_INTERVAL_MS = 250;
 const LABEL_UPDATE_INTERVAL_MS = 500;
 const SUBJECT_EASE_MS = 180;
+const SCORE_EASE_MS = 220;
+const CAPTURE_TOAST_MS = 2500;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
@@ -227,6 +231,7 @@ export function CameraScreen() {
   const sharedValues = useCompositionSharedValues();
   const autoCaptureController = useRef(createAutoCaptureController(DEFAULT_AUTO_CAPTURE_CONFIG));
   const compositionLabelRef = useRef('NO SUBJECT');
+  const compositionScoreRef = useRef(0);
   const mountedRef = useRef(true);
   const isCapturingRef = useRef(false);
   const wasArmedRef = useRef(false);
@@ -273,6 +278,7 @@ export function CameraScreen() {
   const [qualityLine, setQualityLine] = useState('sharpness 80 · exposure 75 (stub) · motion 10 stub');
   const [captureBanner, setCaptureBanner] = useState<CaptureBanner | null>(null);
   const [retainedGuideScore, setRetainedGuideScore] = useState<number | null>(null);
+  const [whyOpen, setWhyOpen] = useState(false);
 
   const canon = useMemo(() => canonById(canonId), [canonId]);
   const activeGuideKinds = canon.guideKinds;
@@ -339,6 +345,12 @@ export function CameraScreen() {
     mountedRef.current = false;
   }, []);
 
+  useEffect(() => {
+    if (!captureBanner) return;
+    const timeout = setTimeout(() => setCaptureBanner(null), CAPTURE_TOAST_MS);
+    return () => clearTimeout(timeout);
+  }, [captureBanner]);
+
   const selectAndApplyCandidate = useCallback(
     (evaluationNowMs: number): AppliedComposition => {
       const selection = selectCompositionCandidate({
@@ -351,7 +363,8 @@ export function CameraScreen() {
       const candidate = detectedScore.candidate;
       const result = detectedScore.composition;
 
-      sharedValues.compositionScore.value = result.score;
+      compositionScoreRef.current = result.score;
+      sharedValues.compositionScore.value = withTiming(result.score, { duration: SCORE_EASE_MS });
       compositionLabelRef.current = titleForCandidate(candidate, result);
 
       if (!candidate) {
@@ -521,7 +534,7 @@ export function CameraScreen() {
       isCapturingRef.current = true;
       setIsCapturing(true);
       const createdAtMs = nowMs();
-      const score = Math.round(sharedValues.compositionScore.value);
+      const score = Math.round(compositionScoreRef.current);
       const label = trigger === 'auto' ? 'COMPOSITION READY' : compositionLabelRef.current;
 
       try {
@@ -555,7 +568,7 @@ export function CameraScreen() {
         if (mountedRef.current) setIsCapturing(false);
       }
     },
-    [addCapturedPhoto, photoOutput, sharedValues.compositionScore]
+    [addCapturedPhoto, photoOutput]
   );
 
   useEffect(() => {
@@ -620,6 +633,14 @@ export function CameraScreen() {
           showVisualMassDebug={debugOverlayVisibility.showVisualMassDebug}
         />
       </Pressable>
+      <StatusStrip
+        canon={canon}
+        title={displayTitle}
+        score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
+        armedLine={armed ? autoStatusLine : null}
+        captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : null}
+        onWhyPress={() => setWhyOpen(true)}
+      />
       {debugPanelsHidden ? null : (
         <ScoreBadge
           modeLabel={displayModeLabel}
@@ -636,7 +657,19 @@ export function CameraScreen() {
           debugQualityMode={debugQualityMode}
         />
       )}
-      <CameraControls onManualCapture={() => void capturePhoto('manual')} isCapturing={isCapturing} />
+      <CameraControls
+        onManualCapture={() => void capturePhoto('manual')}
+        isCapturing={isCapturing}
+        readyThreshold={READY_SCORE_THRESHOLD}
+        sharedValues={sharedValues}
+      />
+      <WhySheet
+        visible={whyOpen}
+        onClose={() => setWhyOpen(false)}
+        canon={canon}
+        snapshot={candidateSnapshot}
+        score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
+      />
     </View>
   );
 }
