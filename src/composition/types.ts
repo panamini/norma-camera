@@ -3,15 +3,40 @@ export type NormalizedPoint = {
   y: number;
 };
 
-export type GuideKind = 'third' | 'half';
+export type GuideKind = 'third' | 'half' | 'phi' | 'root2' | 'diagonal';
 export type Axis = 'x' | 'y';
-export type OverlayMode = 'thirds' | 'halves' | 'both';
 
-export type CompositionGuide = {
+export type CanonId = 'thirds' | 'phi' | 'root2' | 'diagonals';
+
+export type AxisGuide = {
   axis: Axis;
   kind: GuideKind;
   value: number;
   label: string;
+};
+
+export type SegmentGuide = {
+  axis: 'segment';
+  kind: GuideKind;
+  start: NormalizedPoint;
+  end: NormalizedPoint;
+  label: string;
+};
+
+export type CompositionGuide = AxisGuide | SegmentGuide;
+
+export type CanonNode = {
+  point: NormalizedPoint;
+  label: string;
+};
+
+export type CanonDefinition = {
+  id: CanonId;
+  name: string;
+  glyph: string;
+  guideKinds: GuideKind[];
+  nodes: CanonNode[];
+  description: string;
 };
 
 export type GuideHit = {

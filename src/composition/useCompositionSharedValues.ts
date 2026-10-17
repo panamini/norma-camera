@@ -11,9 +11,10 @@ export type CompositionSharedValues = {
   candidateBoundsHeight: SharedValue<number>;
   hasCandidateBounds: SharedValue<number>;
   compositionScore: SharedValue<number>;
-  bestGuideX: SharedValue<number>;
-  bestGuideY: SharedValue<number>;
   highlightIntensity: SharedValue<number>;
+  lockPulse: SharedValue<number>;
+  lockNodeX: SharedValue<number>;
+  lockNodeY: SharedValue<number>;
   sharpnessScore: SharedValue<number>;
   exposureScore: SharedValue<number>;
   motionScore: SharedValue<number>;
@@ -30,9 +31,12 @@ export function useCompositionSharedValues(): CompositionSharedValues {
   const candidateBoundsHeight = useSharedValue(0);
   const hasCandidateBounds = useSharedValue(0);
   const compositionScore = useSharedValue(0);
-  const bestGuideX = useSharedValue(-1);
-  const bestGuideY = useSharedValue(-1);
   const highlightIntensity = useSharedValue(0);
+  // lockPulse rests at 1 (fully faded); a node lock resets it to 0 and eases
+  // back to 1, which drives the expanding ring at (lockNodeX, lockNodeY).
+  const lockPulse = useSharedValue(1);
+  const lockNodeX = useSharedValue(-1);
+  const lockNodeY = useSharedValue(-1);
   const sharpnessScore = useSharedValue(80);
   const exposureScore = useSharedValue(75);
   const motionScore = useSharedValue(10);
@@ -49,17 +53,16 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       candidateBoundsHeight,
       hasCandidateBounds,
       compositionScore,
-      bestGuideX,
-      bestGuideY,
       highlightIntensity,
+      lockPulse,
+      lockNodeX,
+      lockNodeY,
       sharpnessScore,
       exposureScore,
       motionScore,
       sceneChangedScore
     }),
     [
-      bestGuideX,
-      bestGuideY,
       candidateBoundsHeight,
       candidateBoundsWidth,
       candidateBoundsX,
@@ -69,6 +72,9 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       hasCandidateBounds,
       hasSubject,
       highlightIntensity,
+      lockNodeX,
+      lockNodeY,
+      lockPulse,
       motionScore,
       sceneChangedScore,
       sharpnessScore,

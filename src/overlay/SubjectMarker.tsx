@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
 import type { DetectionSource } from '../detection/types';
+import { normaColors } from '../ui/theme';
 
 type Props = {
   width: number;
@@ -51,22 +52,23 @@ const styles = StyleSheet.create({
     width: MARKER_SIZE,
     height: MARKER_SIZE,
     borderRadius: MARKER_SIZE / 2,
-    borderWidth: 2
+    borderWidth: 1.5
   },
+  // Gold ring = the user's own mark; paper ring = Norma's evidence.
   manualMarker: {
-    borderColor: '#f2b84b',
-    backgroundColor: 'rgba(242,184,75,0.14)'
+    borderColor: normaColors.accent,
+    backgroundColor: normaColors.accentSoft
   },
   placeholderMarker: {
-    borderColor: '#ffffff',
-    backgroundColor: 'rgba(255,255,255,0.12)'
+    borderColor: normaColors.paperFaint,
+    backgroundColor: normaColors.paperGhost
   },
   simulatedMarker: {
-    borderColor: '#f2b84b',
-    backgroundColor: 'rgba(242,184,75,0.20)'
+    borderColor: normaColors.accentFaint,
+    backgroundColor: normaColors.accentSoft
   },
   nativeMarker: {
-    borderColor: '#84f28f',
-    backgroundColor: 'rgba(132,242,143,0.18)'
+    borderColor: normaColors.paperDim,
+    backgroundColor: normaColors.paperGhost
   }
 });

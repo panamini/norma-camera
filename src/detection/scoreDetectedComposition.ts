@@ -10,7 +10,7 @@ function isDetectedCompositionScoreInput(value: CompositionCandidate | DetectedC
 
 function explanationForCandidate(candidate: CompositionCandidate | null, fallbackExplanation?: string): string {
   if (!candidate) {
-    return fallbackExplanation ?? 'No candidate. Tap subject or switch Auto.';
+    return fallbackExplanation ?? 'No candidate. Tap your subject to score it.';
   }
 
   switch (candidate.source) {
@@ -23,7 +23,7 @@ function explanationForCandidate(candidate: CompositionCandidate | null, fallbac
     case 'native-heuristic':
       return fallbackExplanation ?? 'Native visual mass is being scored. Live luminance analysis, no recognition is used.';
     case 'none':
-      return fallbackExplanation ?? 'No candidate. Tap subject or switch Auto.';
+      return fallbackExplanation ?? 'No candidate. Tap your subject to score it.';
   }
 }
 

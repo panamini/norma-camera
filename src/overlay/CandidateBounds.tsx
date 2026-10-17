@@ -3,6 +3,7 @@ import { StyleSheet } from 'react-native';
 import Animated, { useAnimatedStyle } from 'react-native-reanimated';
 import type { CompositionSharedValues } from '../composition/useCompositionSharedValues';
 import type { DetectionSource } from '../detection/types';
+import { normaColors } from '../ui/theme';
 
 type Props = {
   width: number;
@@ -51,18 +52,17 @@ const styles = StyleSheet.create({
     position: 'absolute',
     left: 0,
     top: 0,
-    borderWidth: 2,
-    borderRadius: 8,
-    backgroundColor: 'rgba(0,0,0,0.05)'
+    borderWidth: 1,
+    borderRadius: 3
   },
   placeholderBounds: {
-    borderColor: 'rgba(255,255,255,0.88)',
+    borderColor: normaColors.paperFaint,
     borderStyle: 'dashed'
   },
   simulatedBounds: {
-    borderColor: '#f2b84b'
+    borderColor: normaColors.accentFaint
   },
   nativeBounds: {
-    borderColor: '#84f28f'
+    borderColor: normaColors.paperDim
   }
 });

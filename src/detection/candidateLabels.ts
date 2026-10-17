@@ -22,8 +22,21 @@ export function instructionForDetectionMode(mode: DetectionMode, hasCandidate: b
     case 'simulated-detector':
       return 'Testing auto-capture flow.';
     case 'native-heuristic':
-      return hasCandidate ? 'Live luminance analysis. No recognition is used.' : 'Native mode waiting for a strong contrast candidate.';
+      return hasCandidate ? 'Live luminance analysis. No recognition is used.' : 'No dominant contrast mass. Tap your subject to score it.';
   }
+}
+
+const DEGRADED_MODE_LABEL_MARKERS = ['unavailable', 'error', 'stale'] as const;
+
+/**
+ * What the status strip shows under the title: degraded analyzer states
+ * (unavailable / error / stale) surface the honest mode label; every normal
+ * operating state shows the actionable instruction instead, because "no
+ * strong native candidate" is jargon exactly when the user needs "tap".
+ */
+export function statusInstructionFor(modeLabel: string, instruction: string): string {
+  const lowered = modeLabel.toLowerCase();
+  return DEGRADED_MODE_LABEL_MARKERS.some((marker) => lowered.includes(marker)) ? modeLabel : instruction;
 }
 
 export function displayNameForDetectionSource(source: DetectionSource): string {

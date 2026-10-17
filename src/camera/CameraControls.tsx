@@ -1,69 +1,111 @@
-import { memo } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
-import type { OverlayMode } from '../composition/types';
+import { memo, useState } from 'react';
+import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import type { SharedValue } from 'react-native-reanimated';
+import { CANONS } from '../composition/canons';
 import type { DetectionMode } from '../detection/types';
+import { ResonanceArc } from '../overlay/ResonanceArc';
 import { useCameraUiStore } from '../state/cameraUiStore';
 import { DEBUG_OVERLAY_PRESET_OPTIONS } from '../state/debugOverlayVisibility';
+import { tickSelection } from '../ui/haptics';
+import { normaColors, normaFonts } from '../ui/theme';
 
 type Props = {
   onManualCapture: () => void;
+  onOpenGallery: () => void;
   isCapturing: boolean;
+  readyThreshold: number;
+  score: SharedValue<number>;
 };
 
-const OVERLAY_MODES: OverlayMode[] = ['thirds', 'halves', 'both'];
-const DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
-  { value: 'manual', label: 'Manual', accessibilityLabel: 'Use manual tap subject mode' },
-  { value: 'auto-placeholder', label: 'Auto placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
-  { value: 'simulated-detector', label: 'Sim detector', accessibilityLabel: 'Use simulated detector mode' },
-  { value: 'native-heuristic', label: 'Native heuristic', accessibilityLabel: 'Use native heuristic visual mass mode' }
+const SHUTTER_ZONE = 86;
+const SHUTTER_SIZE = 64;
+
+const DEV_DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
+  { value: 'native-heuristic', label: 'native', accessibilityLabel: 'Use native visual mass mode' },
+  { value: 'manual', label: 'manual only', accessibilityLabel: 'Use manual tap subject mode only' },
+  { value: 'auto-placeholder', label: 'placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
+  { value: 'simulated-detector', label: 'sim detector', accessibilityLabel: 'Use simulated detector mode' }
 ];
-function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
-  const overlayMode = useCameraUiStore((state) => state.overlayMode);
+
+function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, readyThreshold, score }: Props) {
+  const canonId = useCameraUiStore((state) => state.canonId);
+  const lastCapture = useCameraUiStore((state) => state.capturedPhotos[0] ?? null);
   const detectionMode = useCameraUiStore((state) => state.detectionMode);
   const armed = useCameraUiStore((state) => state.armed);
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
-  const setOverlayMode = useCameraUiStore((state) => state.setOverlayMode);
+  const setCanonId = useCameraUiStore((state) => state.setCanonId);
   const setDetectionMode = useCameraUiStore((state) => state.setDetectionMode);
   const toggleArmed = useCameraUiStore((state) => state.toggleArmed);
   const setDebugQualityMode = useCameraUiStore((state) => state.setDebugQualityMode);
   const toggleDebugPanelsHidden = useCameraUiStore((state) => state.toggleDebugPanelsHidden);
+  const [devOpen, setDevOpen] = useState(false);
 
   return (
-    <View style={styles.root}>
-      <View accessibilityLabel="Detection mode" style={styles.segmentedWide}>
-        {DETECTION_MODES.map((mode) => {
-          const active = mode.value === detectionMode;
+    <View pointerEvents="box-none" style={styles.root}>
+      {devOpen ? (
+        <View accessibilityLabel="Developer tools" style={styles.devRow}>
+          {DEV_DETECTION_MODES.map((mode) => {
+            const active = mode.value === detectionMode;
+            return (
+              <Pressable
+                key={mode.value}
+                accessibilityRole="button"
+                accessibilityLabel={mode.accessibilityLabel}
+                accessibilityState={{ selected: active }}
+                onPress={() => setDetectionMode(mode.value)}
+                style={[styles.devChip, active ? styles.devChipActive : null]}
+              >
+                <Text style={[styles.devChipText, active ? styles.devChipTextActive : null]}>{mode.label}</Text>
+              </Pressable>
+            );
+          })}
+          {DEBUG_OVERLAY_PRESET_OPTIONS.map((mode) => {
+            const active = mode.value === debugQualityMode;
+            return (
+              <Pressable
+                key={mode.value}
+                accessibilityRole="button"
+                accessibilityLabel={mode.accessibilityLabel}
+                accessibilityState={{ selected: active }}
+                onPress={() => setDebugQualityMode(mode.value)}
+                style={[styles.devChip, active ? styles.devChipActive : null]}
+              >
+                <Text style={[styles.devChipText, active ? styles.devChipTextActive : null]}>{mode.label}</Text>
+              </Pressable>
+            );
+          })}
+          <Pressable
+            accessibilityRole="switch"
+            accessibilityLabel={debugPanelsHidden ? 'Show debug panels' : 'Hide debug panels'}
+            accessibilityState={{ checked: !debugPanelsHidden }}
+            onPress={toggleDebugPanelsHidden}
+            style={[styles.devChip, debugPanelsHidden ? null : styles.devChipActive]}
+          >
+            <Text style={[styles.devChipText, debugPanelsHidden ? null : styles.devChipTextActive]}>
+              {debugPanelsHidden ? 'panels off' : 'panels on'}
+            </Text>
+          </Pressable>
+        </View>
+      ) : null}
 
+      <View accessibilityLabel="Canon" style={styles.canonRow}>
+        {CANONS.map((canon) => {
+          const active = canon.id === canonId;
           return (
             <Pressable
-              key={mode.value}
+              key={canon.id}
               accessibilityRole="button"
-              accessibilityLabel={mode.accessibilityLabel}
+              accessibilityLabel={`Use the ${canon.name} canon`}
               accessibilityState={{ selected: active }}
-              onPress={() => setDetectionMode(mode.value)}
-              style={[styles.segmentButton, active ? styles.segmentButtonActive : null]}
+              onPress={() => {
+                if (!active) tickSelection();
+                setCanonId(canon.id);
+              }}
+              style={[styles.canonChip, active ? styles.canonChipActive : null]}
             >
-              <Text style={[styles.segmentText, active ? styles.segmentTextActive : null]}>{mode.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
-
-      <View accessibilityLabel="Overlay mode" style={styles.segmented}>
-        {OVERLAY_MODES.map((mode) => {
-          const active = mode === overlayMode;
-
-          return (
-            <Pressable
-              key={mode}
-              accessibilityRole="button"
-              accessibilityLabel={`Show ${mode} composition guides`}
-              accessibilityState={{ selected: active }}
-              onPress={() => setOverlayMode(mode)}
-              style={[styles.segmentButton, active ? styles.segmentButtonActive : null]}
-            >
-              <Text style={[styles.segmentText, active ? styles.segmentTextActive : null]}>{mode}</Text>
+              <Text style={[styles.canonGlyph, active ? styles.canonGlyphActive : null]}>{canon.glyph}</Text>
+              <Text style={[styles.canonText, active ? styles.canonTextActive : null]}>{canon.name}</Text>
             </Pressable>
           );
         })}
@@ -71,53 +113,58 @@ function CameraControlsComponent({ onManualCapture, isCapturing }: Props) {
 
       <View style={styles.primaryRow}>
         <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open session gallery"
+          disabled={!lastCapture}
+          onPress={onOpenGallery}
+          style={[styles.galleryThumb, lastCapture ? null : styles.galleryThumbEmpty]}
+        >
+          {lastCapture ? <Image source={{ uri: lastCapture.uri }} resizeMode="cover" style={styles.galleryThumbImage} /> : null}
+        </Pressable>
+        <Pressable
           accessibilityRole="switch"
           accessibilityLabel="Toggle armed auto capture"
           accessibilityState={{ checked: armed }}
           onPress={toggleArmed}
-          style={[styles.armedButton, armed ? styles.armedButtonActive : null]}
+          style={[styles.armPill, armed ? styles.armPillActive : null]}
         >
-          <Text style={[styles.armedText, armed ? styles.armedTextActive : null]}>{armed ? 'ARMED' : 'ARM'}</Text>
+          <Text style={[styles.armText, armed ? styles.armTextActive : null]}>{armed ? 'AUTO-SHOT ON' : 'AUTO-SHOT'}</Text>
         </Pressable>
+
+        <View style={styles.shutterZone}>
+          <ResonanceArc size={SHUTTER_ZONE} readyThreshold={readyThreshold} score={score} />
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Take photo manually"
+            disabled={isCapturing}
+            onPress={onManualCapture}
+            style={({ pressed }) => [styles.shutter, pressed || isCapturing ? styles.shutterPressed : null]}
+          >
+            <View style={styles.shutterInner} />
+          </Pressable>
+        </View>
 
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel="Take photo manually"
-          disabled={isCapturing}
-          onPress={onManualCapture}
-          style={[styles.captureButton, isCapturing ? styles.captureButtonDisabled : null]}
+          accessibilityLabel="Open session gallery"
+          disabled={!lastCapture}
+          onPress={onOpenGallery}
+          style={styles.journalChip}
         >
-          <View style={styles.captureButtonInner} />
+          <Text style={styles.journalChipText}>JOURNAL</Text>
         </Pressable>
       </View>
 
-      <View accessibilityLabel="Debug overlay presets" style={styles.debugRow}>
-        <Pressable
-          accessibilityRole="switch"
-          accessibilityLabel={debugPanelsHidden ? 'Show debug panels' : 'Hide debug panels'}
-          accessibilityState={{ checked: debugPanelsHidden }}
-          onPress={toggleDebugPanelsHidden}
-          style={[styles.debugButton, debugPanelsHidden ? styles.debugButtonActive : null]}
-        >
-          <Text style={[styles.debugText, debugPanelsHidden ? styles.debugTextActive : null]}>{debugPanelsHidden ? 'show panels' : 'hide panels'}</Text>
-        </Pressable>
-        {DEBUG_OVERLAY_PRESET_OPTIONS.map((mode) => {
-          const active = mode.value === debugQualityMode;
-
-          return (
-            <Pressable
-              key={mode.value}
-              accessibilityRole="button"
-              accessibilityLabel={mode.accessibilityLabel}
-              accessibilityState={{ selected: active }}
-              onPress={() => setDebugQualityMode(mode.value)}
-              style={[styles.debugButton, active ? styles.debugButtonActive : null]}
-            >
-              <Text style={[styles.debugText, active ? styles.debugTextActive : null]}>{mode.label}</Text>
-            </Pressable>
-          );
-        })}
-      </View>
+      <Pressable
+        accessibilityRole="switch"
+        accessibilityLabel={devOpen ? 'Hide developer tools' : 'Show developer tools'}
+        accessibilityState={{ checked: devOpen }}
+        onPress={() => setDevOpen((open) => !open)}
+        hitSlop={{ top: 10, bottom: 10, left: 12, right: 12 }}
+        style={styles.devToggle}
+      >
+        <Text style={[styles.devToggleText, devOpen ? styles.devToggleTextActive : null]}>···</Text>
+      </Pressable>
     </View>
   );
 }
@@ -131,109 +178,167 @@ const styles = StyleSheet.create({
     right: 16,
     bottom: 24,
     alignItems: 'center',
-    gap: 10
+    gap: 14
   },
-  segmented: {
-    flexDirection: 'row',
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 4
-  },
-  segmentedWide: {
-    alignSelf: 'stretch',
+  canonRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    borderRadius: 18,
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    padding: 4,
-    gap: 3
+    backgroundColor: normaColors.graphiteScrim,
+    borderRadius: 6,
+    padding: 3,
+    gap: 2
   },
-  segmentButton: {
-    borderRadius: 999,
-    paddingHorizontal: 11,
+  canonChip: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+    borderRadius: 4,
+    paddingHorizontal: 10,
     paddingVertical: 7
   },
-  segmentButtonActive: {
-    backgroundColor: 'rgba(255,255,255,0.9)'
+  canonChipActive: {
+    backgroundColor: normaColors.paper
   },
-  segmentText: {
-    color: '#ffffff',
+  canonGlyph: {
+    fontFamily: normaFonts.mono,
     fontSize: 11,
-    fontWeight: '800',
-    textTransform: 'uppercase'
+    color: normaColors.accentFaint
   },
-  segmentTextActive: {
-    color: '#000000'
+  canonGlyphActive: {
+    color: normaColors.graphite
+  },
+  canonText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 10,
+    letterSpacing: 1.1,
+    textTransform: 'uppercase',
+    color: normaColors.paperDim
+  },
+  canonTextActive: {
+    color: normaColors.graphite
   },
   primaryRow: {
+    alignSelf: 'stretch',
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    gap: 28
+    justifyContent: 'space-between'
   },
-  armedButton: {
-    minWidth: 92,
-    alignItems: 'center',
-    borderRadius: 999,
+  galleryThumb: {
+    width: 40,
+    height: 40,
+    borderRadius: 4,
     borderWidth: 1,
-    borderColor: 'rgba(255,255,255,0.6)',
-    backgroundColor: 'rgba(0,0,0,0.5)',
-    paddingHorizontal: 18,
-    paddingVertical: 12
+    borderColor: normaColors.paperFaint,
+    overflow: 'hidden',
+    backgroundColor: normaColors.graphiteScrim
   },
-  armedButtonActive: {
-    borderColor: '#f2b84b',
-    backgroundColor: 'rgba(242,184,75,0.2)'
+  galleryThumbEmpty: {
+    opacity: 0.4
   },
-  armedText: {
-    color: '#ffffff',
-    fontSize: 13,
-    fontWeight: '800'
+  galleryThumbImage: {
+    ...StyleSheet.absoluteFillObject
   },
-  armedTextActive: {
-    color: '#f2b84b'
+  armPill: {
+    alignItems: 'center',
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: normaColors.paperFaint,
+    backgroundColor: normaColors.graphiteScrim,
+    paddingHorizontal: 14,
+    paddingVertical: 10
   },
-  captureButton: {
-    width: 72,
-    height: 72,
+  armPillActive: {
+    borderColor: normaColors.accent,
+    backgroundColor: normaColors.accentSoft
+  },
+  armText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: normaColors.paperDim
+  },
+  armTextActive: {
+    color: normaColors.accent
+  },
+  shutterZone: {
+    width: SHUTTER_ZONE,
+    height: SHUTTER_ZONE,
+    alignItems: 'center',
+    justifyContent: 'center'
+  },
+  shutter: {
+    width: SHUTTER_SIZE,
+    height: SHUTTER_SIZE,
     alignItems: 'center',
     justifyContent: 'center',
-    borderRadius: 36,
-    borderWidth: 4,
-    borderColor: '#ffffff',
-    backgroundColor: 'rgba(0,0,0,0.32)'
+    borderRadius: SHUTTER_SIZE / 2,
+    borderWidth: 2,
+    borderColor: normaColors.paper,
+    backgroundColor: 'rgba(23,23,21,0.35)'
   },
-  captureButtonDisabled: {
-    opacity: 0.5
+  shutterPressed: {
+    opacity: 0.6
   },
-  captureButtonInner: {
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    backgroundColor: '#ffffff'
+  shutterInner: {
+    width: SHUTTER_SIZE - 14,
+    height: SHUTTER_SIZE - 14,
+    borderRadius: (SHUTTER_SIZE - 14) / 2,
+    backgroundColor: normaColors.paper
   },
-  debugRow: {
+  journalChip: {
+    borderRadius: 4,
+    borderWidth: 1,
+    borderColor: normaColors.paperFaint,
+    backgroundColor: normaColors.graphiteScrim,
+    paddingHorizontal: 12,
+    paddingVertical: 10
+  },
+  journalChipText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 11,
+    letterSpacing: 1.4,
+    color: normaColors.paperDim
+  },
+  devRow: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'center',
-    gap: 6
+    gap: 5
   },
-  debugButton: {
-    borderRadius: 999,
-    backgroundColor: 'rgba(0,0,0,0.48)',
-    paddingHorizontal: 9,
+  devChip: {
+    borderRadius: 3,
+    backgroundColor: normaColors.graphiteScrim,
+    paddingHorizontal: 8,
     paddingVertical: 5
   },
-  debugButtonActive: {
-    backgroundColor: 'rgba(242,184,75,0.82)'
+  devChipActive: {
+    backgroundColor: normaColors.accentSoft,
+    borderWidth: 1,
+    borderColor: normaColors.accentFaint
   },
-  debugText: {
-    color: 'rgba(255,255,255,0.76)',
-    fontSize: 10,
-    fontWeight: '700'
+  devChipText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 9,
+    letterSpacing: 0.6,
+    color: normaColors.paperDim
   },
-  debugTextActive: {
-    color: '#000000'
+  devChipTextActive: {
+    color: normaColors.accent
+  },
+  devToggle: {
+    alignSelf: 'flex-end',
+    marginTop: -6,
+    paddingHorizontal: 8,
+    paddingVertical: 2
+  },
+  devToggleText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 12,
+    letterSpacing: 2,
+    color: normaColors.paperFaint
+  },
+  devToggleTextActive: {
+    color: normaColors.accent
   }
 });

@@ -1,8 +1,186 @@
 # norma-camera detection roadmap
 
-## Current target: PR4.10 Camera Debug Calibration Notes
+## Current target: PR5 Harmony Viewfinder (product phase)
 
-The feature stack is complete for this release candidate:
+PR5.0–PR5.4 are product-UI work on top of the complete V1 engine. See
+[`harmony-viewfinder-plan.md`](harmony-viewfinder-plan.md) for the plan and
+[`phase0-revival-status.md`](phase0-revival-status.md) for the toolchain revival.
+
+What PR5 changes:
+
+- Canon lens model: Thirds, Phi, Root 2, Diagonals as named guide-geometry sets
+  (`src/composition/canons.ts`); the active canon selects which guides feed the
+  existing scoring functions.
+- `GuideKind` gains `phi`, `root2`, `diagonal`; diagonals are segment guides
+  scored by point-to-segment distance through the unchanged falloff formula.
+- The horizontal-line signal aligns against the active canon's y-axis guides;
+  the Diagonals canon has none, so it contributes nothing there.
+- Norma-branded viewfinder: faint canon lines, power-point nodes that light up
+  under the subject, resonance arc around the shutter, one-tap why sheet,
+  haptic tick on node lock, canon selector; debug tooling moved behind a dev
+  toggle (`ScoreBadge` is the dev readout, panels hidden by default).
+- Default detection mode is `native-heuristic` with its honest unavailable
+  fallback; manual tap still overrides in every mode. Auto-capture stays
+  opt-in (ARM off by default).
+- Scoring formula unchanged, but native candidate input coordinates are
+  corrected from raw-frame space to preview/composition space. This is the
+  change anticipated by the PR4.1 coordinate contract: the scored geometry is
+  now exactly the drawn geometry (review found the Diagonals canon could show
+  a lit node while the raw-space score stalled at 62 under `cover` crop).
+  The native line signal input is likewise the mapped line when available.
+  When the mapping is unavailable, raw coordinates are used for both drawing
+  and scoring, so the two can never disagree.
+- The halves guides and the centered special case remain in the engine
+  (tests cover them) but are intentionally unreachable from the v1 canon
+  set — no canon activates `half`.
+- The haptic tick is a node-lock tick: it fires only when the frame is ready
+  AND the subject sits on a canon power point (rising edge, rate-limited,
+  with hysteresis; never for placeholder/simulated candidates). The arc can
+  be full on a line without a node lock — that is by design and the why
+  sheet explains the difference.
+
+What PR5 does not change: native algorithms, native thresholds, the frame
+pipeline, the bridge, the scoring falloff/thresholds/caps, readiness gating,
+auto-capture behavior, debug overlay presets, or the evidence model. New
+dependency: `expo-haptics` (Expo-native, no Play Services; dev-client rebuild
+required).
+
+## PR6 Capture flow
+
+- Captured photos record their canon; session gallery (in-memory, newest
+  first) and review screen with the canon construction re-projected over the
+  contain-fitted image via shared pixel geometry (`canonGeometry.ts`).
+- System share via `expo-sharing`; `+ CANON` share renders an on-device
+  burn-in copy (raster Skia surface, longest side capped at 2048, cache file)
+  — the original capture is never modified.
+- `CONSTRUCT` opens the canon-metadata URL on norma.science (contract in
+  [`construct-export-contract.md`](construct-export-contract.md)); the photo
+  moves only through the share sheet.
+- New dependencies: `expo-sharing`, `expo-file-system` (Expo-native, offline,
+  no Play Services; dev-client rebuild required). Detection, scoring, and
+  capture gates unchanged.
+
+## PR8.0 First-contact UX + line recall calibration
+
+Owner's first naive-user session failed the ten-second rule. Changes:
+
+- Vocabulary: ARM → AUTO-SHOT; the MANUAL|AUTO toggle leaves the primary UI
+  (a tap already overrides AUTO — the toggle was redundant); all four
+  detection modes stay reachable in the dev row; a JOURNAL chip joins the
+  primary row.
+- First-run coach: three skippable cards, shown once (flag on-device).
+- First manual tap shows "SUBJECT MARKED · FOCUS & EXPOSURE UNTOUCHED" —
+  the tap never touches camera focus/exposure and now says so.
+- Guide legibility: canon lines and node ticks get a dark underlay so the
+  construction reads on bright scenes (they were invisible on white walls).
+- Line segment recall (device evidence: a grid-aligned rectangle lit only
+  one side occasionally): Kotlin spike thresholds loosened —
+  TOP_SEGMENT_LIMIT 3→6, EDGE_THRESHOLD_AVERAGE_MULTIPLIER 1.85→1.65,
+  MIN_RUN_CELLS 6→5, MIN_NORMALIZED_LENGTH 0.22→0.18, MIN_CONFIDENCE
+  0.32→0.26 (energy floors unchanged). JS: retention cap 4→6, retention
+  min confidence 0.24→0.22; harmony tolerances angle 7→10°, offset
+  0.035→0.05, min length 0.1→0.08. lineSegments remain readout-only:
+  no scoring, readiness, or capture change. Requires dev-client rebuild.
+
+## PR8.2 Nudge comet + the structural line decision
+
+- Nudge comet: a gold pull from the followed mass toward the nearest power
+  point, fading as the frame approaches ready — the viewfinder now GUIDES
+  instead of judging. UI-thread derived values; no scoring change.
+- Field evidence after three naive-user rounds: screen-vertical edges light,
+  screen-horizontal ones mostly do not, thin window bars and table edges go
+  undetected. Per the June decision rule, the 32×24 grid is approaching
+  "structurally insufficient" for the line experience. Decision: next native
+  PR adds a SECOND, finer luma grid (96×72) feeding only the line-segment
+  path (visual mass, exposure, sharpness stay on 32×24 with their tuned
+  thresholds; cell-unit line thresholds rescale by 3×). No new dependency.
+  Before writing it: one instrumented `lines`-preset session on the window
+  scene to pin the horizontal/vertical asymmetry (orientation mapping vs
+  detector), captured via adb.
+
+## PR8.1 Tap-as-question + snap-to-guide
+
+Second naive-user round surfaced two design flaws:
+
+- A manual pin is a screen position, not an object tracker, so "tap then
+  reframe" was semantically broken. Outside manual-only mode the pin now
+  expires after 5 s (a question, not a mode); the coach and the first-tap
+  toast teach the real gesture: Norma follows the visual mass while you
+  reframe — tap only to ask about a spot.
+- The 3-point central-difference stencil on the 32×24 grid localizes an
+  edge to ±1 cell (~4% of the frame — the owner's "5 mm off"). Matched
+  harmony segments are now drawn PROJECTED ONTO their guide (a match means
+  "this edge agrees with this construction line"); unmatched segments draw
+  nothing outside the debug presets. Detector output unchanged; optional
+  future work: sub-cell parabolic refinement in Kotlin.
+- Owner idea recorded for a later opt-in mode — TRAP POINT: pick a node,
+  and AUTO-SHOT fires when the followed mass crosses it.
+
+## PR7.0 Line Harmony readout
+
+Field feedback: the owner's target scenes are made of lines, and the product
+vision (Cartier-Bresson: the frame's directional lines locking onto the canon
+can fire the shutter) needs line evidence, not only visual mass. PR7.0 is
+step one of that path and is strictly a readout:
+
+- `src/detection/lineHarmony.ts` scores how much the stabilized, preview-
+  mapped line segments (PR4.8 output) agree with the active canon's guides:
+  per-segment best guide by angle (≤7°) and perpendicular offset (≤0.035),
+  aggregated as agreement weighted by length×confidence over ALL considered
+  segments, so disagreeing lines honestly drag the score down. Geometry is
+  derived from mapped endpoints only.
+- Viewfinder: agreeing segments draw in gold over the canon (normal preset,
+  native mode only); the strip shows `LINES <score>`; the why sheet gets a
+  LINE HARMONY section with the honest wording: approximate (32×24 luma
+  grid), readout only — it never fires the shutter.
+- Unchanged: composition score, readiness, capture triggers, auto-capture,
+  native code, thresholds, debug presets. `lineSegments` stay debug-grade
+  evidence; this readout exists to gather on-device evidence for a possible
+  later opt-in FULL AUTO · LINES mode. That mode is a separate owner decision
+  and would require explicitly lifting the "a line must not make a no-subject
+  frame ready" guardrail — not done here.
+
+## PR7.2 Harmony Journal
+
+The habit loop: captures now persist across sessions, on this device only.
+The session gallery becomes the JOURNAL sheet and shows honest progress.
+
+- New `src/journal/` module. `journalStore.ts` copies each capture out of the
+  purgeable camera cache into `harmony-journal/` under the app document
+  directory (filename `<createdAtMs>-<canonId>.<ext>`) and keeps a versioned
+  metadata file `journal.json` (`{ version: 1, entries }`).
+  `journalSerialization.ts` is the pure, unit-tested parse/serialize layer:
+  corrupted or missing JSON starts empty, an unknown schema version starts
+  empty, unknown fields are tolerated, bad rows are skipped — never a crash.
+  `journalStats.ts` is the pure stats layer: local-day streak of consecutive
+  days (ending today or yesterday) with a capture at or above the ready
+  threshold — imported from the auto-capture config, not hardcoded — plus the
+  7-day average score and the best score per canon.
+- Store: `capturedPhotos` hydrates from the journal on app start (newest
+  first); `addCapturedPhoto` also appends to the journal fire-and-forget with
+  caught errors; new `removeCapturedPhoto(createdAtMs)` updates state and
+  journal together.
+- UI: the JOURNAL sheet header carries a mono stats row
+  (`STREAK {n}d · 7D AVG {m} · {total} FRAMES`; the average segment is
+  omitted when the last seven days are empty) and the privacy line now reads
+  "On this device only · nothing leaves it." The grid is otherwise unchanged
+  (newest first, canon glyph + score tag). The review screen gains DELETE
+  with a second-tap confirm: the chip turns `SURE?` for 3 s, then the frame
+  is removed from state and journal and the review closes. No dialogs, no
+  new dependency.
+- Robustness: every file operation is wrapped in try/catch and any journal
+  failure degrades to the previous session-only behavior — capture itself is
+  never blocked. Entries whose photo file is missing are dropped gracefully
+  on load; a simulated capture URI simply fails the copy and stays
+  session-only.
+- What did NOT change: detection, scoring, capture gates, auto-capture,
+  readiness text, native code, thresholds, overlays, `app.json`. No network,
+  no telemetry, no new dependency — persistence uses the already-installed
+  `expo-file-system` object API (`File`/`Directory`/`Paths.document`).
+
+## PR4.10 Camera Debug Calibration Notes
+
+The feature stack was complete for the PR4 release candidate:
 
 - live luminance metrics
 - live sharpness / edge-energy metrics

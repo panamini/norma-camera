@@ -34,8 +34,8 @@ export type StabilizeRecentLineSegmentsInput = {
 };
 
 export const LINE_SEGMENT_RETENTION_MS = 650;
-export const LINE_SEGMENT_MAX_STABILIZED_SEGMENTS = 4;
-export const LINE_SEGMENT_MIN_CONFIDENCE = 0.24;
+export const LINE_SEGMENT_MAX_STABILIZED_SEGMENTS = 6;
+export const LINE_SEGMENT_MIN_CONFIDENCE = 0.22;
 export const LINE_SEGMENT_MIN_LENGTH_EUCLIDEAN = 0.08;
 export const LINE_SEGMENT_MAX_CENTER_DISTANCE = 0.09;
 export const LINE_SEGMENT_MAX_ANGLE_DELTA_DEG = 18;

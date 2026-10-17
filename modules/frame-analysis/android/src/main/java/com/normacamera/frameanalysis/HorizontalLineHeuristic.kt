@@ -208,13 +208,16 @@ internal data class LineSegmentCandidate(
 internal object LineSegmentHeuristic {
   private const val MIN_GRID_WIDTH = 6
   private const val MIN_GRID_HEIGHT = 6
-  private const val TOP_SEGMENT_LIMIT = 3
+  // PR8.0 field calibration: PR4.7 tightened these for debug-noise reduction;
+  // the Line Harmony readout needs recall (a grid-aligned rectangle should
+  // light all four sides). Floors guarding flat scenes stay unchanged.
+  private const val TOP_SEGMENT_LIMIT = 6
   private const val MIN_OVERALL_EDGE_ENERGY = 0.018
   private const val EDGE_THRESHOLD_FLOOR = 0.16
-  private const val EDGE_THRESHOLD_AVERAGE_MULTIPLIER = 1.85
-  private const val MIN_RUN_CELLS = 6
-  private const val MIN_NORMALIZED_LENGTH = 0.22
-  private const val MIN_CONFIDENCE = 0.32
+  private const val EDGE_THRESHOLD_AVERAGE_MULTIPLIER = 1.65
+  private const val MIN_RUN_CELLS = 5
+  private const val MIN_NORMALIZED_LENGTH = 0.18
+  private const val MIN_CONFIDENCE = 0.26
   private const val SIMILAR_SEGMENT_CENTER_DISTANCE = 0.08
   private const val CONTRAST_SCORE_RANGE = 0.55
 

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { decideAutoCapture } from '../../autocapture/decideAutoCapture';
 import type { NativeFrameAnalysisResult, NativeLineSegmentCandidate } from '../nativeHeuristicTypes';
 import {
+  LINE_SEGMENT_MAX_STABILIZED_SEGMENTS,
   stabilizeLineSegmentsInAnalysis,
   stabilizeRecentLineSegments,
   type StabilizedLineSegment,
@@ -84,11 +85,13 @@ describe('stabilizeRecentLineSegments', () => {
       makeSegment({ y1: 0.1, y2: 0.1, confidence: 0.98 }),
       makeSegment({ y1: 0.2, y2: 0.2, confidence: 0.97 }),
       makeSegment({ y1: 0.4, y2: 0.4, confidence: 0.96 }),
-      makeSegment({ y1: 0.5, y2: 0.5, confidence: 0.95 })
+      makeSegment({ y1: 0.5, y2: 0.5, confidence: 0.95 }),
+      makeSegment({ y1: 0.62, y2: 0.62, confidence: 0.94 }),
+      makeSegment({ y1: 0.72, y2: 0.72, confidence: 0.93 })
     ];
     const result = stabilize(stable, latest, 1_450);
 
-    expect(result).toHaveLength(4);
+    expect(result).toHaveLength(LINE_SEGMENT_MAX_STABILIZED_SEGMENTS);
     expect(result.some((entry) => entry.stabilityState === 'retained')).toBe(true);
   });
 
@@ -125,13 +128,15 @@ describe('stabilizeRecentLineSegments', () => {
       makeSegment({ y1: 0.2, y2: 0.2, confidence: 0.92, lengthEuclidean: 0.7 }),
       makeSegment({ y1: 0.3, y2: 0.3, confidence: 0.75, lengthEuclidean: 0.9 }),
       makeSegment({ y1: 0.4, y2: 0.4, confidence: 0.7, lengthEuclidean: 0.6 }),
-      makeSegment({ y1: 0.5, y2: 0.5, confidence: 0.68, lengthEuclidean: 0.8 })
+      makeSegment({ y1: 0.5, y2: 0.5, confidence: 0.68, lengthEuclidean: 0.8 }),
+      makeSegment({ y1: 0.62, y2: 0.62, confidence: 0.55, lengthEuclidean: 0.5 }),
+      makeSegment({ y1: 0.72, y2: 0.72, confidence: 0.45, lengthEuclidean: 0.5 })
     ];
 
     const result = stabilize([], latest, 1_000);
 
-    expect(result).toHaveLength(4);
-    expect(result.map((entry) => entry.segment.confidence)).toEqual([0.92, 0.75, 0.7, 0.68]);
+    expect(result).toHaveLength(LINE_SEGMENT_MAX_STABILIZED_SEGMENTS);
+    expect(result.map((entry) => entry.segment.confidence)).toEqual([0.92, 0.75, 0.7, 0.68, 0.55, 0.45]);
   });
 
   it('rejects invalid values and low-confidence segments', () => {
