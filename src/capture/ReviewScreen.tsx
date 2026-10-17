@@ -6,7 +6,7 @@ import { canonById } from '../composition/canons';
 import { CanonStaticOverlay } from '../overlay/CanonStaticOverlay';
 import type { CapturedPhoto } from '../state/cameraUiStore';
 import { normaColors, normaFonts } from '../ui/theme';
-import { renderCanonBurnIn } from './burnInCanon';
+import { renderNormaCard } from './burnInCanon';
 import { constructExportUrl } from './constructExport';
 import { fitContainRect } from './fitRect';
 
@@ -66,11 +66,11 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
       setIsBurningIn(true);
       setActionNote(null);
       try {
-        const burnedUri = await renderCanonBurnIn(reviewed);
-        await handleShare(burnedUri);
+        const cardUri = await renderNormaCard(reviewed);
+        await handleShare(cardUri);
       } catch (error) {
         const message = error instanceof Error ? error.message : 'unknown error';
-        setActionNote(`canon burn-in failed · ${message}`);
+        setActionNote(`card render failed · ${message}`);
       } finally {
         setIsBurningIn(false);
       }
@@ -147,12 +147,12 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
           </Pressable>
           <Pressable
             accessibilityRole="button"
-            accessibilityLabel="Share photo with the canon construction drawn in"
+            accessibilityLabel="Share as a Norma card with the canon construction drawn in"
             disabled={isBurningIn}
             onPress={() => void handleShareWithCanon(photo)}
             style={[styles.actionChip, isBurningIn ? styles.actionChipBusy : null]}
           >
-            <Text style={styles.actionText}>{isBurningIn ? 'DRAWING…' : '+ CANON'}</Text>
+            <Text style={styles.actionText}>{isBurningIn ? 'DRAWING…' : 'CARD'}</Text>
           </Pressable>
           <Pressable
             accessibilityRole="button"
