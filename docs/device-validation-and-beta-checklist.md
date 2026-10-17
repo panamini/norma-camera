@@ -79,6 +79,27 @@ Then the usual two-terminal flow: `npm run u` / `npm run d`.
   collapse, thermal warning, battery drain outliers; note start/end battery %
 - 10 captures + 5 burn-in shares in one session: no memory crash
 
+## 5b. On-device validation record (2026-10-17, adb-driven)
+
+Verified on the Pixel 7a (fresh dev-client build, Metro over USB):
+
+- viewfinder chrome renders for all canons; manual tap on a node → gold
+  marker on the node, node glow, score 100, full arc + ready ring, correct
+  state label; Diagonals segment scoring confirmed live (`SUBJECT ON
+  DIAGONAL · 100` with the marker on the falling diagonal)
+- `LINES` readout live: real matched segment drawn in gold near the upper
+  third of a cluttered scene at an honestly low 26
+- journal: entries written (photo copied + versioned JSON), hydration after
+  `am force-stop` + relaunch shows the thumbnail; logcat free of fatals and
+  JS errors across the session
+- still owner-only: ARM auto-capture with a moving subject, LINES judgment
+  on real scenes, CARD visual check, haptic feel, 20-minute stability
+
+NOTE before any release build: the generated `android/` predates the
+app.json bump, so the installed build still reports versionName 0.1.0.
+Run `npx expo prebuild -p android` (or delete `android/`) before the beta
+`.aab` so 0.2.0 / versionCode 2 and any new config plugins land.
+
 ## 6. Play internal track (decisions + steps, owner)
 
 - **DECIDE: application id.** `com.anonymous.normacamera` is permanent after
