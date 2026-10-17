@@ -28,6 +28,36 @@ const TICK_HALF_LENGTH = 6;
 const GLOW_BASE_RADIUS = 9;
 const GLOW_GROWTH = 5;
 const CORE_DOT_RADIUS = 2.5;
+const PULSE_START_RADIUS = 12;
+const PULSE_GROWTH = 34;
+
+type LockPulseProps = {
+  width: number;
+  height: number;
+  lockPulse: SharedValue<number>;
+  lockNodeX: SharedValue<number>;
+  lockNodeY: SharedValue<number>;
+};
+
+/**
+ * The lock ring: on a node lock, an expanding gold ring leaves the locked
+ * node and dissolves (lockPulse eases 0 → 1; it rests at 1, invisible).
+ */
+function LockPulseRing({ width, height, lockPulse, lockNodeX, lockNodeY }: LockPulseProps) {
+  const cx = useDerivedValue(() => lockNodeX.value * width);
+  const cy = useDerivedValue(() => lockNodeY.value * height);
+  const radius = useDerivedValue(() => PULSE_START_RADIUS + PULSE_GROWTH * lockPulse.value);
+  const opacity = useDerivedValue(() => {
+    if (lockNodeX.value < 0) return 0;
+    return (1 - lockPulse.value) * 0.9;
+  });
+
+  return (
+    <Group opacity={opacity}>
+      <Circle cx={cx} cy={cy} r={radius} style="stroke" strokeWidth={2} color={normaColors.accent} />
+    </Group>
+  );
+}
 
 /**
  * One canon power point: a static paper tick, plus a gold glow that lights
@@ -87,6 +117,13 @@ function CanonNodesComponent({ width, height, canon, sharedValues }: Props) {
             hasSubject={sharedValues.hasSubject}
           />
         ))}
+        <LockPulseRing
+          width={width}
+          height={height}
+          lockPulse={sharedValues.lockPulse}
+          lockNodeX={sharedValues.lockNodeX}
+          lockNodeY={sharedValues.lockNodeY}
+        />
       </Canvas>
     </View>
   );

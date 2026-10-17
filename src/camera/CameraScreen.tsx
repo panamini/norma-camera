@@ -40,7 +40,7 @@ import { useCameraUiStore, type CapturedPhoto } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { tickNodeLock } from '../ui/haptics';
 import { CameraControls } from './CameraControls';
-import { evaluateNodeLockTick, nearestNodeDistance } from './nodeLockTick';
+import { evaluateNodeLockTick, nearestNode } from './nodeLockTick';
 import { StatusStrip } from './StatusStrip';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
 import { useFrameQualityStub } from './useFrameQualityStub';
@@ -64,6 +64,7 @@ const LABEL_UPDATE_INTERVAL_MS = 500;
 const SUBJECT_EASE_MS = 180;
 const SCORE_EASE_MS = 220;
 const CAPTURE_TOAST_MS = 2500;
+const LOCK_PULSE_MS = 520;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
@@ -598,11 +599,12 @@ export function CameraScreen() {
       const hasCandidate = applied.selection.candidate !== null;
 
       const scoredCandidate = applied.detectedScore.candidate;
+      const lockTarget = scoredCandidate ? nearestNode(scoredCandidate.center, canon.nodes) : { node: null, distance: Number.POSITIVE_INFINITY };
       const tickDecision = evaluateNodeLockTick({
         wasLocked: wasNodeLockedRef.current,
         score: applied.detectedScore.composition.score,
         readyThreshold: READY_SCORE_THRESHOLD,
-        nodeDistance: scoredCandidate ? nearestNodeDistance(scoredCandidate.center, canon.nodes) : Number.POSITIVE_INFINITY,
+        nodeDistance: lockTarget.distance,
         source: scoredCandidate?.source ?? 'none',
         nowMs: currentNowMs,
         lastTickAtMs: lastNodeLockTickAtMsRef.current
@@ -611,6 +613,12 @@ export function CameraScreen() {
       if (tickDecision.tick) {
         lastNodeLockTickAtMsRef.current = currentNowMs;
         tickNodeLock();
+        if (lockTarget.node) {
+          sharedValues.lockNodeX.value = lockTarget.node.point.x;
+          sharedValues.lockNodeY.value = lockTarget.node.point.y;
+          sharedValues.lockPulse.value = 0;
+          sharedValues.lockPulse.value = withTiming(1, { duration: LOCK_PULSE_MS });
+        }
       }
 
       const decision = autoCaptureController.current.evaluate({

@@ -5,6 +5,7 @@ import {
   NODE_LOCK_RELEASE_DISTANCE,
   NODE_LOCK_TICK_MIN_INTERVAL_MS,
   evaluateNodeLockTick,
+  nearestNode,
   nearestNodeDistance
 } from '../nodeLockTick';
 
@@ -32,6 +33,15 @@ describe('nearestNodeDistance', () => {
 
   it('is infinite with no nodes', () => {
     expect(nearestNodeDistance({ x: 0.5, y: 0.5 }, [])).toBe(Number.POSITIVE_INFINITY);
+  });
+
+  it('returns the node itself for the lock pulse', () => {
+    const thirds = canonById('thirds');
+    const result = nearestNode({ x: 0.3, y: 0.32 }, thirds.nodes);
+    expect(result.node?.label).toBe('THIRDS_UPPER_LEFT');
+    expect(result.distance).toBeGreaterThan(0);
+
+    expect(nearestNode({ x: 0.5, y: 0.5 }, []).node).toBeNull();
   });
 });
 

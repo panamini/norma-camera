@@ -31,9 +31,12 @@ Honest by construction:
 - Auto-capture exists but is strictly opt-in, behind an ARM switch with
   conservative wording about what it can actually know.
 
-Shoot, review with the construction drawn over your photo, share clean or
-with the canon burned in, or hand the canon context to Norma Construct on
-norma.science to keep working on the composition.
+Shoot, review with the construction drawn over your photo, and share clean
+or as a Norma card — your photo as a print, with its construction, canon,
+and resonance score. Your Harmony Journal keeps every frame on your device:
+your streak, your seven-day average, your best frame per canon. Hand the
+canon context to Norma Construct on norma.science to keep working on the
+composition.
 
 ## Category
 

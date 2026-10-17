@@ -12,6 +12,9 @@ export type CompositionSharedValues = {
   hasCandidateBounds: SharedValue<number>;
   compositionScore: SharedValue<number>;
   highlightIntensity: SharedValue<number>;
+  lockPulse: SharedValue<number>;
+  lockNodeX: SharedValue<number>;
+  lockNodeY: SharedValue<number>;
   sharpnessScore: SharedValue<number>;
   exposureScore: SharedValue<number>;
   motionScore: SharedValue<number>;
@@ -29,6 +32,11 @@ export function useCompositionSharedValues(): CompositionSharedValues {
   const hasCandidateBounds = useSharedValue(0);
   const compositionScore = useSharedValue(0);
   const highlightIntensity = useSharedValue(0);
+  // lockPulse rests at 1 (fully faded); a node lock resets it to 0 and eases
+  // back to 1, which drives the expanding ring at (lockNodeX, lockNodeY).
+  const lockPulse = useSharedValue(1);
+  const lockNodeX = useSharedValue(-1);
+  const lockNodeY = useSharedValue(-1);
   const sharpnessScore = useSharedValue(80);
   const exposureScore = useSharedValue(75);
   const motionScore = useSharedValue(10);
@@ -46,6 +54,9 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       hasCandidateBounds,
       compositionScore,
       highlightIntensity,
+      lockPulse,
+      lockNodeX,
+      lockNodeY,
       sharpnessScore,
       exposureScore,
       motionScore,
@@ -61,6 +72,9 @@ export function useCompositionSharedValues(): CompositionSharedValues {
       hasCandidateBounds,
       hasSubject,
       highlightIntensity,
+      lockNodeX,
+      lockNodeY,
+      lockPulse,
       motionScore,
       sceneChangedScore,
       sharpnessScore,

@@ -6,13 +6,22 @@ export const NODE_LOCK_RELEASE_DISTANCE = 0.065;
 export const NODE_LOCK_RELEASE_SCORE_MARGIN = 6;
 export const NODE_LOCK_TICK_MIN_INTERVAL_MS = 700;
 
-export function nearestNodeDistance(point: NormalizedPoint, nodes: CanonNode[]): number {
-  let nearest = Number.POSITIVE_INFINITY;
+export type NearestNodeResult = {
+  node: CanonNode | null;
+  distance: number;
+};
+
+export function nearestNode(point: NormalizedPoint, nodes: CanonNode[]): NearestNodeResult {
+  let nearest: NearestNodeResult = { node: null, distance: Number.POSITIVE_INFINITY };
   for (const node of nodes) {
     const distance = Math.hypot(point.x - node.point.x, point.y - node.point.y);
-    if (distance < nearest) nearest = distance;
+    if (distance < nearest.distance) nearest = { node, distance };
   }
   return nearest;
+}
+
+export function nearestNodeDistance(point: NormalizedPoint, nodes: CanonNode[]): number {
+  return nearestNode(point, nodes).distance;
 }
 
 export type NodeLockTickInput = {

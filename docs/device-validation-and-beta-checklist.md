@@ -58,6 +58,21 @@ Then the usual two-terminal flow: `npm run u` / `npm run d`.
 - CONSTRUCT opens norma.science with canon/score/label/captured_at_ms in the
   URL and nothing else
 
+## 4b. PR7.x additions (line harmony, card, journal, lock pulse)
+
+- `LINES <score>` chip appears in AUTO when stable segments exist; agreeing
+  segments draw in gold over the canon; the chip rises when lines genuinely
+  sit on the grid and stays low on arbitrary scenes (report the numbers —
+  they calibrate FULL AUTO · LINES)
+- WHY? sheet shows the LINE HARMONY section with honest wording
+- node lock: haptic tick + the gold ring leaves the locked node and dissolves
+- CARD share renders the Norma card: paper mat, construction drawn in, gold
+  resonance bar (length = score), caption band `N O R M A · <CANON> · n/100`
+- journal: capture → kill the app → relaunch → the frame is in JOURNAL with
+  `STREAK · 7D AVG · FRAMES` stats; DELETE (tap, then SURE?) removes file
+  + entry; gallery updates
+- journal survives a cache clear (photos copied to app documents)
+
 ## 5. Stability session (Phase 3 gate)
 
 - 20-minute continuous viewfinder session in AUTO, ARM off: watch for FPS
