@@ -70,17 +70,21 @@ La caméra qui déclenche quand la géométrie chante — ta vision Cartier-Bres
 Gated par l'évidence terrain du P1. Si le readout est fiable : mode opt-in,
 lock soutenu 2–3 s → déclenchement. C'est la feature de presse.
 
-## 4. Le modèle économique (recommandation ferme)
+## 4. Le modèle économique (DÉCIDÉ 2026-10-17)
 
-**Camera payante, achat unique, 14,99 € (lancement 9,99 €).** Pas d'abonnement
-sur la camera : l'abonnement contredit « rien ne quitte ton appareil » et la
-niche craft/privacy déteste ça. Le pricing Halide/Photon prouve la fourchette.
-- Play Store + **F-Droid/GrapheneOS en priorité marketing** : cette communauté
-  évangélise gratuitement et correspond exactement au moat n°3.
-- **Construct Pro (web) en abonnement** reste le revenu récurrent ; la camera
-  est l'entonnoir (bouton CONSTRUCT déjà câblé).
-- Beta interne gratuite MAINTENANT pour les retours ; prix affiché dès la
-  fiche pour assumer le positionnement craft.
+Décisions du propriétaire : pas de backend, pas d'abonnement camera.
+
+**Mécanique Play Store à respecter : une app gratuite ne peut JAMAIS devenir
+payante sur la même fiche** (l'inverse est permis). Donc :
+
+- **Phase base d'utilisateurs = la beta, gratuite par nature** (piste interne
+  puis ouverte) : c'est elle qui construit la base sans hypothéquer le prix.
+- **Lancement v1.0 payant d'entrée : 9,99 € prix d'intro**, montée à 14,99 €
+  ensuite (baisser/solder reste toujours possible). Achat unique, à vie.
+- **F-Droid gratuit** comme canal communautaire privacy/GrapheneOS — ces
+  utilisateurs évangélisent ; le Play payant est le « support the dev ».
+- **Construct Pro (web)** reste le seul revenu récurrent ; la camera est
+  l'entonnoir (bouton CONSTRUCT déjà câblé).
 
 ## 5. Exécution — 4 semaines
 
