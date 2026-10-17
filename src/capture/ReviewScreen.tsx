@@ -1,10 +1,10 @@
 import * as Sharing from 'expo-sharing';
-import { memo, useCallback, useState } from 'react';
+import { memo, useCallback, useEffect, useRef, useState } from 'react';
 import type { ImageLoadEventData, LayoutChangeEvent, NativeSyntheticEvent } from 'react-native';
 import { Image, Linking, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { canonById } from '../composition/canons';
 import { CanonStaticOverlay } from '../overlay/CanonStaticOverlay';
-import type { CapturedPhoto } from '../state/cameraUiStore';
+import { useCameraUiStore, type CapturedPhoto } from '../state/cameraUiStore';
 import { normaColors, normaFonts } from '../ui/theme';
 import { renderNormaCard } from './burnInCanon';
 import { constructExportUrl } from './constructExport';
@@ -17,6 +17,8 @@ type Props = {
 
 type Size = { width: number; height: number };
 
+const DELETE_CONFIRM_WINDOW_MS = 3000;
+
 function formatCaptureTime(createdAtMs: number): string {
   const date = new Date(createdAtMs);
   const hours = String(date.getHours()).padStart(2, '0');
@@ -25,9 +27,10 @@ function formatCaptureTime(createdAtMs: number): string {
 }
 
 /**
- * Session review: the photo, its canon construction on demand, honest
- * metadata, system share, and the Construct hand-off. Nothing is uploaded;
- * the share sheet and the browser are the only exits.
+ * Journal review: the photo, its canon construction on demand, honest
+ * metadata, system share, the Construct hand-off, and a two-tap delete that
+ * removes the frame from the on-device journal. Nothing is uploaded; the
+ * share sheet and the browser are the only exits.
  */
 function ReviewScreenComponent({ photo, onClose }: Props) {
   const [canonVisible, setCanonVisible] = useState(true);
@@ -35,6 +38,18 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
   const [boxSize, setBoxSize] = useState<Size>({ width: 0, height: 0 });
   const [actionNote, setActionNote] = useState<string | null>(null);
   const [isBurningIn, setIsBurningIn] = useState(false);
+  const [deleteArmed, setDeleteArmed] = useState(false);
+  const deleteTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const removeCapturedPhoto = useCameraUiStore((state) => state.removeCapturedPhoto);
+
+  const clearDeleteTimer = useCallback(() => {
+    if (deleteTimerRef.current !== null) {
+      clearTimeout(deleteTimerRef.current);
+      deleteTimerRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => clearDeleteTimer, [clearDeleteTimer]);
 
   const handleImageLoad = useCallback((event: NativeSyntheticEvent<ImageLoadEventData>) => {
     const { width, height } = event.nativeEvent.source;
@@ -88,11 +103,28 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
   }, []);
 
   const handleDismiss = useCallback(() => {
+    clearDeleteTimer();
+    setDeleteArmed(false);
     setImageSize(null);
     setActionNote(null);
     setCanonVisible(true);
     onClose();
-  }, [onClose]);
+  }, [clearDeleteTimer, onClose]);
+
+  /** First tap arms the chip (SURE? for 3 s); the second tap deletes and closes. */
+  const handleDeletePress = useCallback(
+    (reviewed: CapturedPhoto) => {
+      if (!deleteArmed) {
+        setDeleteArmed(true);
+        clearDeleteTimer();
+        deleteTimerRef.current = setTimeout(() => setDeleteArmed(false), DELETE_CONFIRM_WINDOW_MS);
+        return;
+      }
+      removeCapturedPhoto(reviewed.createdAtMs);
+      handleDismiss();
+    },
+    [clearDeleteTimer, deleteArmed, handleDismiss, removeCapturedPhoto]
+  );
 
   if (!photo) {
     return null;
@@ -161,6 +193,14 @@ function ReviewScreenComponent({ photo, onClose }: Props) {
             style={styles.actionChip}
           >
             <Text style={styles.actionText}>CONSTRUCT</Text>
+          </Pressable>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel={deleteArmed ? 'Tap again to delete this frame from the journal' : 'Delete this frame from the journal'}
+            onPress={() => handleDeletePress(photo)}
+            style={[styles.actionChip, deleteArmed ? styles.actionChipActive : null]}
+          >
+            <Text style={[styles.actionText, deleteArmed ? styles.actionTextActive : null]}>{deleteArmed ? 'SURE?' : 'DELETE'}</Text>
           </Pressable>
           <Pressable accessibilityRole="button" accessibilityLabel="Close review" onPress={handleDismiss} style={styles.actionChip}>
             <Text style={styles.actionText}>CLOSE</Text>
@@ -231,6 +271,7 @@ const styles = StyleSheet.create({
   },
   actionRow: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'center',
     gap: 8
   },

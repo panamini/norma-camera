@@ -242,6 +242,7 @@ export function CameraScreen() {
   const debugQualityMode = useCameraUiStore((state) => state.debugQualityMode);
   const debugPanelsHidden = useCameraUiStore((state) => state.debugPanelsHidden);
   const addCapturedPhoto = useCameraUiStore((state) => state.addCapturedPhoto);
+  const hydrateFromJournal = useCameraUiStore((state) => state.hydrateFromJournal);
   const capturedPhotos = useCameraUiStore((state) => state.capturedPhotos);
   const nativeHeuristic = useNativeHeuristicCandidate(detectionMode === 'native-heuristic');
   const nativeSharpnessScore = nativeHeuristic.analysis?.sharpness?.sharpnessScore;
@@ -350,6 +351,11 @@ export function CameraScreen() {
   useEffect(() => () => {
     mountedRef.current = false;
   }, []);
+
+  // Harmony Journal: hydrate persisted captures once on app start.
+  useEffect(() => {
+    hydrateFromJournal();
+  }, [hydrateFromJournal]);
 
   useEffect(() => {
     if (!captureBanner) return;

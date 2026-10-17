@@ -84,6 +84,44 @@ step one of that path and is strictly a readout:
   and would require explicitly lifting the "a line must not make a no-subject
   frame ready" guardrail — not done here.
 
+## PR7.2 Harmony Journal
+
+The habit loop: captures now persist across sessions, on this device only.
+The session gallery becomes the JOURNAL sheet and shows honest progress.
+
+- New `src/journal/` module. `journalStore.ts` copies each capture out of the
+  purgeable camera cache into `harmony-journal/` under the app document
+  directory (filename `<createdAtMs>-<canonId>.<ext>`) and keeps a versioned
+  metadata file `journal.json` (`{ version: 1, entries }`).
+  `journalSerialization.ts` is the pure, unit-tested parse/serialize layer:
+  corrupted or missing JSON starts empty, an unknown schema version starts
+  empty, unknown fields are tolerated, bad rows are skipped — never a crash.
+  `journalStats.ts` is the pure stats layer: local-day streak of consecutive
+  days (ending today or yesterday) with a capture at or above the ready
+  threshold — imported from the auto-capture config, not hardcoded — plus the
+  7-day average score and the best score per canon.
+- Store: `capturedPhotos` hydrates from the journal on app start (newest
+  first); `addCapturedPhoto` also appends to the journal fire-and-forget with
+  caught errors; new `removeCapturedPhoto(createdAtMs)` updates state and
+  journal together.
+- UI: the JOURNAL sheet header carries a mono stats row
+  (`STREAK {n}d · 7D AVG {m} · {total} FRAMES`; the average segment is
+  omitted when the last seven days are empty) and the privacy line now reads
+  "On this device only · nothing leaves it." The grid is otherwise unchanged
+  (newest first, canon glyph + score tag). The review screen gains DELETE
+  with a second-tap confirm: the chip turns `SURE?` for 3 s, then the frame
+  is removed from state and journal and the review closes. No dialogs, no
+  new dependency.
+- Robustness: every file operation is wrapped in try/catch and any journal
+  failure degrades to the previous session-only behavior — capture itself is
+  never blocked. Entries whose photo file is missing are dropped gracefully
+  on load; a simulated capture URI simply fails the copy and stays
+  session-only.
+- What did NOT change: detection, scoring, capture gates, auto-capture,
+  readiness text, native code, thresholds, overlays, `app.json`. No network,
+  no telemetry, no new dependency — persistence uses the already-installed
+  `expo-file-system` object API (`File`/`Directory`/`Paths.document`).
+
 ## PR4.10 Camera Debug Calibration Notes
 
 The feature stack was complete for the PR4 release candidate:

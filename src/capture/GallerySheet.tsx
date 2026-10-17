@@ -1,6 +1,8 @@
-import { memo, useCallback } from 'react';
+import { memo, useCallback, useMemo } from 'react';
 import { FlatList, Image, Modal, Pressable, StyleSheet, Text, View } from 'react-native';
 import { canonById } from '../composition/canons';
+import { journalStats, type JournalStats } from '../journal/journalStats';
+import { nowMs } from '../shared/time';
 import type { CapturedPhoto } from '../state/cameraUiStore';
 import { normaColors, normaFonts } from '../ui/theme';
 
@@ -13,11 +15,24 @@ type Props = {
 
 const NUM_COLUMNS = 3;
 
+/** Mono stats row; the 7-day average segment is omitted when there is nothing to average. */
+function statsLineFor(stats: JournalStats): string {
+  const segments = [`STREAK ${stats.currentStreak}d`];
+  if (stats.sevenDayAverageScore !== null) {
+    segments.push(`7D AVG ${Math.round(stats.sevenDayAverageScore)}`);
+  }
+  segments.push(`${stats.totalCaptures} ${stats.totalCaptures === 1 ? 'FRAME' : 'FRAMES'}`);
+  return segments.join(' · ');
+}
+
 /**
- * Session gallery: this session's captures only, newest first, kept in
- * memory — nothing is persisted or uploaded by Norma.
+ * Harmony Journal: captures persist across sessions in the on-device journal,
+ * newest first — nothing is uploaded by Norma.
  */
 function GallerySheetComponent({ visible, photos, onSelect, onClose }: Props) {
+  // `visible` is a deliberate dependency: reopening the sheet re-reads the
+  // clock, so the streak cannot go stale while the app stays open overnight.
+  const stats = useMemo(() => journalStats(photos, nowMs()), [photos, visible]);
   const renderItem = useCallback(
     ({ item }: { item: CapturedPhoto }) => {
       const canon = canonById(item.canonId);
@@ -43,14 +58,15 @@ function GallerySheetComponent({ visible, photos, onSelect, onClose }: Props) {
     <Modal visible={visible} transparent animationType="slide" onRequestClose={onClose}>
       <View style={styles.root}>
         <View style={styles.headerRow}>
-          <Text style={styles.headerText}>{`SESSION · ${photos.length} ${photos.length === 1 ? 'CAPTURE' : 'CAPTURES'}`}</Text>
-          <Pressable accessibilityRole="button" accessibilityLabel="Close gallery" onPress={onClose} style={styles.closeChip}>
+          <Text style={styles.headerText}>JOURNAL</Text>
+          <Pressable accessibilityRole="button" accessibilityLabel="Close journal" onPress={onClose} style={styles.closeChip}>
             <Text style={styles.closeText}>CLOSE</Text>
           </Pressable>
         </View>
+        <Text style={styles.statsText}>{statsLineFor(stats)}</Text>
         {photos.length === 0 ? (
           <View style={styles.empty}>
-            <Text style={styles.emptyText}>NO CAPTURES THIS SESSION.</Text>
+            <Text style={styles.emptyText}>NO FRAMES IN YOUR JOURNAL YET.</Text>
           </View>
         ) : (
           <FlatList
@@ -62,7 +78,7 @@ function GallerySheetComponent({ visible, photos, onSelect, onClose }: Props) {
             contentContainerStyle={styles.listContent}
           />
         )}
-        <Text style={styles.privacyLine}>Session only · stored on this device · nothing is uploaded.</Text>
+        <Text style={styles.privacyLine}>On this device only · nothing leaves it.</Text>
       </View>
     </Modal>
   );
@@ -94,6 +110,12 @@ const styles = StyleSheet.create({
     fontSize: 11,
     letterSpacing: 1.4,
     color: normaColors.paper
+  },
+  statsText: {
+    fontFamily: normaFonts.mono,
+    fontSize: 9,
+    letterSpacing: 1.2,
+    color: normaColors.paperDim
   },
   closeChip: {
     borderRadius: 4,
