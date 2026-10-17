@@ -20,12 +20,12 @@ const STEPS: CoachStep[] = [
     body: 'A classical composition grid with marked power points. Tap a name under the viewfinder to switch.'
   },
   {
-    title: 'PUT YOUR SUBJECT ON A POINT',
-    body: 'When your subject rests on a marked point, it lights up and the ring around the shutter fills. That is the shot.'
+    title: 'REFRAME UNTIL IT SINGS',
+    body: 'Norma follows the strongest visual mass while you move. Reframe until it rests on a marked point — the point lights up, the ring around the shutter fills. That is the shot.'
   },
   {
-    title: 'TAP TO MARK YOUR SUBJECT',
-    body: 'Tap the screen anytime to mark the subject yourself — it never changes focus or exposure. AUTO-SHOT, if you turn it on, fires by itself when the frame holds.'
+    title: 'TAP TO ASK',
+    body: 'Tap any spot to score it for five seconds — a question, not a tracker. It never changes focus or exposure. AUTO-SHOT, if you turn it on, fires by itself when the frame holds.'
   }
 ];
 

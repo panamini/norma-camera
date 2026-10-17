@@ -78,6 +78,21 @@ describe('scoreLineHarmony', () => {
     expect(result).toEqual(EMPTY_LINE_HARMONY);
   });
 
+  it('snaps matched segments onto their guide', () => {
+    const offsetValue = 0.02;
+    const nearUpperThird = scoreLineHarmony([segment({ x1: 0.1, y1: 1 / 3 + offsetValue, x2: 0.9, y2: 1 / 3 + offsetValue })], THIRDS);
+    expect(nearUpperThird.matches[0]?.snapped).toEqual({ x1: 0.1, y1: 1 / 3, x2: 0.9, y2: 1 / 3 });
+
+    const nearPhiVertical = scoreLineHarmony([segment({ x1: PHI_INV + 0.02, y1: 0.2, x2: PHI_INV + 0.02, y2: 0.8 })], PHI);
+    expect(nearPhiVertical.matches[0]?.snapped).toEqual({ x1: PHI_INV, y1: 0.2, x2: PHI_INV, y2: 0.8 });
+
+    const nearDiagonal = scoreLineHarmony([segment({ x1: 0.3, y1: 0.33, x2: 0.7, y2: 0.73 })], DIAGONALS);
+    const snapped = nearDiagonal.matches[0]?.snapped;
+    expect(snapped).toBeDefined();
+    expect(snapped!.x1).toBeCloseTo(snapped!.y1, 9);
+    expect(snapped!.x2).toBeCloseTo(snapped!.y2, 9);
+  });
+
   it('accepts plain segments without a stability state', () => {
     const plain = segment({ x1: 0.1, y1: 2 / 3, x2: 0.9, y2: 2 / 3 });
     delete (plain as { stabilityState?: unknown }).stabilityState;

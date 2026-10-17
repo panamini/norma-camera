@@ -26,12 +26,26 @@ export const DEFAULT_LINE_HARMONY_CONFIG: LineHarmonyConfig = {
   minSegmentLength: 0.08
 };
 
+export type SnappedSegment = {
+  x1: number;
+  y1: number;
+  x2: number;
+  y2: number;
+};
+
 export type LineHarmonyMatch = {
   segment: HarmonySegment;
   guideLabel: string;
   agreement: number;
   angleDeltaDeg: number;
   offset: number;
+  /**
+   * The matched segment projected onto its guide. The 32×24 grid localizes
+   * an edge to ±1 cell, so the overlay draws the snapped segment: a match
+   * means "this edge agrees with this construction line", and it is drawn
+   * on that line.
+   */
+  snapped: SnappedSegment;
 };
 
 export type LineHarmonyResult = {
@@ -71,25 +85,54 @@ function segmentGeometry(segment: HarmonySegment): SegmentGeometry {
   };
 }
 
-function guideTarget(guide: CompositionGuide): { angleDeg: number; offsetFor: (geometry: SegmentGeometry) => number } {
+type GuideTarget = {
+  angleDeg: number;
+  offsetFor: (geometry: SegmentGeometry) => number;
+  snap: (segment: HarmonySegment) => SnappedSegment;
+};
+
+function clamp01(value: number): number {
+  return Math.min(1, Math.max(0, value));
+}
+
+function guideTarget(guide: CompositionGuide): GuideTarget {
   if (guide.axis === 'segment') {
     const dx = guide.end.x - guide.start.x;
     const dy = guide.end.y - guide.start.y;
-    const length = Math.hypot(dx, dy);
+    const lengthSquared = dx * dx + dy * dy;
+    const length = Math.sqrt(lengthSquared);
+    const project = (x: number, y: number) => {
+      if (lengthSquared <= 0) return { x: guide.start.x, y: guide.start.y };
+      const t = clamp01(((x - guide.start.x) * dx + (y - guide.start.y) * dy) / lengthSquared);
+      return { x: guide.start.x + t * dx, y: guide.start.y + t * dy };
+    };
     return {
       angleDeg: (Math.atan2(dy, dx) * 180) / Math.PI,
       offsetFor: (geometry) => {
         if (length <= 0) return Math.hypot(geometry.midX - guide.start.x, geometry.midY - guide.start.y);
         return Math.abs((geometry.midX - guide.start.x) * dy - (geometry.midY - guide.start.y) * dx) / length;
+      },
+      snap: (segment) => {
+        const a = project(segment.x1, segment.y1);
+        const b = project(segment.x2, segment.y2);
+        return { x1: a.x, y1: a.y, x2: b.x, y2: b.y };
       }
     };
   }
 
   if (guide.axis === 'x') {
-    return { angleDeg: 90, offsetFor: (geometry) => Math.abs(geometry.midX - guide.value) };
+    return {
+      angleDeg: 90,
+      offsetFor: (geometry) => Math.abs(geometry.midX - guide.value),
+      snap: (segment) => ({ x1: guide.value, y1: segment.y1, x2: guide.value, y2: segment.y2 })
+    };
   }
 
-  return { angleDeg: 0, offsetFor: (geometry) => Math.abs(geometry.midY - guide.value) };
+  return {
+    angleDeg: 0,
+    offsetFor: (geometry) => Math.abs(geometry.midY - guide.value),
+    snap: (segment) => ({ x1: segment.x1, y1: guide.value, x2: segment.x2, y2: guide.value })
+  };
 }
 
 function isConsiderable(segment: HarmonySegment, geometry: SegmentGeometry, config: LineHarmonyConfig): boolean {
@@ -136,7 +179,7 @@ export function scoreLineHarmony(
 
       const agreement = (1 - angleDelta / config.maxAngleDeltaDeg) * (1 - offset / config.maxOffset);
       if (!best || agreement > best.agreement) {
-        best = { segment, guideLabel: guide.label, agreement, angleDeltaDeg: angleDelta, offset };
+        best = { segment, guideLabel: guide.label, agreement, angleDeltaDeg: angleDelta, offset, snapped: target.snap(segment) };
       }
     }
 

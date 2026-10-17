@@ -82,6 +82,24 @@ Owner's first naive-user session failed the ten-second rule. Changes:
   0.035→0.05, min length 0.1→0.08. lineSegments remain readout-only:
   no scoring, readiness, or capture change. Requires dev-client rebuild.
 
+## PR8.1 Tap-as-question + snap-to-guide
+
+Second naive-user round surfaced two design flaws:
+
+- A manual pin is a screen position, not an object tracker, so "tap then
+  reframe" was semantically broken. Outside manual-only mode the pin now
+  expires after 5 s (a question, not a mode); the coach and the first-tap
+  toast teach the real gesture: Norma follows the visual mass while you
+  reframe — tap only to ask about a spot.
+- The 3-point central-difference stencil on the 32×24 grid localizes an
+  edge to ±1 cell (~4% of the frame — the owner's "5 mm off"). Matched
+  harmony segments are now drawn PROJECTED ONTO their guide (a match means
+  "this edge agrees with this construction line"); unmatched segments draw
+  nothing outside the debug presets. Detector output unchanged; optional
+  future work: sub-cell parabolic refinement in Kotlin.
+- Owner idea recorded for a later opt-in mode — TRAP POINT: pick a node,
+  and AUTO-SHOT fires when the followed mass crosses it.
+
 ## PR7.0 Line Harmony readout
 
 Field feedback: the owner's target scenes are made of lines, and the product

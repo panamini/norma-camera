@@ -26,8 +26,8 @@ function LineHarmonyOverlayComponent({ width, height, matches }: Props) {
         {matches.map((match) => (
           <Line
             key={`${match.guideLabel}-${match.segment.x1}-${match.segment.y1}-${match.segment.x2}-${match.segment.y2}`}
-            p1={vec(match.segment.x1 * width, match.segment.y1 * height)}
-            p2={vec(match.segment.x2 * width, match.segment.y2 * height)}
+            p1={vec(match.snapped.x1 * width, match.snapped.y1 * height)}
+            p2={vec(match.snapped.x2 * width, match.snapped.y2 * height)}
             color={normaColors.accent}
             strokeWidth={2}
             opacity={0.3 + 0.6 * match.agreement}

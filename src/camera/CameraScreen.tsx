@@ -66,6 +66,7 @@ const SUBJECT_EASE_MS = 180;
 const SCORE_EASE_MS = 220;
 const CAPTURE_TOAST_MS = 2500;
 const LOCK_PULSE_MS = 520;
+const MANUAL_PIN_LIFETIME_MS = 5000;
 const HIGHLIGHT_SCORE_THRESHOLD = 70;
 const READY_SCORE_THRESHOLD = DEFAULT_AUTO_CAPTURE_CONFIG.compositionThreshold;
 const GUIDE_SCORE_RETENTION_MS = 900;
@@ -380,6 +381,14 @@ export function CameraScreen() {
     return () => clearTimeout(timeout);
   }, [tapHint]);
 
+  // Outside manual-only mode the tap is a question, not a tracker: the pin
+  // scores its spot briefly, then Norma resumes following the visual mass.
+  useEffect(() => {
+    if (!manualSubject || detectionMode === 'manual') return;
+    const timeout = setTimeout(() => setManualSubject(null), MANUAL_PIN_LIFETIME_MS);
+    return () => clearTimeout(timeout);
+  }, [detectionMode, manualSubject]);
+
   useEffect(() => {
     let cancelled = false;
     import('../journal/firstRunFlag')
@@ -564,7 +573,7 @@ export function CameraScreen() {
       autoCaptureController.current.reset();
       if (!tapHintShownRef.current) {
         tapHintShownRef.current = true;
-        setTapHint('SUBJECT MARKED · FOCUS & EXPOSURE UNTOUCHED');
+        setTapHint('SCORING THIS SPOT FOR 5s · FOCUS & EXPOSURE UNTOUCHED');
       }
     },
     [layout.height, layout.width]
