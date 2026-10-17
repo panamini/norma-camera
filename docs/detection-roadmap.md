@@ -82,6 +82,22 @@ Owner's first naive-user session failed the ten-second rule. Changes:
   0.035→0.05, min length 0.1→0.08. lineSegments remain readout-only:
   no scoring, readiness, or capture change. Requires dev-client rebuild.
 
+## PR8.2 Nudge comet + the structural line decision
+
+- Nudge comet: a gold pull from the followed mass toward the nearest power
+  point, fading as the frame approaches ready — the viewfinder now GUIDES
+  instead of judging. UI-thread derived values; no scoring change.
+- Field evidence after three naive-user rounds: screen-vertical edges light,
+  screen-horizontal ones mostly do not, thin window bars and table edges go
+  undetected. Per the June decision rule, the 32×24 grid is approaching
+  "structurally insufficient" for the line experience. Decision: next native
+  PR adds a SECOND, finer luma grid (96×72) feeding only the line-segment
+  path (visual mass, exposure, sharpness stay on 32×24 with their tuned
+  thresholds; cell-unit line thresholds rescale by 3×). No new dependency.
+  Before writing it: one instrumented `lines`-preset session on the window
+  scene to pin the horizontal/vertical asymmetry (orientation mapping vs
+  detector), captured via adb.
+
 ## PR8.1 Tap-as-question + snap-to-guide
 
 Second naive-user round surfaced two design flaws:
