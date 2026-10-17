@@ -40,6 +40,7 @@ import { useCameraUiStore, type CapturedPhoto } from '../state/cameraUiStore';
 import { getDebugOverlayVisibility } from '../state/debugOverlayVisibility';
 import { tickNodeLock } from '../ui/haptics';
 import { CameraControls } from './CameraControls';
+import { FirstRunCoach } from './FirstRunCoach';
 import { evaluateNodeLockTick, nearestNode } from './nodeLockTick';
 import { StatusStrip } from './StatusStrip';
 import { useCameraDeviceSafe } from './useCameraDeviceSafe';
@@ -283,6 +284,9 @@ export function CameraScreen() {
   const [galleryOpen, setGalleryOpen] = useState(false);
   const [reviewPhoto, setReviewPhoto] = useState<CapturedPhoto | null>(null);
   const [captureError, setCaptureError] = useState<string | null>(null);
+  const [tapHint, setTapHint] = useState<string | null>(null);
+  const [firstRunVisible, setFirstRunVisible] = useState(false);
+  const tapHintShownRef = useRef(false);
 
   const canon = useMemo(() => canonById(canonId), [canonId]);
   const activeGuideKinds = canon.guideKinds;
@@ -369,6 +373,24 @@ export function CameraScreen() {
     const timeout = setTimeout(() => setCaptureError(null), CAPTURE_TOAST_MS);
     return () => clearTimeout(timeout);
   }, [captureError]);
+
+  useEffect(() => {
+    if (!tapHint) return;
+    const timeout = setTimeout(() => setTapHint(null), CAPTURE_TOAST_MS);
+    return () => clearTimeout(timeout);
+  }, [tapHint]);
+
+  useEffect(() => {
+    let cancelled = false;
+    import('../journal/firstRunFlag')
+      .then((flag) => {
+        if (!cancelled && !flag.hasSeenFirstRun()) setFirstRunVisible(true);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   const selectAndApplyCandidate = useCallback(
     (evaluationNowMs: number): AppliedComposition => {
@@ -540,6 +562,10 @@ export function CameraScreen() {
       });
       setCaptureBanner(null);
       autoCaptureController.current.reset();
+      if (!tapHintShownRef.current) {
+        tapHintShownRef.current = true;
+        setTapHint('SUBJECT MARKED · FOCUS & EXPOSURE UNTOUCHED');
+      }
     },
     [layout.height, layout.width]
   );
@@ -685,7 +711,7 @@ export function CameraScreen() {
         score={candidateSnapshot.hasCandidate ? displayScore : retainedGuideScore}
         instruction={statusInstructionFor(displayModeLabel, displayInstruction)}
         armedLine={armed ? autoStatusLine : null}
-        captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : captureError}
+        captureToast={captureBanner ? `CAPTURED · ${captureBanner.score}` : (captureError ?? tapHint)}
         lineHarmony={detectionMode === 'native-heuristic' ? lineHarmony : null}
         onWhyPress={() => setWhyOpen(true)}
       />
@@ -727,6 +753,15 @@ export function CameraScreen() {
         onClose={() => setGalleryOpen(false)}
       />
       <ReviewScreen photo={reviewPhoto} onClose={() => setReviewPhoto(null)} />
+      <FirstRunCoach
+        visible={firstRunVisible}
+        onDone={() => {
+          setFirstRunVisible(false);
+          void import('../journal/firstRunFlag')
+            .then((flag) => flag.markFirstRunSeen())
+            .catch(() => {});
+        }}
+      />
     </View>
   );
 }

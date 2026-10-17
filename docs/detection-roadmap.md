@@ -60,6 +60,28 @@ required).
   no Play Services; dev-client rebuild required). Detection, scoring, and
   capture gates unchanged.
 
+## PR8.0 First-contact UX + line recall calibration
+
+Owner's first naive-user session failed the ten-second rule. Changes:
+
+- Vocabulary: ARM → AUTO-SHOT; the MANUAL|AUTO toggle leaves the primary UI
+  (a tap already overrides AUTO — the toggle was redundant); all four
+  detection modes stay reachable in the dev row; a JOURNAL chip joins the
+  primary row.
+- First-run coach: three skippable cards, shown once (flag on-device).
+- First manual tap shows "SUBJECT MARKED · FOCUS & EXPOSURE UNTOUCHED" —
+  the tap never touches camera focus/exposure and now says so.
+- Guide legibility: canon lines and node ticks get a dark underlay so the
+  construction reads on bright scenes (they were invisible on white walls).
+- Line segment recall (device evidence: a grid-aligned rectangle lit only
+  one side occasionally): Kotlin spike thresholds loosened —
+  TOP_SEGMENT_LIMIT 3→6, EDGE_THRESHOLD_AVERAGE_MULTIPLIER 1.85→1.65,
+  MIN_RUN_CELLS 6→5, MIN_NORMALIZED_LENGTH 0.22→0.18, MIN_CONFIDENCE
+  0.32→0.26 (energy floors unchanged). JS: retention cap 4→6, retention
+  min confidence 0.24→0.22; harmony tolerances angle 7→10°, offset
+  0.035→0.05, min length 0.1→0.08. lineSegments remain readout-only:
+  no scoring, readiness, or capture change. Requires dev-client rebuild.
+
 ## PR7.0 Line Harmony readout
 
 Field feedback: the owner's target scenes are made of lines, and the product

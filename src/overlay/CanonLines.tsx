@@ -22,10 +22,19 @@ function CanonLinesComponent({ width, height, canon }: Props) {
       <Canvas style={StyleSheet.absoluteFill}>
         {segments.map((segment) => (
           <Line
+            key={`${segment.key}-shadow`}
+            p1={vec(segment.x1, segment.y1)}
+            p2={vec(segment.x2, segment.y2)}
+            color={normaColors.lineShadow}
+            strokeWidth={2.5}
+          />
+        ))}
+        {segments.map((segment) => (
+          <Line
             key={segment.key}
             p1={vec(segment.x1, segment.y1)}
             p2={vec(segment.x2, segment.y2)}
-            color={normaColors.paperFaint}
+            color={normaColors.paperLine}
             strokeWidth={1}
           />
         ))}

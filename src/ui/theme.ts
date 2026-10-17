@@ -9,6 +9,9 @@ export const normaColors = {
   paperDim: 'rgba(244,241,234,0.72)',
   paperFaint: 'rgba(244,241,234,0.38)',
   paperGhost: 'rgba(244,241,234,0.16)',
+  // Guide strokes: a dark underlay keeps hairlines legible on bright scenes.
+  paperLine: 'rgba(244,241,234,0.85)',
+  lineShadow: 'rgba(23,23,21,0.45)',
   graphite: '#171715',
   graphiteScrim: 'rgba(23,23,21,0.68)',
   graphiteScrimHeavy: 'rgba(23,23,21,0.86)',

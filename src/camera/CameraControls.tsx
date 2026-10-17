@@ -21,6 +21,8 @@ const SHUTTER_ZONE = 86;
 const SHUTTER_SIZE = 64;
 
 const DEV_DETECTION_MODES: Array<{ value: DetectionMode; label: string; accessibilityLabel: string }> = [
+  { value: 'native-heuristic', label: 'native', accessibilityLabel: 'Use native visual mass mode' },
+  { value: 'manual', label: 'manual only', accessibilityLabel: 'Use manual tap subject mode only' },
   { value: 'auto-placeholder', label: 'placeholder', accessibilityLabel: 'Use automatic placeholder subject mode' },
   { value: 'simulated-detector', label: 'sim detector', accessibilityLabel: 'Use simulated detector mode' }
 ];
@@ -126,7 +128,7 @@ function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, 
           onPress={toggleArmed}
           style={[styles.armPill, armed ? styles.armPillActive : null]}
         >
-          <Text style={[styles.armText, armed ? styles.armTextActive : null]}>{armed ? 'ARMED' : 'ARM'}</Text>
+          <Text style={[styles.armText, armed ? styles.armTextActive : null]}>{armed ? 'AUTO-SHOT ON' : 'AUTO-SHOT'}</Text>
         </Pressable>
 
         <View style={styles.shutterZone}>
@@ -142,26 +144,15 @@ function CameraControlsComponent({ onManualCapture, onOpenGallery, isCapturing, 
           </Pressable>
         </View>
 
-        <View accessibilityLabel="Subject mode" style={styles.modeToggle}>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Use manual tap subject mode"
-            accessibilityState={{ selected: detectionMode === 'manual' }}
-            onPress={() => setDetectionMode('manual')}
-            style={[styles.modeChip, detectionMode === 'manual' ? styles.modeChipActive : null]}
-          >
-            <Text style={[styles.modeText, detectionMode === 'manual' ? styles.modeTextActive : null]}>MANUAL</Text>
-          </Pressable>
-          <Pressable
-            accessibilityRole="button"
-            accessibilityLabel="Use native visual mass auto mode"
-            accessibilityState={{ selected: detectionMode === 'native-heuristic' }}
-            onPress={() => setDetectionMode('native-heuristic')}
-            style={[styles.modeChip, detectionMode === 'native-heuristic' ? styles.modeChipActive : null]}
-          >
-            <Text style={[styles.modeText, detectionMode === 'native-heuristic' ? styles.modeTextActive : null]}>AUTO</Text>
-          </Pressable>
-        </View>
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Open session gallery"
+          disabled={!lastCapture}
+          onPress={onOpenGallery}
+          style={styles.journalChip}
+        >
+          <Text style={styles.journalChipText}>JOURNAL</Text>
+        </Pressable>
       </View>
 
       <Pressable
@@ -249,7 +240,6 @@ const styles = StyleSheet.create({
     ...StyleSheet.absoluteFillObject
   },
   armPill: {
-    minWidth: 64,
     alignItems: 'center',
     borderRadius: 4,
     borderWidth: 1,
@@ -296,29 +286,19 @@ const styles = StyleSheet.create({
     borderRadius: (SHUTTER_SIZE - 14) / 2,
     backgroundColor: normaColors.paper
   },
-  modeToggle: {
-    flexDirection: 'row',
-    backgroundColor: normaColors.graphiteScrim,
+  journalChip: {
     borderRadius: 4,
-    padding: 3,
-    gap: 2
+    borderWidth: 1,
+    borderColor: normaColors.paperFaint,
+    backgroundColor: normaColors.graphiteScrim,
+    paddingHorizontal: 12,
+    paddingVertical: 10
   },
-  modeChip: {
-    borderRadius: 3,
-    paddingHorizontal: 9,
-    paddingVertical: 8
-  },
-  modeChipActive: {
-    backgroundColor: normaColors.paper
-  },
-  modeText: {
+  journalChipText: {
     fontFamily: normaFonts.mono,
-    fontSize: 10,
-    letterSpacing: 1.1,
+    fontSize: 11,
+    letterSpacing: 1.4,
     color: normaColors.paperDim
-  },
-  modeTextActive: {
-    color: normaColors.graphite
   },
   devRow: {
     flexDirection: 'row',

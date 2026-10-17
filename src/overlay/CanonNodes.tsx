@@ -84,13 +84,25 @@ function CanonNodeMark({ node, width, height, subjectX, subjectY, hasSubject }: 
       <Line
         p1={vec(cx - TICK_HALF_LENGTH, cy)}
         p2={vec(cx + TICK_HALF_LENGTH, cy)}
-        color={normaColors.paperDim}
+        color={normaColors.lineShadow}
+        strokeWidth={2.5}
+      />
+      <Line
+        p1={vec(cx, cy - TICK_HALF_LENGTH)}
+        p2={vec(cx, cy + TICK_HALF_LENGTH)}
+        color={normaColors.lineShadow}
+        strokeWidth={2.5}
+      />
+      <Line
+        p1={vec(cx - TICK_HALF_LENGTH, cy)}
+        p2={vec(cx + TICK_HALF_LENGTH, cy)}
+        color={normaColors.paperLine}
         strokeWidth={1}
       />
       <Line
         p1={vec(cx, cy - TICK_HALF_LENGTH)}
         p2={vec(cx, cy + TICK_HALF_LENGTH)}
-        color={normaColors.paperDim}
+        color={normaColors.paperLine}
         strokeWidth={1}
       />
       <Group opacity={activation}>

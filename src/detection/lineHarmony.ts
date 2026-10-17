@@ -21,9 +21,9 @@ export type LineHarmonyConfig = {
 };
 
 export const DEFAULT_LINE_HARMONY_CONFIG: LineHarmonyConfig = {
-  maxAngleDeltaDeg: 7,
-  maxOffset: 0.035,
-  minSegmentLength: 0.1
+  maxAngleDeltaDeg: 10,
+  maxOffset: 0.05,
+  minSegmentLength: 0.08
 };
 
 export type LineHarmonyMatch = {
